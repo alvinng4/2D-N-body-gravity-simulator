@@ -43,26 +43,26 @@ class FIXED_STEP_SIZE_INTEGRATOR:
         v_err_comp_sum = np.zeros((objects_count, 3))
 
         progress_bar = Progress_bar()
-        count = ctypes.c_long(0)
-        store_count = ctypes.c_int(0)
+        count = ctypes.c_int64(0)
+        store_count = ctypes.c_int32(0)
         with progress_bar:
             task = progress_bar.add_task("", total=store_npts)
             match integrator:
                 case "euler":
                     while count.value < npts:
                         self.c_lib.euler(
-                            ctypes.c_int(objects_count),
+                            ctypes.c_int32(objects_count),
                             x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             ctypes.c_double(dt),
-                            ctypes.c_long(npts),
+                            ctypes.c_int64(npts),
                             m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             ctypes.c_double(G),
                             self.sol_state.ctypes.data_as(
                                 ctypes.POINTER(ctypes.c_double)
                             ),
-                            ctypes.c_int(self.store_every_n),
-                            ctypes.c_int(store_npts),
+                            ctypes.c_int32(self.store_every_n),
+                            ctypes.c_int32(store_npts),
                             ctypes.byref(count),
                             ctypes.byref(store_count),
                             x_err_comp_sum.ctypes.data_as(
@@ -77,18 +77,18 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                 case "euler_cromer":
                     while count.value < npts:
                         self.c_lib.euler_cromer(
-                            ctypes.c_int(objects_count),
+                            ctypes.c_int32(objects_count),
                             x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             ctypes.c_double(dt),
-                            ctypes.c_long(npts),
+                            ctypes.c_int64(npts),
                             m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             ctypes.c_double(G),
                             self.sol_state.ctypes.data_as(
                                 ctypes.POINTER(ctypes.c_double)
                             ),
-                            ctypes.c_int(self.store_every_n),
-                            ctypes.c_int(store_npts),
+                            ctypes.c_int32(self.store_every_n),
+                            ctypes.c_int32(store_npts),
                             ctypes.byref(count),
                             ctypes.byref(store_count),
                             x_err_comp_sum.ctypes.data_as(
@@ -103,18 +103,18 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                 case "rk4":
                     while count.value < npts:
                         self.c_lib.rk4(
-                            ctypes.c_int(objects_count),
+                            ctypes.c_int32(objects_count),
                             x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             ctypes.c_double(dt),
-                            ctypes.c_long(npts),
+                            ctypes.c_int64(npts),
                             m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             ctypes.c_double(G),
                             self.sol_state.ctypes.data_as(
                                 ctypes.POINTER(ctypes.c_double)
                             ),
-                            ctypes.c_int(self.store_every_n),
-                            ctypes.c_int(store_npts),
+                            ctypes.c_int32(self.store_every_n),
+                            ctypes.c_int32(store_npts),
                             ctypes.byref(count),
                             ctypes.byref(store_count),
                             x_err_comp_sum.ctypes.data_as(
@@ -129,18 +129,18 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                 case "leapfrog":
                     while count.value < npts:
                         self.c_lib.leapfrog(
-                            ctypes.c_int(objects_count),
+                            ctypes.c_int32(objects_count),
                             x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             ctypes.c_double(dt),
-                            ctypes.c_long(npts),
+                            ctypes.c_int64(npts),
                             m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             ctypes.c_double(G),
                             self.sol_state.ctypes.data_as(
                                 ctypes.POINTER(ctypes.c_double)
                             ),
-                            ctypes.c_int(self.store_every_n),
-                            ctypes.c_int(store_npts),
+                            ctypes.c_int32(self.store_every_n),
+                            ctypes.c_int32(store_npts),
                             ctypes.byref(count),
                             ctypes.byref(store_count),
                             x_err_comp_sum.ctypes.data_as(

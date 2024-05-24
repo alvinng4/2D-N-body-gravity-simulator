@@ -88,7 +88,7 @@ class IAS15:
         x_err_comp_sum = np.zeros((objects_count, 3))
         v_err_comp_sum = np.zeros((objects_count, 3))
 
-        count = ctypes.c_int(0)
+        count = ctypes.c_int64(0)
         store_count = ctypes.c_int(0)
         progress_bar = Progress_bar()
         with progress_bar:

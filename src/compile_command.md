@@ -4,7 +4,7 @@ gnu99 instead of c99 is picked because testing on mac shows that gnu99 is faster
 
 On mac (gcc-13 (Homebrew GCC 13.2.0) 13.2.0):
 ```
-gcc -shared -fPIC -O3 -std=gnu99 -Wall -Wextra -Wpedantic -Wmisleading-indentation c_lib.c -o c_lib.dylib
+gcc-13 -shared -fPIC -O3 -std=gnu99 -Wall -Wextra -Wpedantic -Wmisleading-indentation c_lib.c -o c_lib.dylib
 ```
 
 On windows (gcc.exe (Rev5, Built by MSYS2 project) 5.3.0):

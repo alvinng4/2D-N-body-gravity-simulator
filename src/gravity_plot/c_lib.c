@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 // #include <stdio.h> // For testing
 
@@ -9,6 +10,7 @@
     #define WIN32DLL_API 
 #endif
 
+typedef int64_t int64;
 typedef double real;
 
 real abs_max_vec(const real *restrict vec, int vec_length);
@@ -29,13 +31,13 @@ void euler(
     real (*restrict x)[3], 
     real (*restrict v)[3], 
     real dt, 
-    long npts, 
+    int64 npts, 
     const real *restrict m, 
     real G, 
     real (*restrict sol_state)[6 * objects_count],
     int store_every_n,
     int store_npts,
-    long *restrict count,
+    int64 *restrict count,
     int *restrict store_count,
     real (*restrict x_err_comp_sum)[3], 
     real (*restrict v_err_comp_sum)[3]
@@ -45,13 +47,13 @@ void euler_cromer(
     real (*restrict x)[3], 
     real (*restrict v)[3], 
     real dt, 
-    long npts, 
+    int64 npts, 
     const real *restrict m, 
     real G, 
     real (*restrict sol_state)[6 * objects_count],
     int store_every_n,
     int store_npts,
-    long *restrict count,
+    int64 *restrict count,
     int *restrict store_count,
     real (*restrict x_err_comp_sum)[3], 
     real (*restrict v_err_comp_sum)[3]
@@ -59,15 +61,15 @@ void euler_cromer(
 void rk4(
     int objects_count, 
     real (*restrict x)[3], 
-    real (*restrict v)[3],  
+    real (*restrict v)[3], 
     real dt, 
-    long npts, 
+    int64 npts, 
     const real *restrict m, 
     real G, 
     real (*restrict sol_state)[6 * objects_count],
     int store_every_n,
     int store_npts,
-    long *restrict count,
+    int64 *restrict count,
     int *restrict store_count,
     real (*restrict x_err_comp_sum)[3], 
     real (*restrict v_err_comp_sum)[3]
@@ -77,13 +79,13 @@ void leapfrog(
     real (*restrict x)[3], 
     real (*restrict v)[3], 
     real dt, 
-    long npts, 
+    int64 npts, 
     const real *restrict m, 
     real G, 
     real (*restrict sol_state)[6 * objects_count],
     int store_every_n,
     int store_npts,
-    long *restrict count,
+    int64 *restrict count,
     int *restrict store_count,
     real (*restrict x_err_comp_sum)[3], 
     real (*restrict v_err_comp_sum)[3]
@@ -309,7 +311,8 @@ WIN32DLL_API void compute_energy(
     real G
 )
 {
-    int progress_percentage = (int) round((float) *count / (float) npts * 100.0);
+    // Round down current progress percentage as int
+    int progress_percentage = (*count / npts * 100);
 
     real temp_vec[3];
 
@@ -352,7 +355,7 @@ WIN32DLL_API void compute_energy(
         }
 
         // Exit to update progress bar
-        if ((int) round((float) *count / (float) npts * 100.0) > progress_percentage)
+        if ((*count / npts * 100) > progress_percentage)
         {   
             break;
         }
@@ -399,13 +402,13 @@ WIN32DLL_API void euler(
     real (*restrict x)[3], 
     real (*restrict v)[3], 
     real dt, 
-    long npts, 
+    int64 npts, 
     const real *restrict m, 
     real G, 
     real (*restrict sol_state)[6 * objects_count],
     int store_every_n,
     int store_npts,
-    long *restrict count,
+    int64 *restrict count,
     int *restrict store_count,
     real (*restrict x_err_comp_sum)[3], 
     real (*restrict v_err_comp_sum)[3]
@@ -415,8 +418,8 @@ WIN32DLL_API void euler(
     real (*temp_v)[3] = malloc(objects_count * 3 * sizeof(real));
     real (*a)[3] = malloc(objects_count * 3 * sizeof(real));
 
-    // Current progress percentage rounded to int
-    int progress_percentage = (int) round(*count * 100 / npts);
+    // Round down current progress percentage as int
+    int progress_percentage = *count * 100 / npts;
 
     // Main Loop
     while ((*count + 1) <= npts)
@@ -478,7 +481,7 @@ WIN32DLL_API void euler(
         *count += 1;
 
         // Exit to update progress bar
-        if ((int) (*count * 100 / npts) > progress_percentage)
+        if ((*count * 100 / npts) > progress_percentage)
         {   
             free(a);
             free(temp_x);
@@ -489,19 +492,19 @@ WIN32DLL_API void euler(
 }
 
 WIN32DLL_API void euler_cromer(
-    int objects_count, 
-    real (*restrict x)[3], 
-    real (*restrict v)[3], 
-    real dt, 
-    long npts, 
-    const real *restrict m, 
-    real G, 
+    int objects_count,
+    real (*restrict x)[3],
+    real (*restrict v)[3],
+    real dt,
+    int64 npts,
+    const real *restrict m,
+    real G,
     real (*restrict sol_state)[6 * objects_count],
     int store_every_n,
     int store_npts,
-    long *restrict count,
+    int64 *restrict count,
     int *restrict store_count,
-    real (*restrict x_err_comp_sum)[3], 
+    real (*restrict x_err_comp_sum)[3],
     real (*restrict v_err_comp_sum)[3]
 )
 {   
@@ -509,8 +512,8 @@ WIN32DLL_API void euler_cromer(
     real (*temp_v)[3] = malloc(objects_count * 3 * sizeof(real));
     real (*a)[3] = malloc(objects_count * 3 * sizeof(real));
 
-    // Current progress percentage rounded to int
-    int progress_percentage = (int) round(*count * 100 / npts);
+    // Round down current progress percentage as int
+    int progress_percentage = *count * 100 / npts;
 
     // Main Loop
     while ((*count + 1) <= npts)
@@ -576,7 +579,7 @@ WIN32DLL_API void euler_cromer(
         *count += 1;
 
         // Exit to update progress bar
-        if ((int) (*count * 100 / npts) > progress_percentage)
+        if ((*count * 100 / npts) > progress_percentage)
         {   
             free(a);
             free(temp_x);
@@ -591,13 +594,13 @@ WIN32DLL_API void rk4(
     real (*restrict x)[3], 
     real (*restrict v)[3], 
     real dt, 
-    long npts, 
+    int64 npts, 
     const real *restrict m, 
     real G, 
     real (*restrict sol_state)[6 * objects_count],
     int store_every_n,
     int store_npts,
-    long *restrict count,
+    int64 *restrict count,
     int *restrict store_count,
     real (*restrict x_err_comp_sum)[3], 
     real (*restrict v_err_comp_sum)[3]
@@ -617,8 +620,8 @@ WIN32DLL_API void rk4(
     real (*xk3)[3] = malloc(objects_count * 3 * sizeof(real));
     real (*xk4)[3] = malloc(objects_count * 3 * sizeof(real));
 
-    // Current progress percentage rounded to int
-    int progress_percentage = (int) round(*count * 100 / npts);
+    // Round down current progress percentage as int
+    int progress_percentage = *count * 100 / npts;
 
     // Main Loop
     while ((*count + 1) <= npts)
@@ -722,7 +725,7 @@ WIN32DLL_API void rk4(
         *count += 1;
 
         // Exit to update progress bar
-        if ((int) (*count * 100 / npts) > progress_percentage)
+        if ((*count * 100 / npts) > progress_percentage)
         {   
             free(a);
             free(temp_x);
@@ -745,13 +748,13 @@ WIN32DLL_API void leapfrog(
     real (*restrict x)[3], 
     real (*restrict v)[3], 
     real dt, 
-    long npts, 
+    int64 npts, 
     const real *restrict m, 
     real G, 
     real (*restrict sol_state)[6 * objects_count],
     int store_every_n,
     int store_npts,
-    long *restrict count,
+    int64 *restrict count,
     int *restrict store_count,
     real (*restrict x_err_comp_sum)[3], 
     real (*restrict v_err_comp_sum)[3]
@@ -764,8 +767,8 @@ WIN32DLL_API void leapfrog(
 
     int is_initialize = 1;
 
-    // Current progress percentage rounded to int
-    int progress_percentage = (int) round(*count * 100 / npts);
+    // Round down current progress percentage as int
+    int progress_percentage = *count * 100 / npts;
 
     // Main Loop
     while ((*count + 1) <= npts)
@@ -844,7 +847,7 @@ WIN32DLL_API void leapfrog(
         *count += 1;
 
         // Exit to update progress bar
-        if ((int) (*count * 100 / npts) > progress_percentage)
+        if ((*count * 100 / npts) > progress_percentage)
         {   
             free(a_0);
             free(a_1);
@@ -915,8 +918,8 @@ WIN32DLL_API int rk_embedded(
     real (*temp_x_err_comp_sum)[3] = malloc(objects_count * 3 * sizeof(real));
     real (*temp_v_err_comp_sum)[3] = malloc(objects_count * 3 * sizeof(real));
 
-    // Current progress percentage rounded to int
-    int progress_percentage = (int) round(*t / tf * 100);
+    // Round down current progress percentage as int
+    int progress_percentage = (int) (*t / tf * 100.0);
 
     // Main Loop
     while (1)
@@ -1207,8 +1210,8 @@ WIN32DLL_API int ias15(
     real (*restrict v_err_comp_sum)[3]
 )
 {
-    // Current progress percentage rounded to int
-    int progress_percentage = (int) round(*t / tf * 100);
+    // Round down current progress percentage as int
+    int progress_percentage = (int) (*t / tf * 100.0);
 
     int dim_nodes_minus_1 = dim_nodes - 1;
     int dim_nodes_minus_2 = dim_nodes - 2;
