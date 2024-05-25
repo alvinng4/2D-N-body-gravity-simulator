@@ -456,14 +456,23 @@ class GravitySimulator:
 
         print()
         # --------------------Input tf--------------------
+        # tf = 0 is allowed as user may want to plot the
+        # initial position of the system
         while True:
             self.tf = input("Enter tf (d/yr): ")
             if matches := re.search(
                 r"([0-9]*\.?[0-9]*)(?:\.|\W*)*(day|year|d|y)?", self.tf, re.IGNORECASE
             ):
-                if matches.group(1):
+                if not matches.group(1):
+                    print("Invalid input. Please try again.")
+                    print()
+                    continue
+
+                try:
                     self.tf = float(matches.group(1))
-                else:
+                    if self.tf < 0:
+                        raise ValueError
+                except ValueError:
                     print("Invalid input. Please try again.")
                     print()
                     continue
@@ -485,9 +494,16 @@ class GravitySimulator:
                     self.dt,
                     re.IGNORECASE,
                 ):
-                    if matches.group(1):
+                    if not matches.group(1):
+                        print("Invalid input. Please try again.")
+                        print()
+                        continue
+
+                    try:
                         self.dt = float(matches.group(1))
-                    else:
+                        if self.dt <= 0:
+                            raise ValueError
+                    except ValueError:
                         print("Invalid input. Please try again.")
                         print()
                         continue
