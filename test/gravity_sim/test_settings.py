@@ -10,16 +10,18 @@ from pathlib import Path
 import random
 import sys
 
-path =  Path(__file__).parent.parent.parent.absolute() / "gravity_sim"
+path = Path(__file__).parent.parent.parent.absolute() / "gravity_sim"
 sys.path.insert(0, str(path))
 
 from settings import Settings
+
 
 def test_max_range():
     settings = Settings(screen_width=1920, screen_height=1080)
     assert settings.MAX_RANGE > 0
     # MAX_RANGE * self.settings.distance_scale + self.screen_rect.center - self.camera.pos must be smaller than pygame int value
     assert abs(settings.MAX_RANGE) * settings.MAX_DISTANCE_SCALE + 100000 < 2147483647
+
 
 def test_settings_screen_size():
     settings1 = Settings(screen_width=1920, screen_height=1080)
@@ -138,6 +140,7 @@ def test_new_star_mass_scale():
         settings.MIN_NEW_STAR_MASS_SCALE, ndigits=15
     )
 
+
 def test_new_star_speed_scale():
     settings = Settings(screen_width=1920, screen_height=1080)
     assert settings.MAX_NEW_STAR_SPEED_SCALE > settings.MIN_NEW_STAR_SPEED_SCALE
@@ -147,16 +150,23 @@ def test_new_star_speed_scale():
     )
     settings.new_star_speed_scale = random_value
     assert settings.new_star_speed_scale == random_value
-    test_value = int((settings.MAX_NEW_STAR_SPEED_SCALE - settings.MIN_NEW_STAR_SPEED_SCALE) / 2)
+    test_value = int(
+        (settings.MAX_NEW_STAR_SPEED_SCALE - settings.MIN_NEW_STAR_SPEED_SCALE) / 2
+    )
     settings.new_star_speed_scale = settings.MAX_NEW_STAR_SPEED_SCALE - test_value
-    assert settings.new_star_speed_scale == settings.MAX_NEW_STAR_SPEED_SCALE - test_value
+    assert (
+        settings.new_star_speed_scale == settings.MAX_NEW_STAR_SPEED_SCALE - test_value
+    )
     settings.new_star_speed_scale = settings.MAX_NEW_STAR_SPEED_SCALE + test_value
     assert settings.new_star_speed_scale == settings.MAX_NEW_STAR_SPEED_SCALE
     settings.new_star_speed_scale = settings.MIN_NEW_STAR_SPEED_SCALE + test_value
-    assert settings.new_star_speed_scale == settings.MIN_NEW_STAR_SPEED_SCALE + test_value
+    assert (
+        settings.new_star_speed_scale == settings.MIN_NEW_STAR_SPEED_SCALE + test_value
+    )
     settings.new_star_speed_scale = settings.MIN_NEW_STAR_SPEED_SCALE - test_value
     assert settings.new_star_speed_scale == settings.MIN_NEW_STAR_SPEED_SCALE
-    
+
+
 def test_settings_dt():
     settings = Settings(screen_width=1920, screen_height=1080)
     assert settings.MAX_DT > settings.MIN_DT
@@ -205,9 +215,7 @@ def test_settings_max_iteration():
     )
     settings.max_iteration = random_value
     assert settings.max_iteration == random_value
-    test_value = int(
-        (settings.MAX_MAX_ITERATION - settings.MIN_MAX_ITERATION) / 2
-    )
+    test_value = int((settings.MAX_MAX_ITERATION - settings.MIN_MAX_ITERATION) / 2)
     settings.max_iteration = settings.MAX_MAX_ITERATION - test_value
     assert settings.max_iteration == settings.MAX_MAX_ITERATION - test_value
     settings.max_iteration = settings.MAX_MAX_ITERATION + test_value
@@ -230,9 +238,7 @@ def test_settings_min_iteration():
     )
     settings.min_iteration = random_value
     assert settings.min_iteration == random_value
-    test_value = int(
-        (settings.MIN_MIN_ITERATION - settings.MIN_MIN_ITERATION) / 2
-    )
+    test_value = int((settings.MIN_MIN_ITERATION - settings.MIN_MIN_ITERATION) / 2)
     settings.min_iteration = settings.MIN_MIN_ITERATION - test_value
     assert settings.min_iteration == settings.MIN_MIN_ITERATION - test_value
     settings.min_iteration = settings.MIN_MIN_ITERATION + test_value

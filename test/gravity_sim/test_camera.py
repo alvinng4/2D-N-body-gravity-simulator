@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys
 
-path =  Path(__file__).parent.parent.parent.absolute() / "gravity_sim"
+path = Path(__file__).parent.parent.parent.absolute() / "gravity_sim"
 sys.path.insert(0, str(path))
 
 from camera import Camera

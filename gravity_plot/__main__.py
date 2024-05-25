@@ -636,9 +636,7 @@ class GravitySimulator:
                 self.simulator.energy = trimmed_energy
 
             if self.tf_unit == "years":
-                self.sol_time_in_tf_unit = (
-                    self.simulator.sol_time / self.DAYS_PER_YEAR
-                )
+                self.sol_time_in_tf_unit = self.simulator.sol_time / self.DAYS_PER_YEAR
             else:
                 self.sol_time_in_tf_unit = self.simulator.sol_time
 

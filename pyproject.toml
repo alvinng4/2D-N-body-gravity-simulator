@@ -1,0 +1,23 @@
+[project]
+name = "gravity-simulator"
+version = "1.0.0"
+requires-python = ">= 3.10"
+description = "N-body gravity simulator with plotting and interactive modules"
+readme = "README.md"
+license = {file = "LICENSE"}
+dependencies = [
+    "matplotlib==3.8.3",
+    "numpy==1.26.4",
+    "pygame==2.5.2",
+    "rich==13.7.1",
+]
+
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "pytest",
+    ]

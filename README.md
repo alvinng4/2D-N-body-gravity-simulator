@@ -67,7 +67,7 @@ git clone https://github.com/alvinng4/Gravity-Simulator
 ```
 Install the required packages by
 ```
-pip install -r requirements.txt
+pip install .
 ```
 ### Running the program
 Interactive module: run the following command in terminal
