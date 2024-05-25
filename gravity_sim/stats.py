@@ -67,7 +67,7 @@ class Stats:
         self.fps_board.print_msg(f"FPS = {self.fps:2.1f}")
         self.obj_count_board.print_msg(f"Object = {self.objects_count}")
         self.simulation_time_board.print_msg(
-            f"Simulation Time = {self.simulation_time / 365.256363004:.1e} years"
+            f"Simulation Time = {self.simulation_time / 365.242189:.1e} years"
         )
         self.run_time_board.print_msg(f"Run time = {self.run_time:.0f} seconds")
         self.total_energy_board.print_msg(f"Total Energy = {self.total_energy:.3e}")
