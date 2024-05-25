@@ -985,7 +985,7 @@ class Plotter:
                         energy = energy[:i]
 
                         if grav_plot.tf_unit == "years":
-                            sol_time /= grav_plot.SIDEREAL_DAYS_PER_YEAR
+                            sol_time /= grav_plot.DAYS_PER_YEAR
 
                         ax.semilogy(
                             sol_time,

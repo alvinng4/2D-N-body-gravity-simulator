@@ -20,7 +20,7 @@ from progress_bar import Progress_bar
 
 
 class GravitySimulator:
-    SIDEREAL_DAYS_PER_YEAR = 365.256363004
+    DAYS_PER_YEAR = 365.242189
 
     def __init__(self):
         # --------------------Read command line arguments--------------------
@@ -154,7 +154,7 @@ class GravitySimulator:
 
                 if self.tf_unit == "years":
                     self.sol_time_in_tf_unit = (
-                        self.simulator.sol_time / self.SIDEREAL_DAYS_PER_YEAR
+                        self.simulator.sol_time / self.DAYS_PER_YEAR
                     )
                 else:
                     self.sol_time_in_tf_unit = self.simulator.sol_time
@@ -411,7 +411,7 @@ class GravitySimulator:
                     self.system
                 ]
                 if self.tf_unit == "years":
-                    self.tf *= self.SIDEREAL_DAYS_PER_YEAR
+                    self.tf *= self.DAYS_PER_YEAR
 
                 return None
 
@@ -482,7 +482,7 @@ class GravitySimulator:
                     break
                 else:
                     self.tf_unit = "years"
-                    self.tf *= self.SIDEREAL_DAYS_PER_YEAR
+                    self.tf *= self.DAYS_PER_YEAR
                     break
 
         # --------------------Input dt--------------------
@@ -513,7 +513,7 @@ class GravitySimulator:
                         break
                     else:
                         self.dt_unit = "years"
-                        self.dt *= self.SIDEREAL_DAYS_PER_YEAR
+                        self.dt *= self.DAYS_PER_YEAR
                         break
 
         elif self.integrator in ["rkf45", "dopri", "dverk", "rkf78", "ias15"]:
@@ -527,12 +527,12 @@ class GravitySimulator:
             f"Integrator: {self.available_integrators_to_printable_names[self.integrator]}"
         )
         if self.tf_unit == "years":
-            print(f"tf: {self.tf / self.SIDEREAL_DAYS_PER_YEAR:g} years")
+            print(f"tf: {self.tf / self.DAYS_PER_YEAR:g} years")
         else:
             print(f"tf: {self.tf} days")
         if self.integrator in ["euler", "euler_cromer", "rk4", "leapfrog"]:
             if self.dt_unit == "years":
-                print(f"dt: {self.dt / self.SIDEREAL_DAYS_PER_YEAR} years")
+                print(f"dt: {self.dt / self.DAYS_PER_YEAR} years")
             else:
                 print(f"dt: {self.dt} days")
         elif self.integrator in ["rkf45", "dopri", "dverk", "rkf78", "ias15"]:
@@ -637,7 +637,7 @@ class GravitySimulator:
 
             if self.tf_unit == "years":
                 self.sol_time_in_tf_unit = (
-                    self.simulator.sol_time / self.SIDEREAL_DAYS_PER_YEAR
+                    self.simulator.sol_time / self.DAYS_PER_YEAR
                 )
             else:
                 self.sol_time_in_tf_unit = self.simulator.sol_time
@@ -663,7 +663,7 @@ class GravitySimulator:
                 / (
                     str(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
                     + f"_{self.system}_"
-                    + f"{(self.tf / self.SIDEREAL_DAYS_PER_YEAR):g}{self.tf_unit[0]}_"
+                    + f"{(self.tf / self.DAYS_PER_YEAR):g}{self.tf_unit[0]}_"
                     + f"{self.integrator}"
                     + ".csv"
                 )
