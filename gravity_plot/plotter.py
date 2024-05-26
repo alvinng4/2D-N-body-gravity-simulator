@@ -55,35 +55,29 @@ class Plotter:
                 ]
 
         if grav_plot.system in grav_plot.solar_like_systems:
-            # Plot with solar system colors
-            for i in range(grav_plot.simulator.objects_count):
-                traj = ax.plot(
-                    grav_plot.simulator.sol_state[:, i * 3],
-                    grav_plot.simulator.sol_state[:, 1 + i * 3],
-                    color=grav_plot.solar_like_systems_colors[objs_name[i]],
-                )
-                # Plot the last position as a filled circle
-                ax.plot(
-                    grav_plot.simulator.sol_state[-1, i * 3],
-                    grav_plot.simulator.sol_state[-1, 1 + i * 3],
-                    "o",
-                    color=traj[0].get_color(),
-                    label=objs_name[i],
-                )
+            colors = [
+                grav_plot.solar_like_systems_colors[objs_name[i]]
+                for i in range(grav_plot.simulator.objects_count)
+            ]
+            labels = objs_name
         else:
-            # Plot with random colors
-            for i in range(grav_plot.simulator.objects_count):
-                traj = ax.plot(
-                    grav_plot.simulator.sol_state[:, i * 3],
-                    grav_plot.simulator.sol_state[:, 1 + i * 3],
-                )
-                # Plot the last position as a filled circle
-                ax.plot(
-                    grav_plot.simulator.sol_state[-1, i * 3],
-                    grav_plot.simulator.sol_state[-1, 1 + i * 3],
-                    "o",
-                    color=traj[0].get_color(),
-                )
+            colors = [None for _ in range(grav_plot.simulator.objects_count)]
+            labels = [None for _ in range(grav_plot.simulator.objects_count)]
+
+        for i in range(grav_plot.simulator.objects_count):
+            traj = ax.plot(
+                grav_plot.simulator.sol_state[:, i * 3],
+                grav_plot.simulator.sol_state[:, 1 + i * 3],
+                color=colors[i],
+            )
+            # Plot the last position as a filled circle
+            ax.plot(
+                grav_plot.simulator.sol_state[-1, i * 3],
+                grav_plot.simulator.sol_state[-1, 1 + i * 3],
+                "o",
+                color=traj[0].get_color(),
+                label=labels[i],
+            )
 
         if grav_plot.system in grav_plot.solar_like_systems:
             fig.legend(loc="center right", borderaxespad=0.2)
@@ -135,39 +129,32 @@ class Plotter:
                 ]
 
         if grav_plot.system in grav_plot.solar_like_systems:
-            # Plot with solar system colors
-            for i in range(grav_plot.simulator.objects_count):
-                traj = ax.plot(
-                    grav_plot.simulator.sol_state[:, i * 3],
-                    grav_plot.simulator.sol_state[:, i * 3 + 1],
-                    grav_plot.simulator.sol_state[:, i * 3 + 2],
-                    color=grav_plot.solar_like_systems_colors[objs_name[i]],
-                )
-                # Plot the last position as a filled circle
-                ax.plot(
-                    grav_plot.simulator.sol_state[-1, i * 3],
-                    grav_plot.simulator.sol_state[-1, i * 3 + 1],
-                    grav_plot.simulator.sol_state[-1, i * 3 + 2],
-                    "o",
-                    color=traj[0].get_color(),
-                    label=objs_name[i],
-                )
+            colors = [
+                grav_plot.solar_like_systems_colors[objs_name[i]]
+                for i in range(grav_plot.simulator.objects_count)
+            ]
+            labels = objs_name
         else:
-            # Plot with random colors
-            for i in range(grav_plot.simulator.objects_count):
-                traj = ax.plot(
-                    grav_plot.simulator.sol_state[:, i * 3],
-                    grav_plot.simulator.sol_state[:, i * 3 + 1],
-                    grav_plot.simulator.sol_state[:, i * 3 + 2],
-                )
-                # Plot the last position as a filled circle
-                ax.plot(
-                    grav_plot.simulator.sol_state[-1, i * 3],
-                    grav_plot.simulator.sol_state[-1, i * 3 + 1],
-                    grav_plot.simulator.sol_state[-1, i * 3 + 2],
-                    "o",
-                    color=traj[0].get_color(),
-                )
+            colors = [None for _ in range(grav_plot.simulator.objects_count)]
+            labels = [None for _ in range(grav_plot.simulator.objects_count)]
+
+        # Plot with solar system colors
+        for i in range(grav_plot.simulator.objects_count):
+            traj = ax.plot(
+                grav_plot.simulator.sol_state[:, i * 3],
+                grav_plot.simulator.sol_state[:, i * 3 + 1],
+                grav_plot.simulator.sol_state[:, i * 3 + 2],
+                color=colors[i],
+            )
+            # Plot the last position as a filled circle
+            ax.plot(
+                grav_plot.simulator.sol_state[-1, i * 3],
+                grav_plot.simulator.sol_state[-1, i * 3 + 1],
+                grav_plot.simulator.sol_state[-1, i * 3 + 2],
+                "o",
+                color=traj[0].get_color(),
+                label=labels[i],
+            )
 
         Plotter.set_3d_axes_equal(ax)
 
@@ -346,6 +333,16 @@ class Plotter:
                     "Vesta",
                 ]
 
+        if grav_plot.system in grav_plot.solar_like_systems:
+            colors = [
+                grav_plot.solar_like_systems_colors[objs_name[i]]
+                for i in range(grav_plot.simulator.objects_count)
+            ]
+            labels = objs_name
+        else:
+            colors = [None for _ in range(grav_plot.simulator.objects_count)]
+            labels = [None for _ in range(grav_plot.simulator.objects_count)]
+
         file_path = Path(__file__).parent / "results"
         file_path.mkdir(parents=True, exist_ok=True)
         file_path /= file_name + ".gif"
@@ -363,6 +360,7 @@ class Plotter:
 
         writer = PillowWriter(fps=fps)
         progress_bar = Progress_bar()
+
         if not is_maintain_fixed_dt:
             with writer.saving(fig, file_path, dpi):
                 with progress_bar:
@@ -373,43 +371,26 @@ class Plotter:
                         ):
                             continue
 
-                        if grav_plot.system in grav_plot.solar_like_systems:
-                            # Plot with solar system colors
-                            # Plot the trajectory from the beginning to current position
-                            for j in range(grav_plot.simulator.objects_count):
-                                traj = ax.plot(
-                                    grav_plot.simulator.sol_state[: (i + 1), j * 3],
-                                    grav_plot.simulator.sol_state[: (i + 1), j * 3 + 1],
-                                    color=grav_plot.solar_like_systems_colors[
-                                        objs_name[j]
-                                    ],
-                                )
-                                # Plot the current position as a filled circle
-                                ax.plot(
-                                    grav_plot.simulator.sol_state[i, j * 3],
-                                    grav_plot.simulator.sol_state[i, j * 3 + 1],
-                                    "o",
-                                    color=traj[0].get_color(),
-                                    label=objs_name[j],
-                                )
-                            # Add legend at the beginning
-                            if i == 0:
-                                fig.legend(loc="center right", borderaxespad=0.2)
-                        else:
-                            # Plot with random colors
-                            # Plot the trajectory from the beginning to current position
-                            for j in range(grav_plot.simulator.objects_count):
-                                traj = ax.plot(
-                                    grav_plot.simulator.sol_state[: (i + 1), j * 3],
-                                    grav_plot.simulator.sol_state[: (i + 1), j * 3 + 1],
-                                )
-                                # Plot the current position as a filled circle
-                                ax.plot(
-                                    grav_plot.simulator.sol_state[i, j * 3],
-                                    grav_plot.simulator.sol_state[i, j * 3 + 1],
-                                    "o",
-                                    color=traj[0].get_color(),
-                                )
+                        # Plot the trajectory from the beginning to current position
+                        for j in range(grav_plot.simulator.objects_count):
+                            traj = ax.plot(
+                                grav_plot.simulator.sol_state[: (i + 1), j * 3],
+                                grav_plot.simulator.sol_state[: (i + 1), j * 3 + 1],
+                                color=colors[j],
+                            )
+                            # Plot the current position as a filled circle
+                            ax.plot(
+                                grav_plot.simulator.sol_state[i, j * 3],
+                                grav_plot.simulator.sol_state[i, j * 3 + 1],
+                                "o",
+                                color=traj[0].get_color(),
+                                label=labels[j],
+                            )
+                        # Add legend at the beginning
+                        if (i == 0) and (
+                            grav_plot.system in grav_plot.solar_like_systems
+                        ):
+                            fig.legend(loc="center right", borderaxespad=0.2)
 
                         # Set axis labels before capturing the frame
                         ax.set_xlabel("$x$ (AU)")
@@ -428,6 +409,7 @@ class Plotter:
                 print("Saving the file...")
 
         else:
+            # Attempt to maintain fixed dt for the animation
             with writer.saving(fig, file_path, dpi):
                 with progress_bar:
                     frame_size = (
@@ -444,47 +426,27 @@ class Plotter:
                         index = np.searchsorted(
                             grav_plot.simulator.sol_time, plot_time[i]
                         )
-                        if grav_plot.system in grav_plot.solar_like_systems:
-                            # Plot with solar system colors
-                            # Plot the trajectory from the beginning to current position
-                            for j in range(grav_plot.simulator.objects_count):
-                                traj = ax.plot(
-                                    grav_plot.simulator.sol_state[: (index + 1), j * 3],
-                                    grav_plot.simulator.sol_state[
-                                        : (index + 1), j * 3 + 1
-                                    ],
-                                    color=grav_plot.solar_like_systems_colors[
-                                        objs_name[j]
-                                    ],
-                                )
-                                # Plot the current position as a filled circle
-                                ax.plot(
-                                    grav_plot.simulator.sol_state[index, j * 3],
-                                    grav_plot.simulator.sol_state[index, j * 3 + 1],
-                                    "o",
-                                    color=traj[0].get_color(),
-                                    label=objs_name[j],
-                                )
-                            # Add legend at the beginning
-                            if i == 0:
-                                fig.legend(loc="center right", borderaxespad=0.2)
-                        else:
-                            # Plot with random colors
-                            # Plot the trajectory from the beginning to current position
-                            for j in range(grav_plot.simulator.objects_count):
-                                traj = ax.plot(
-                                    grav_plot.simulator.sol_state[: (index + 1), j * 3],
-                                    grav_plot.simulator.sol_state[
-                                        : (index + 1), j * 3 + 1
-                                    ],
-                                )
-                                # Plot the current position as a filled circle
-                                ax.plot(
-                                    grav_plot.simulator.sol_state[index, j * 3],
-                                    grav_plot.simulator.sol_state[index, j * 3 + 1],
-                                    "o",
-                                    color=traj[0].get_color(),
-                                )
+
+                        # Plot the trajectory from the beginning to current position
+                        for j in range(grav_plot.simulator.objects_count):
+                            traj = ax.plot(
+                                grav_plot.simulator.sol_state[: (index + 1), j * 3],
+                                grav_plot.simulator.sol_state[: (index + 1), j * 3 + 1],
+                                color=colors[j],
+                            )
+                            # Plot the current position as a filled circle
+                            ax.plot(
+                                grav_plot.simulator.sol_state[index, j * 3],
+                                grav_plot.simulator.sol_state[index, j * 3 + 1],
+                                "o",
+                                color=traj[0].get_color(),
+                                label=labels[j],
+                            )
+                        # Add legend at the beginning
+                        if (i == 0) and (
+                            grav_plot.system in grav_plot.solar_like_systems
+                        ):
+                            fig.legend(loc="center right", borderaxespad=0.2)
 
                         # Set axis labels before capturing the frame
                         ax.set_xlabel("$x$ (AU)")
@@ -554,6 +516,16 @@ class Plotter:
                     "Vesta",
                 ]
 
+        if grav_plot.system in grav_plot.solar_like_systems:
+            colors = [
+                grav_plot.solar_like_systems_colors[objs_name[i]]
+                for i in range(grav_plot.simulator.objects_count)
+            ]
+            labels = objs_name
+        else:
+            colors = [None for _ in range(grav_plot.simulator.objects_count)]
+            labels = [None for _ in range(grav_plot.simulator.objects_count)]
+
         file_path = Path(__file__).parent / "results"
         file_path.mkdir(parents=True, exist_ok=True)
         file_path /= file_name + ".gif"
@@ -585,53 +557,32 @@ class Plotter:
                         ):
                             continue
 
-                        if grav_plot.system in grav_plot.solar_like_systems:
-                            # Plot with solar system colors
-                            # Plot the trajectory from the beginning to current position
-                            for j in range(grav_plot.simulator.objects_count):
-                                traj = ax.plot(
-                                    grav_plot.simulator.sol_state[: (i + 1), j * 3],
-                                    grav_plot.simulator.sol_state[: (i + 1), j * 3 + 1],
-                                    grav_plot.simulator.sol_state[: (i + 1), j * 3 + 2],
-                                    color=grav_plot.solar_like_systems_colors[
-                                        objs_name[j]
-                                    ],
-                                )
-                                # Plot the current position as a filled circle
-                                ax.plot(
-                                    grav_plot.simulator.sol_state[i, j * 3],
-                                    grav_plot.simulator.sol_state[i, j * 3 + 1],
-                                    grav_plot.simulator.sol_state[i, j * 3 + 2],
-                                    "o",
-                                    color=traj[0].get_color(),
-                                    label=objs_name[j],
-                                )
+                        # Plot the trajectory from the beginning to current position
+                        for j in range(grav_plot.simulator.objects_count):
+                            traj = ax.plot(
+                                grav_plot.simulator.sol_state[: (i + 1), j * 3],
+                                grav_plot.simulator.sol_state[: (i + 1), j * 3 + 1],
+                                grav_plot.simulator.sol_state[: (i + 1), j * 3 + 2],
+                                color=colors[j],
+                            )
+                            # Plot the current position as a filled circle
+                            ax.plot(
+                                grav_plot.simulator.sol_state[i, j * 3],
+                                grav_plot.simulator.sol_state[i, j * 3 + 1],
+                                grav_plot.simulator.sol_state[i, j * 3 + 2],
+                                "o",
+                                color=traj[0].get_color(),
+                                label=labels[j],
+                            )
 
-                            # Add legend
+                        # Add legend
+                        if grav_plot.system in grav_plot.solar_like_systems:
                             ax.legend(loc="center right", bbox_to_anchor=(1.325, 0.5))
 
                             # Adjust figure for the legend
                             if i == 0:
                                 fig.subplots_adjust(right=0.7)
                                 fig.tight_layout()
-
-                        else:
-                            # Plot with random colors
-                            # Plot the trajectory from the beginning to current position
-                            for j in range(grav_plot.simulator.objects_count):
-                                traj = ax.plot(
-                                    grav_plot.simulator.sol_state[: (i + 1), j * 3],
-                                    grav_plot.simulator.sol_state[: (i + 1), j * 3 + 1],
-                                    grav_plot.simulator.sol_state[: (i + 1), j * 3 + 2],
-                                )
-                                # Plot the current position as a filled circle
-                                ax.plot(
-                                    grav_plot.simulator.sol_state[i, j * 3],
-                                    grav_plot.simulator.sol_state[i, j * 3 + 1],
-                                    grav_plot.simulator.sol_state[i, j * 3 + 2],
-                                    "o",
-                                    color=traj[0].get_color(),
-                                )
 
                         # Set axis labels and setting 3d axes scale before capturing the frame
                         ax.set_xlabel("$x$ (AU)")
@@ -657,6 +608,7 @@ class Plotter:
                 print("Saving the file...")
 
         else:
+            # Attempt to maintain fixed dt for the animation
             frame_size = math.floor(grav_plot.data_size / plot_every_nth_point) + 1
             plot_time = np.linspace(
                 grav_plot.simulator.sol_time[0],
@@ -671,61 +623,33 @@ class Plotter:
                         index = np.searchsorted(
                             grav_plot.simulator.sol_time, plot_time[i]
                         )
-                        if grav_plot.system in grav_plot.solar_like_systems:
-                            # Plot with solar system colors
-                            # Plot the trajectory from the beginning to current position
-                            for j in range(grav_plot.simulator.objects_count):
-                                traj = ax.plot(
-                                    grav_plot.simulator.sol_state[: (index + 1), j * 3],
-                                    grav_plot.simulator.sol_state[
-                                        : (index + 1), j * 3 + 1
-                                    ],
-                                    grav_plot.simulator.sol_state[
-                                        : (index + 1), j * 3 + 2
-                                    ],
-                                    color=grav_plot.solar_like_systems_colors[
-                                        objs_name[j]
-                                    ],
-                                )
-                                # Plot the current position as a filled circle
-                                ax.plot(
-                                    grav_plot.simulator.sol_state[index, j * 3],
-                                    grav_plot.simulator.sol_state[index, j * 3 + 1],
-                                    grav_plot.simulator.sol_state[index, j * 3 + 2],
-                                    "o",
-                                    color=traj[0].get_color(),
-                                    label=objs_name[j],
-                                )
 
-                            # Add legend
+                        # Plot the trajectory from the beginning to current position
+                        for j in range(grav_plot.simulator.objects_count):
+                            traj = ax.plot(
+                                grav_plot.simulator.sol_state[: (index + 1), j * 3],
+                                grav_plot.simulator.sol_state[: (index + 1), j * 3 + 1],
+                                grav_plot.simulator.sol_state[: (index + 1), j * 3 + 2],
+                                color=colors[j],
+                            )
+                            # Plot the current position as a filled circle
+                            ax.plot(
+                                grav_plot.simulator.sol_state[index, j * 3],
+                                grav_plot.simulator.sol_state[index, j * 3 + 1],
+                                grav_plot.simulator.sol_state[index, j * 3 + 2],
+                                "o",
+                                color=traj[0].get_color(),
+                                label=labels[j],
+                            )
+
+                        # Add legend
+                        if grav_plot.system in grav_plot.solar_like_systems:
                             ax.legend(loc="center right", bbox_to_anchor=(1.325, 0.5))
 
                             # Adjust figure for the legend
                             if i == 0:
                                 fig.subplots_adjust(right=0.7)
                                 fig.tight_layout()
-
-                        else:
-                            # Plot with random colors
-                            # Plot the trajectory from the beginning to current position
-                            for j in range(grav_plot.simulator.objects_count):
-                                traj = ax.plot(
-                                    grav_plot.simulator.sol_state[: (index + 1), j * 3],
-                                    grav_plot.simulator.sol_state[
-                                        : (index + 1), j * 3 + 1
-                                    ],
-                                    grav_plot.simulator.sol_state[
-                                        : (index + 1), j * 3 + 2
-                                    ],
-                                )
-                                # Plot the current position as a filled circle
-                                ax.plot(
-                                    grav_plot.simulator.sol_state[index, j * 3],
-                                    grav_plot.simulator.sol_state[index, j * 3 + 1],
-                                    grav_plot.simulator.sol_state[index, j * 3 + 2],
-                                    "o",
-                                    color=traj[0].get_color(),
-                                )
 
                         # Set axis labels and setting 3d axes scale before capturing the frame
                         ax.set_xlabel("$x$ (AU)")
