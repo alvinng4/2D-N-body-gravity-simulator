@@ -727,58 +727,61 @@ class GravitySimulator:
             else:
                 print("File not found! Please try again.")
 
-        # Get object_count
-        try:
-            with open(read_file_path, "r") as file:
-                reader = csv.reader(file)
-                objects_count = round((len(next(reader)) - 3) / (3 * 2))
-        except FileNotFoundError:
-            sys.exit("Error: file is not found. Exiting the program")
-
         # Read data
         start = timeit.default_timer()
+        progress_bar = Progress_bar()
+        
         try:
             with open(read_file_path, "r") as file:
                 reader = csv.reader(file)
 
-                # Allocate memory
-                sol_time = np.zeros(50000)
-                sol_dt = np.zeros(50000)
-                energy = np.zeros(50000)
-                sol_state = np.zeros((50000, objects_count * 3 * 2))
+                # Get object_count and file size
+                objects_count = round((len(next(reader)) - 3) / (3 * 2))
+                file_size = sum(1 for _ in file) + 1
 
-                print()
-                print("Reading data...")
+                with progress_bar:
+                    task = progress_bar.add_task("", total=file_size)
 
-                i = 0
-                for row in reader:
-                    sol_time[i] = row[0]
-                    sol_dt[i] = row[1]
-                    energy[i] = row[2]
-                    for j in range(objects_count):
-                        sol_state[i][j * 3 + 0] = row[3 + j * 3 + 0]
-                        sol_state[i][j * 3 + 1] = row[3 + j * 3 + 1]
-                        sol_state[i][j * 3 + 2] = row[3 + j * 3 + 2]
-                        sol_state[i][objects_count * 3 + j * 3 + 0] = row[
-                            3 + objects_count * 3 + j * 3 + 0
-                        ]
-                        sol_state[i][objects_count * 3 + j * 3 + 1] = row[
-                            3 + objects_count * 3 + j * 3 + 1
-                        ]
-                        sol_state[i][objects_count * 3 + j * 3 + 2] = row[
-                            3 + objects_count * 3 + j * 3 + 2
-                        ]
+                    # Allocate memory
+                    sol_time = np.zeros(50000)
+                    sol_dt = np.zeros(50000)
+                    energy = np.zeros(50000)
+                    sol_state = np.zeros((50000, objects_count * 3 * 2))
 
-                    i += 1
+                    print()
+                    print("Reading data...")
 
-                    # Extending memory buffer
-                    if i % 50000 == 0:
-                        sol_time = np.concatenate((sol_time, np.zeros(50000)))
-                        sol_dt = np.concatenate((sol_dt, np.zeros(50000)))
-                        energy = np.concatenate((energy, np.zeros(50000)))
-                        sol_state = np.concatenate(
-                            (sol_state, np.zeros((50000, objects_count * 3 * 2)))
-                        )
+                    i = 0
+                    file.seek(0)
+                    for row in reader:
+                        sol_time[i] = row[0]
+                        sol_dt[i] = row[1]
+                        energy[i] = row[2]
+                        for j in range(objects_count):
+                            sol_state[i][j * 3 + 0] = row[3 + j * 3 + 0]
+                            sol_state[i][j * 3 + 1] = row[3 + j * 3 + 1]
+                            sol_state[i][j * 3 + 2] = row[3 + j * 3 + 2]
+                            sol_state[i][objects_count * 3 + j * 3 + 0] = row[
+                                3 + objects_count * 3 + j * 3 + 0
+                            ]
+                            sol_state[i][objects_count * 3 + j * 3 + 1] = row[
+                                3 + objects_count * 3 + j * 3 + 1
+                            ]
+                            sol_state[i][objects_count * 3 + j * 3 + 2] = row[
+                                3 + objects_count * 3 + j * 3 + 2
+                            ]
+
+                        i += 1
+                        progress_bar.update(task, completed=i)
+
+                        # Extending memory buffer
+                        if i % 50000 == 0:
+                            sol_time = np.concatenate((sol_time, np.zeros(50000)))
+                            sol_dt = np.concatenate((sol_dt, np.zeros(50000)))
+                            energy = np.concatenate((energy, np.zeros(50000)))
+                            sol_state = np.concatenate(
+                                (sol_state, np.zeros((50000, objects_count * 3 * 2)))
+                            )
 
                 stop = timeit.default_timer()
                 print("Reading completed.\n")
