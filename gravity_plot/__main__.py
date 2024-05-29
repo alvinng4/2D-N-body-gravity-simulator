@@ -218,7 +218,7 @@ class GravitySimulator:
                         axes_lim,
                         is_cancel,
                         is_maintain_fixed_dt,
-                    ) = Plotter.ask_user_input_animation(2, self)
+                    ) = Plotter.animation_user_interface(2, self)
                     if not is_cancel:
                         Plotter.animation_2d_traj_gif(
                             self,
@@ -242,7 +242,7 @@ class GravitySimulator:
                         axes_lim,
                         is_cancel,
                         is_maintain_fixed_dt,
-                    ) = Plotter.ask_user_input_animation(3, self)
+                    ) = Plotter.animation_user_interface(3, self)
                     if not is_cancel:
                         Plotter.animation_3d_traj_gif(
                             self,
@@ -286,7 +286,7 @@ class GravitySimulator:
 
     def _launch_simulation(self):
         while True:
-            self._read_user_simulation_input()
+            self._get_user_simulation_input()
             self._print_user_simulation_input()
             if get_bool("Proceed?"):
                 print("")
@@ -295,7 +295,7 @@ class GravitySimulator:
         self.simulator.initialize_system(self)
         self.simulator.simulation()
 
-    def _read_user_simulation_input(self):
+    def _get_user_simulation_input(self):
         # --------------------Check and Input systems--------------------
         while True:
             self.available_systems = self.default_systems.copy()

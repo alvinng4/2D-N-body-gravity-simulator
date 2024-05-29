@@ -170,7 +170,7 @@ class Plotter:
         print()
 
     @staticmethod
-    def ask_user_input_animation(dim: int, grav_plot):
+    def animation_user_interface(dim: int, grav_plot):
         while True:
             fps = get_float("Enter FPS: ", larger_than=0)
 
