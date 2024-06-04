@@ -20,7 +20,7 @@ On windows (gcc.exe (Rev5, Built by MSYS2 project) 5.3.0):
 gcc -shared -O3 -std=gnu99 -Wall -Wextra -Wpedantic c_lib.c -o c_lib.dll
 ```
 
-On linux (gcc (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0):
+On linux (gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0):
 ```
 gcc -shared -fPIC -O3 -std=gnu99 -Wall -Wextra -Wpedantic -Wmisleading-indentation c_lib.c -o c_lib.so
 ```
