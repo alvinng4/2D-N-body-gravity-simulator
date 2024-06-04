@@ -11,7 +11,7 @@ import ctypes
 import numpy as np
 
 from common import acceleration
-from progress_bar import Progress_bar
+from progress_bar import Progress_bar_with_data_size
 
 
 class RK_EMBEDDED:
@@ -64,9 +64,9 @@ class RK_EMBEDDED:
     def simulation_c_lib(
         self, objects_count, x, v, m, G, tf, abs_tolerance, rel_tolerance
     ):
-        progress_bar = Progress_bar()
+        progress_bar = Progress_bar_with_data_size()
         with progress_bar:
-            task = progress_bar.add_task("", total=tf)
+            task = progress_bar.add_task("", total=tf, store_count=1)
             a = acceleration(objects_count, x, m, G)
             dt = self.rk_embedded_initial_time_step(
                 objects_count,
@@ -134,7 +134,7 @@ class RK_EMBEDDED:
                 )
 
                 # Update percentage bar
-                progress_bar.update(task, completed=t.value)
+                progress_bar.update(task, completed=t.value, store_count=store_count.value+1)
                 if rk_flag == 0:
                     pass
 
@@ -151,7 +151,7 @@ class RK_EMBEDDED:
 
                 # End simulation as t = tf
                 elif rk_flag == 2:
-                    progress_bar.update(task, completed=tf)
+                    progress_bar.update(task, completed=tf, store_count=store_count.value+1)
                     self.sol_state = self.sol_state[0 : store_count.value + 1]
                     self.sol_time = self.sol_time[0 : store_count.value + 1]
                     self.sol_dt = self.sol_dt[0 : store_count.value + 1]
@@ -173,7 +173,7 @@ class RK_EMBEDDED:
             rel_tolerance,
         )
 
-        progress_bar = Progress_bar()
+        progress_bar = Progress_bar_with_data_size()
         with progress_bar:
             self.sol_state, self.sol_time, self.sol_dt = self.simulation(
                 progress_bar,
@@ -257,7 +257,7 @@ class RK_EMBEDDED:
         # Launch integration:
         count = 0
         store_count = 0
-        task = progress_bar.add_task("", total=tf)
+        task = progress_bar.add_task("", total=tf, store_count=store_count+1)
         while True:
             # Calculate xk and vk
             vk[0] = acceleration(objects_count, x, m, G)
@@ -345,7 +345,7 @@ class RK_EMBEDDED:
                     sol_time[store_count] = t
                     sol_dt[store_count] = dt
 
-                progress_bar.update(task, completed=t)
+                progress_bar.update(task, completed=t, store_count=store_count+1)
 
                 # Check buffer size and extend if needed :
                 if (store_count + 1) == len(sol_state):
@@ -372,7 +372,7 @@ class RK_EMBEDDED:
                 dt = tf - t
 
             if t >= tf:
-                progress_bar.update(task, completed=tf)
+                progress_bar.update(task, completed=tf, store_count=store_count+1)
                 return (
                     sol_state[0 : store_count + 1],
                     sol_time[0 : store_count + 1],

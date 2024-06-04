@@ -9,7 +9,7 @@ import math
 import numpy as np
 
 from common import acceleration
-from progress_bar import Progress_bar
+from progress_bar import Progress_bar_with_data_size
 
 
 class FIXED_STEP_SIZE_INTEGRATOR:
@@ -42,11 +42,11 @@ class FIXED_STEP_SIZE_INTEGRATOR:
         x_err_comp_sum = np.zeros((objects_count, 3))
         v_err_comp_sum = np.zeros((objects_count, 3))
 
-        progress_bar = Progress_bar()
+        progress_bar = Progress_bar_with_data_size()
         count = ctypes.c_int64(0)
         store_count = ctypes.c_int(0)
         with progress_bar:
-            task = progress_bar.add_task("", total=store_npts)
+            task = progress_bar.add_task("", total=store_npts, store_count=1)
             match integrator:
                 case "euler":
                     while count.value < npts:
@@ -72,8 +72,8 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                                 ctypes.POINTER(ctypes.c_double)
                             ),
                         )
-                        progress_bar.update(task, completed=store_count.value)
-                    progress_bar.update(task, completed=store_npts)
+                        progress_bar.update(task, completed=store_count.value, store_count=store_count.value+1)
+                    progress_bar.update(task, completed=store_npts, store_count=store_npts)
                 case "euler_cromer":
                     while count.value < npts:
                         self.c_lib.euler_cromer(
@@ -98,8 +98,8 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                                 ctypes.POINTER(ctypes.c_double)
                             ),
                         )
-                        progress_bar.update(task, completed=store_count.value)
-                    progress_bar.update(task, completed=store_npts)
+                        progress_bar.update(task, completed=store_count.value, store_count=store_count.value+1)
+                    progress_bar.update(task, completed=store_npts, store_count=store_npts)
                 case "rk4":
                     while count.value < npts:
                         self.c_lib.rk4(
@@ -124,8 +124,8 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                                 ctypes.POINTER(ctypes.c_double)
                             ),
                         )
-                        progress_bar.update(task, completed=store_count.value)
-                    progress_bar.update(task, completed=store_npts)
+                        progress_bar.update(task, completed=store_count.value, store_count=store_count.value+1)
+                    progress_bar.update(task, completed=store_npts, store_count=store_npts)
                 case "leapfrog":
                     while count.value < npts:
                         self.c_lib.leapfrog(
@@ -150,8 +150,8 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                                 ctypes.POINTER(ctypes.c_double)
                             ),
                         )
-                        progress_bar.update(task, completed=store_count.value)
-                    progress_bar.update(task, completed=store_npts)
+                        progress_bar.update(task, completed=store_count.value, store_count=store_count.value+1)
+                    progress_bar.update(task, completed=store_npts, store_count=store_npts)
 
     def simulation_numpy(self, integrator, objects_count, x, v, m, G, dt, tf):
         npts = int(np.floor((tf / dt))) + 1  # + 1 for t0
@@ -172,12 +172,13 @@ class FIXED_STEP_SIZE_INTEGRATOR:
         x_err_comp_sum = np.zeros((objects_count, 3))
         v_err_comp_sum = np.zeros((objects_count, 3))
 
-        progress_bar = Progress_bar()
+        progress_bar = Progress_bar_with_data_size()
         store_count = 0
         with progress_bar:
+            task = progress_bar.add_task("", total=store_npts, store_count=1)
             match integrator:
                 case "euler":
-                    for count in progress_bar.track(range(npts - 1)):
+                    for count in range(npts - 1):
                         a = acceleration(objects_count, x, m, G)
                         x, v, x_err_comp_sum, v_err_comp_sum = self.euler(
                             x, v, a, dt, x_err_comp_sum, v_err_comp_sum
@@ -199,8 +200,11 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                                 )
                             )
 
+                        progress_bar.update(task, completed=store_count, store_count=store_count+1)
+                    progress_bar.update(task, completed=store_npts, store_count=store_npts)
+
                 case "euler_cromer":
-                    for count in progress_bar.track(range(npts - 1)):
+                    for count in range(npts - 1):
                         a = acceleration(objects_count, x, m, G)
                         x, v, x_err_comp_sum, v_err_comp_sum = self.euler_cromer(
                             x, v, a, dt, x_err_comp_sum, v_err_comp_sum
@@ -222,8 +226,11 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                                 )
                             )
 
+                        progress_bar.update(task, completed=store_count, store_count=store_count+1)
+                    progress_bar.update(task, completed=store_npts, store_count=store_npts)
+
                 case "rk4":
-                    for count in progress_bar.track(range(npts - 1)):
+                    for count in range(npts - 1):
                         x, v, x_err_comp_sum, v_err_comp_sum = self.rk4(
                             objects_count,
                             x,
@@ -251,9 +258,12 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                                 )
                             )
 
+                        progress_bar.update(task, completed=store_count, store_count=store_count+1)
+                    progress_bar.update(task, completed=store_npts, store_count=store_npts)
+
                 case "leapfrog":
                     a = acceleration(objects_count, x, m, G)
-                    for count in progress_bar.track(range(npts - 1)):
+                    for count in range(npts - 1):
                         x, v, a, x_err_comp_sum, v_err_comp_sum = self.leapfrog(
                             objects_count,
                             x,
@@ -281,6 +291,9 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                                     np.reshape(v, objects_count * 3),
                                 )
                             )
+
+                        progress_bar.update(task, completed=store_count, store_count=store_count+1)
+                    progress_bar.update(task, completed=store_npts, store_count=store_npts)
 
     @staticmethod
     def euler(x, v, a, dt, x_err_comp_sum, v_err_comp_sum):

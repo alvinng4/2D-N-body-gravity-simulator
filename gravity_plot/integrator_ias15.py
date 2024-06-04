@@ -11,7 +11,7 @@ import ctypes
 import numpy as np
 
 from common import acceleration
-from progress_bar import Progress_bar
+from progress_bar import Progress_bar_with_data_size
 
 
 class IAS15:
@@ -90,9 +90,9 @@ class IAS15:
 
         count = ctypes.c_int64(0)
         store_count = ctypes.c_int(0)
-        progress_bar = Progress_bar()
+        progress_bar = Progress_bar_with_data_size()
         with progress_bar:
-            task = progress_bar.add_task("", total=tf)
+            task = progress_bar.add_task("", total=tf, store_count=store_count.value+1)
             while True:
                 ias15_flag = self.c_lib.ias15(
                     ctypes.c_int(objects_count),
@@ -129,7 +129,7 @@ class IAS15:
                 )
 
                 # Update progress bar
-                progress_bar.update(task, completed=t.value)
+                progress_bar.update(task, completed=t.value, store_count=store_count.value+1)
                 if ias15_flag == 0:
                     pass
 
@@ -145,7 +145,7 @@ class IAS15:
                     self.sol_time = np.concatenate((self.sol_time, np.zeros(npts)))
                     self.sol_dt = np.concatenate((self.sol_dt, np.zeros(npts)))
 
-            progress_bar.update(task, completed=tf)
+            progress_bar.update(task, completed=tf, store_count=store_count.value+1)
             return (
                 self.sol_state[0 : store_count.value + 1],
                 self.sol_time[0 : store_count.value + 1],
@@ -199,9 +199,9 @@ class IAS15:
         ias15_refine_flag = 0
         count = 0
         store_count = 0
-        progress_bar = Progress_bar()
+        progress_bar = Progress_bar_with_data_size()
         with progress_bar:
-            task = progress_bar.add_task("", total=tf)
+            task = progress_bar.add_task("", total=tf, store_count=store_count+1)
             while True:
                 (
                     x,
@@ -245,7 +245,7 @@ class IAS15:
                 )
 
                 # Update step
-                progress_bar.update(task, completed=t)
+                progress_bar.update(task, completed=t, store_count=store_count+1)
                 count += 1
 
                 # Store step
@@ -282,7 +282,7 @@ class IAS15:
                     sol_time = np.concatenate((sol_time, np.zeros(npts)))
                     sol_dt = np.concatenate((sol_dt, np.zeros(npts)))
 
-            progress_bar.update(task, completed=tf)
+            progress_bar.update(task, completed=tf, store_count=store_count+1)
             return (
                 sol_state[0 : store_count + 1],
                 sol_time[0 : store_count + 1],
