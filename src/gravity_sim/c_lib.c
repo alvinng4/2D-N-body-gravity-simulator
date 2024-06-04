@@ -304,7 +304,12 @@ WIN32DLL_API void acceleration(
     real R_norm, temp_value, temp_vec[3], R[3];
 
     // Empty the input array
-    memset(a, 0, objects_count * 3 * sizeof(real));
+    for (int i = 0; i < objects_count; i++)
+    {
+        a[i][0] = 0.0;
+        a[i][1] = 0.0;
+        a[i][2] = 0.0;
+    }
 
     for(int i = 0; i < objects_count; i++)
     {
@@ -597,8 +602,16 @@ WIN32DLL_API void rk_embedded(
 
         for (int stage = 1; stage < stages; stage++)
         {
-            memset(temp_v, 0, objects_count * 3 * sizeof(real));
-            memset(temp_x, 0, objects_count * 3 * sizeof(real));         
+            // Empty temp_v and temp_x
+            for (int i = 0; i < objects_count; i++)
+            {
+                temp_v[i][0] = 0.0;
+                temp_v[i][1] = 0.0;
+                temp_v[i][2] = 0.0;
+                temp_x[i][0] = 0.0;
+                temp_x[i][1] = 0.0;
+                temp_x[i][2] = 0.0;
+            }           
 
             for (int j = 0; j < stage; j++)
             {
@@ -627,11 +640,24 @@ WIN32DLL_API void rk_embedded(
             memcpy(&xk[stage * objects_count * 3], temp_v, objects_count * 3 * sizeof(real));
         }
 
+        // Empty temp_v, temp_x, error_estimation_delta_v, error_estimation_delta_x
+        for (int i = 0; i < objects_count; i++)
+        {
+            temp_v[i][0] = 0.0;
+            temp_v[i][1] = 0.0;
+            temp_v[i][2] = 0.0;
+            temp_x[i][0] = 0.0;
+            temp_x[i][1] = 0.0;
+            temp_x[i][2] = 0.0;
+            error_estimation_delta_v[i][0] = 0.0;
+            error_estimation_delta_v[i][1] = 0.0;
+            error_estimation_delta_v[i][2] = 0.0;
+            error_estimation_delta_x[i][0] = 0.0;
+            error_estimation_delta_x[i][1] = 0.0;
+            error_estimation_delta_x[i][2] = 0.0;
+        }
+
         // Calculate x_1, v_1 and also delta x, delta v for error estimation
-        memset(temp_v, 0, objects_count * 3 * sizeof(real));
-        memset(temp_x, 0, objects_count * 3 * sizeof(real));       
-        memset(error_estimation_delta_v, 0, objects_count * 3 * sizeof(real));
-        memset(error_estimation_delta_x, 0, objects_count * 3 * sizeof(real));       
         for(int stage = 0; stage < stages; stage++)
         {
             for (int k = 0; k < objects_count; k++)
@@ -1362,7 +1388,13 @@ WIN32DLL_API void ias15_refine_aux_b(
     }
     else
     {
-        memset(delta_aux_b, 0, dim_nodes_minus_1 * objects_count * 3 * sizeof(real));
+        // Empty delta_aux_b
+        for (int i = 0; i < dim_nodes_minus_1 * objects_count; i++)
+        {
+            delta_aux_b[i * 3 + 0] = 0.0;
+            delta_aux_b[i * 3 + 1] = 0.0;
+            delta_aux_b[i * 3 + 2] = 0.0;
+        }
     }
 
     real q = dt_new / dt;
