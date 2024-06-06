@@ -1013,7 +1013,13 @@ WIN32DLL_API void ias15_approx_pos(
     {
         for (int k = 0; k < 3; k++)
         {
-            x[j][k] = x0[j][k] + dt * node * (
+            /*
+            *   Warning: Combining both statements would increase floating point error
+            *            e.g. x[j][k] = x0[j][k] + ...   (WRONG)
+            */
+
+            x[j][k] = x0[j][k];
+            x[j][k] += dt * node * (
                 v0[j][k]
                 + dt
                 * node
@@ -1064,7 +1070,13 @@ WIN32DLL_API void ias15_approx_vel(
     {
         for (int k = 0; k < 3; k++)
         {
-            v[j][k] = v0[j][k] + dt * node * (
+            /*
+            *   Warning: Combining both statements would increase floating point error
+            *            e.g. v[j][k] = v0[j][k] + ...   (WRONG)
+            */
+
+            v[j][k] = v0[j][k];
+            v[j][k] += dt * node * (
                 a0[j][k]
                 + node
                 * (
