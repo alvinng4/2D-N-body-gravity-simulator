@@ -138,7 +138,6 @@ void ias15_step(
     real safety_fac,
     int *restrict ias15_refine_flag,
     real *restrict aux_a,
-    real (*restrict temp_a)[3],
     real (*restrict x)[3],
     real (*restrict v)[3],
     real (*restrict a)[3],
@@ -149,8 +148,9 @@ void ias15_step(
 void ias15_approx_pos(
     int objects_count,
     real (*restrict x)[3],
-    real (*restrict v)[3],
-    real (*restrict a)[3],
+    real (*restrict x0)[3],
+    real (*restrict v0)[3],
+    real (*restrict a0)[3],
     real node,
     real *restrict aux_b,
     real dt
@@ -158,7 +158,8 @@ void ias15_approx_pos(
 void ias15_approx_vel(
     int objects_count,
     real (*restrict v)[3],
-    real (*restrict a)[3],
+    real (*restrict v0)[3],
+    real (*restrict a0)[3],
     real node,
     real *restrict aux_b,
     real dt
@@ -803,7 +804,6 @@ WIN32DLL_API void ias15(
 
     // Arrays for ias15_step
     real *aux_a = malloc(dim_nodes * objects_count * 3 * sizeof(real));
-    real (*temp_a)[3] = malloc(objects_count * 3 * sizeof(real));
     real (*x_step)[3] = malloc(objects_count * 3 * sizeof(real));
     real (*v_step)[3] = malloc(objects_count * 3 * sizeof(real));
     real (*a_step)[3] = malloc(objects_count * 3 * sizeof(real));
@@ -843,7 +843,6 @@ WIN32DLL_API void ias15(
             safety_fac,
             ias15_refine_flag,
             aux_a,
-            temp_a,
             x_step,
             v_step,
             a_step,
@@ -855,7 +854,6 @@ WIN32DLL_API void ias15(
         if (i >= min_iteration && *t > (t0 + expected_time_scale * 1e-5))
         {
             free(aux_a);
-            free(temp_a);
             free(x_step);
             free(v_step);
             free(a_step);
@@ -894,7 +892,6 @@ WIN32DLL_API void ias15_step(
     real safety_fac,
     int *restrict ias15_refine_flag,
     real *restrict aux_a,
-    real (*restrict temp_a)[3],
     real (*restrict x)[3],
     real (*restrict v)[3],
     real (*restrict a)[3],
@@ -910,20 +907,17 @@ WIN32DLL_API void ias15_step(
     {   
         // Loop for predictor-corrector algorithm
         // 12 = max iterations
-        memcpy(a, a0, objects_count * 3 * sizeof(real));
         for (int temp = 0; temp < 12; temp++)
         {
             for (int i = 0; i < dim_nodes; i++)
             {
                 // Estimate position and velocity with current aux_b and nodes
-                memcpy(x, x0, objects_count * 3 * sizeof(real));
-                memcpy(v, v0, objects_count * 3 * sizeof(real));
-                ias15_approx_pos(objects_count, x, v, a, nodes[i], aux_b, *dt);
-                ias15_approx_vel(objects_count, v, a, nodes[i], aux_b, *dt);
+                ias15_approx_pos(objects_count, x, x0, v0, a0, nodes[i], aux_b, *dt);
+                ias15_approx_vel(objects_count, v, v0, a0, nodes[i], aux_b, *dt);
 
                 // Evaluate force function and store result
-                acceleration(objects_count, x, temp_a, m, G);
-                memcpy(&aux_a[i * objects_count * 3], temp_a, objects_count * 3 * sizeof(real));
+                acceleration(objects_count, x, a, m, G);
+                memcpy(&aux_a[i * objects_count * 3], a, objects_count * 3 * sizeof(real));
                 
                 ias15_compute_aux_g(objects_count, dim_nodes, aux_g, aux_r, aux_a, i, F);
                 ias15_compute_aux_b(objects_count, dim_nodes_minus_1, aux_b, aux_g, aux_c, i);
@@ -945,11 +939,8 @@ WIN32DLL_API void ias15_step(
         }
 
         // Advance step
-        memcpy(x, x0, objects_count * 3 * sizeof(real));
-        memcpy(v, v0, objects_count * 3 * sizeof(real));
-        memcpy(a, a0, objects_count * 3 * sizeof(real));
-        ias15_approx_pos(objects_count, x, v, a, 1.0, aux_b, *dt);
-        ias15_approx_vel(objects_count, v, a, 1.0, aux_b, *dt);
+        ias15_approx_pos(objects_count, x, x0, v0, a0, 1.0, aux_b, *dt);
+        ias15_approx_vel(objects_count, v, v0, a0, 1.0, aux_b, *dt);
         acceleration(objects_count, x, a, m, G);
 
         // Estimate relative error
@@ -1010,8 +1001,9 @@ WIN32DLL_API void ias15_step(
 WIN32DLL_API void ias15_approx_pos(
     int objects_count,
     real (*restrict x)[3],
-    real (*restrict v)[3],
-    real (*restrict a)[3],
+    real (*restrict x0)[3],
+    real (*restrict v0)[3],
+    real (*restrict a0)[3],
     real node,
     real *restrict aux_b,
     real dt
@@ -1021,12 +1013,12 @@ WIN32DLL_API void ias15_approx_pos(
     {
         for (int k = 0; k < 3; k++)
         {
-            x[j][k] = x[j][k] + dt * node * (
-                v[j][k]
+            x[j][k] = x0[j][k] + dt * node * (
+                v0[j][k]
                 + dt
                 * node
                 * (
-                    a[j][k]
+                    a0[j][k]
                     + node 
                     * (
                         aux_b[0 * objects_count * 3 + j * 3 + k] / 3.0
@@ -1061,7 +1053,8 @@ WIN32DLL_API void ias15_approx_pos(
 WIN32DLL_API void ias15_approx_vel(
     int objects_count,
     real (*restrict v)[3],
-    real (*restrict a)[3],
+    real (*restrict v0)[3],
+    real (*restrict a0)[3],
     real node,
     real *restrict aux_b,
     real dt
@@ -1071,8 +1064,8 @@ WIN32DLL_API void ias15_approx_vel(
     {
         for (int k = 0; k < 3; k++)
         {
-            v[j][k] = v[j][k] + dt * node * (
-                a[j][k]
+            v[j][k] = v0[j][k] + dt * node * (
+                a0[j][k]
                 + node
                 * (
                     aux_b[0 * objects_count * 3 + j * 3 + k] / 2.0
