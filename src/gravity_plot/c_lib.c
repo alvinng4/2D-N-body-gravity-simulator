@@ -188,7 +188,7 @@ void ias15_step(
     real (*restrict temp_x_err_comp_sum)[3], 
     real (*restrict temp_v_err_comp_sum)[3]
 );
-void ias15_approx_pos_aux(
+void ias15_approx_pos_pc(
     int objects_count,
     real (*restrict x)[3],
     real (*restrict x0)[3],
@@ -199,7 +199,7 @@ void ias15_approx_pos_aux(
     real dt,
     real (*restrict x_err_comp_sum)[3]
 );
-void ias15_approx_vel_aux(
+void ias15_approx_vel_pc(
     int objects_count,
     real (*restrict v)[3],
     real (*restrict v0)[3],
@@ -271,7 +271,7 @@ WIN32DLL_API real abs_max_vec(const real *restrict vec, int vec_length)
 // Find the max absolute value in a array with 3D vectors
 WIN32DLL_API real abs_max_vec_array(real (*restrict arr)[3], int objects_count)
 {
-    real max = 0;
+    real max = 0.0;
     for (int i = 0; i < objects_count; i++)
     {
         max = fmax(max, fabs(arr[i][0]));
@@ -1431,8 +1431,8 @@ WIN32DLL_API void ias15_step(
             for (int i = 0; i < dim_nodes; i++)
             {
                 // Estimate position and velocity with current aux_b and nodes
-                ias15_approx_pos_aux(objects_count, x, x0, v0, a0, nodes[i], aux_b, *dt, x_err_comp_sum);
-                ias15_approx_vel_aux(objects_count, v, v0, a0, nodes[i], aux_b, *dt, v_err_comp_sum);
+                ias15_approx_pos_pc(objects_count, x, x0, v0, a0, nodes[i], aux_b, *dt, x_err_comp_sum);
+                ias15_approx_vel_pc(objects_count, v, v0, a0, nodes[i], aux_b, *dt, v_err_comp_sum);
 
                 // Evaluate force function and store result
                 acceleration(objects_count, x, a, m, G);
@@ -1536,8 +1536,8 @@ WIN32DLL_API void ias15_step(
     }
 }
 
-// Calculate the auxiliary position used to calculate aux_b and aux_g
-WIN32DLL_API void ias15_approx_pos_aux(
+// Calculate position in the predictor-corrector algorithm to calculate aux_b and aux_g
+WIN32DLL_API void ias15_approx_pos_pc(
     int objects_count,
     real (*restrict x)[3],
     real (*restrict x0)[3],
@@ -1596,8 +1596,8 @@ WIN32DLL_API void ias15_approx_pos_aux(
     }
 }
 
-// Calculate the auxiliary velocity used to calculate aux_b and aux_g
-WIN32DLL_API void ias15_approx_vel_aux(
+// Calculate velocity in the predictor-corrector algorithm to calculate aux_b and aux_g
+WIN32DLL_API void ias15_approx_vel_pc(
     int objects_count,
     real (*restrict v)[3],
     real (*restrict v0)[3],

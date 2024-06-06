@@ -207,7 +207,7 @@ WIN32DLL_API real abs_max_vec(const real *restrict vec, int vec_length)
 WIN32DLL_API real abs_max_vec_array(real (*restrict arr)[3], int objects_count)
 {
     // Find the max absolute value in a 1D array
-    real max = 0;
+    real max = 0.0;
     for (int i = 0; i < objects_count; i++)
     {
         for (int j = 0; j < 3; j++)

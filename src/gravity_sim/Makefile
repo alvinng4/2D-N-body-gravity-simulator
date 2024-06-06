@@ -1,4 +1,4 @@
-CFLAGS = -shared -O3 -std=gnu99 -Wall -Wextra -Wpedantic
+CFLAGS = -shared -O3 -std=gnu99 -Wall -Wextra -Wpedantic -lm
 
 ifeq ($(OS),Windows_NT)
     c_lib.dll: c_lib.c
