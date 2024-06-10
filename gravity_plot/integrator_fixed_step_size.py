@@ -165,16 +165,14 @@ class FIXED_STEP_SIZE_INTEGRATOR:
             .copy()
             .reshape(store_npts, solutions.objects_count * 6)
         )
-        # print("test1")
+
         return_sol_time = np.ctypeslib.as_array(
             solutions.sol_time, shape=(store_npts,)
         ).copy()
-        # print("test2")
         return_sol_dt = np.ctypeslib.as_array(
             solutions.sol_dt, shape=(store_npts,)
         ).copy()
-        # print("test3")
-        return_m = np.ctypeslib.as_array(solutions.m, shape=(store_npts,)).copy()
+        return_m = np.ctypeslib.as_array(solutions.m, shape=(solutions.objects_count,)).copy()
 
         print("Freeing C memory...")
         self.c_lib.free_memory_real(solutions.sol_state)
