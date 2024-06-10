@@ -163,6 +163,12 @@ class Simulator:
         if grav_plot.is_c_lib:
             self.c_lib = grav_plot.c_lib
 
+        self.x = np.zeros(0)
+        self.v = np.zeros(0)
+        self.m = np.zeros(0)
+        self.objects_count = 0
+        self.G = 0.0
+
     def initialize_system_numpy(self, grav_plot):
         self.G = self.CONSTANT_G
 
@@ -454,9 +460,13 @@ class Simulator:
                     )
                     self.objects_count = 12
 
-    def simulation(self):
+    def simulation(self, is_custom_sys):
         print("Simulating the system...")
         start = timeit.default_timer()
+
+        if is_custom_sys:
+            self.x.resize((self.objects_count * 3,))
+            self.v.resize((self.objects_count * 3,))
 
         match self.integrator:
             case "euler" | "euler_cromer" | "rk4" | "leapfrog":

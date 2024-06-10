@@ -33,6 +33,11 @@ class IAS15:
                 simulator.system.encode("utf-8"),
                 simulator.tf,
                 simulator.tolerance,
+                simulator.x,  #######################
+                simulator.v,  #                     #
+                simulator.m,  #  For Custom system  #
+                simulator.G,  #                     #
+                simulator.objects_count,  #######################
             )
 
         elif simulator.is_c_lib == False:
@@ -46,7 +51,17 @@ class IAS15:
                 simulator.tolerance,
             )
 
-    def simulation_c_lib(self, system_name, tf, tolerance):
+    def simulation_c_lib(
+        self,
+        system_name,
+        tf,
+        tolerance,
+        custom_sys_x,
+        custom_sys_v,
+        custom_sys_m,
+        custom_sys_G,
+        custom_sys_objects_count,
+    ):
         # Recommended tolerance: 1e-9
 
         class Solutions(ctypes.Structure):
@@ -77,6 +92,11 @@ class IAS15:
             ctypes.c_double(tolerance),
             ctypes.c_int(self.store_every_n),
             ctypes.byref(store_count),
+            custom_sys_x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            custom_sys_v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            custom_sys_m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            ctypes.c_double(custom_sys_G),
+            ctypes.c_int(custom_sys_objects_count),
         )
 
         t.value = tf  # Close the thread forcefully if not closed

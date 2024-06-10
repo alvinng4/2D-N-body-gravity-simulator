@@ -47,6 +47,11 @@ class RK_EMBEDDED:
                 simulator.tf,
                 simulator.tolerance,
                 simulator.tolerance,
+                simulator.x,  #######################
+                simulator.v,  #                     #
+                simulator.m,  #  For Custom system  #
+                simulator.G,  #                     #
+                simulator.objects_count,  #######################
             )
         else:
             self.simulation_numpy(
@@ -61,7 +66,19 @@ class RK_EMBEDDED:
                 simulator.tolerance,
             )
 
-    def simulation_c_lib(self, order, system_name, tf, abs_tolerance, rel_tolerance):
+    def simulation_c_lib(
+        self,
+        order,
+        system_name,
+        tf,
+        abs_tolerance,
+        rel_tolerance,
+        custom_sys_x,
+        custom_sys_v,
+        custom_sys_m,
+        custom_sys_G,
+        custom_sys_objects_count,
+    ):
         class Solutions(ctypes.Structure):
             _fields_ = [
                 ("sol_state", ctypes.POINTER(ctypes.c_double)),
@@ -92,6 +109,11 @@ class RK_EMBEDDED:
             ctypes.c_double(rel_tolerance),
             ctypes.c_int(self.store_every_n),
             ctypes.byref(store_count),
+            custom_sys_x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            custom_sys_v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            custom_sys_m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            ctypes.c_double(custom_sys_G),
+            ctypes.c_int(custom_sys_objects_count),
         )
 
         t.value = tf  # Close the thread forcefully if not closed

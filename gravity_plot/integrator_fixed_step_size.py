@@ -31,6 +31,11 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                 simulator.integrator,
                 simulator.dt,
                 simulator.tf,
+                simulator.x,  #######################
+                simulator.v,  #                     #
+                simulator.m,  #  For Custom system  #
+                simulator.G,  #                     #
+                simulator.objects_count,  #######################
             )
         else:
             self.simulation_numpy(
@@ -44,7 +49,18 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                 simulator.tf,
             )
 
-    def simulation_c_lib(self, system_name, integrator, dt, tf):
+    def simulation_c_lib(
+        self,
+        system_name,
+        integrator,
+        dt,
+        tf,
+        custom_sys_x,
+        custom_sys_v,
+        custom_sys_m,
+        custom_sys_G,
+        custom_sys_objects_count,
+    ):
         class Solutions(ctypes.Structure):
             _fields_ = [
                 ("sol_state", ctypes.POINTER(ctypes.c_double)),
@@ -72,7 +88,7 @@ class FIXED_STEP_SIZE_INTEGRATOR:
             target=progress_bar_c_lib_fixed_integrator, args=(store_npts, store_count)
         )
         progress_bar_thread.start()
-
+        
         # parameters are double no matter what "real" is defined
         match integrator:
             case "euler":
@@ -83,6 +99,11 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                     ctypes.c_int(store_npts),
                     ctypes.c_int(self.store_every_n),
                     ctypes.byref(store_count),
+                    custom_sys_x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    custom_sys_v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    custom_sys_m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    ctypes.c_double(custom_sys_G),
+                    ctypes.c_int(custom_sys_objects_count),
                 )
             case "euler_cromer":
                 solutions = self.c_lib.euler_cromer(
@@ -92,6 +113,11 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                     ctypes.c_int(store_npts),
                     ctypes.c_int(self.store_every_n),
                     ctypes.byref(store_count),
+                    custom_sys_x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    custom_sys_v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    custom_sys_m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    ctypes.c_double(custom_sys_G),
+                    ctypes.c_int(custom_sys_objects_count),
                 )
             case "rk4":
                 solutions = self.c_lib.rk4(
@@ -101,6 +127,11 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                     ctypes.c_int(store_npts),
                     ctypes.c_int(self.store_every_n),
                     ctypes.byref(store_count),
+                    custom_sys_x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    custom_sys_v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    custom_sys_m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    ctypes.c_double(custom_sys_G),
+                    ctypes.c_int(custom_sys_objects_count),
                 )
             case "leapfrog":
                 solutions = self.c_lib.leapfrog(
@@ -110,10 +141,17 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                     ctypes.c_int(store_npts),
                     ctypes.c_int(self.store_every_n),
                     ctypes.byref(store_count),
+                    custom_sys_x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    custom_sys_v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    custom_sys_m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    ctypes.c_double(custom_sys_G),
+                    ctypes.c_int(custom_sys_objects_count),
                 )
 
         if store_count.value < (store_npts - 1):
-            store_count.value = (store_npts - 1)  # Close the thread forcefully if not closed
+            store_count.value = (
+                store_npts - 1
+            )  # Close the thread forcefully if not closed
         progress_bar_thread.join()
 
         print()

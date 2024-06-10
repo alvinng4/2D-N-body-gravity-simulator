@@ -299,18 +299,21 @@ class GravitySimulator:
                 print("")
                 break
 
-        self.simulator.store_every_n = grav_plot.store_every_n
-        self.simulator.system = grav_plot.system
-        self.simulator.integrator = grav_plot.integrator
-        self.simulator.tf = grav_plot.tf
-        self.simulator.unit = grav_plot.tf_unit
-        self.simulator.tolerance = grav_plot.tolerance
-        self.simulator.dt = grav_plot.dt
+        self.simulator.store_every_n = self.store_every_n
+        self.simulator.system = self.system
+        self.simulator.integrator = self.integrator
+        self.simulator.tf = self.tf
+        self.simulator.unit = self.tf_unit
+        self.simulator.tolerance = self.tolerance
+        self.simulator.dt = self.dt
 
-        if not self.is_c_lib:
+        if (not self.is_c_lib) or (self.system not in self.default_systems):
             self.simulator.initialize_system_numpy(self)
 
-        self.simulator.simulation()
+        if self.system not in self.default_systems:
+            self.simulator.simulation(is_custom_sys=True)
+        else:
+            self.simulator.simulation(is_custom_sys=False)
 
     def _get_user_simulation_input(self):
         # --------------------Check and Input systems--------------------

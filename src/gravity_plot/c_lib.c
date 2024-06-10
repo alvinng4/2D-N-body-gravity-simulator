@@ -32,7 +32,8 @@ void initialize_system(
     real **v,
     real **m,
     int *restrict objects_count,
-    real *restrict G
+    real *restrict G,
+    int *restrict custom_sys_flag
 );
 real abs_max_vec(const real *restrict vec, int vec_length);
 real vec_norm(const real *restrict vec, int vec_length);
@@ -52,7 +53,12 @@ Solutions euler(
     int64 npts,
     int store_npts,
     int store_every_n,
-    int *restrict store_count
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count
 );
 Solutions euler_cromer(
     const char *restrict system,
@@ -60,7 +66,12 @@ Solutions euler_cromer(
     int64 npts,
     int store_npts,
     int store_every_n,
-    int *restrict store_count
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count
 );
 Solutions rk4(
     const char *restrict system,
@@ -68,7 +79,12 @@ Solutions rk4(
     int64 npts,
     int store_npts,
     int store_every_n,
-    int *restrict store_count
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count
 );
 Solutions leapfrog(
     const char *restrict system,
@@ -76,7 +92,12 @@ Solutions leapfrog(
     int64 npts,
     int store_npts,
     int store_every_n,
-    int *restrict store_count
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count
 );
 Solutions rk_embedded(
     int order,
@@ -86,7 +107,12 @@ Solutions rk_embedded(
     double input_abs_tolerance,
     double input_rel_tolerance,
     int store_every_n,
-    int *restrict store_count
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count
 );
 real rk_embedded_initial_dt(
     int objects_count,
@@ -114,7 +140,12 @@ Solutions ias15(
     double tf, 
     double input_tolerance,
     int store_every_n,
-    int *restrict store_count
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count
 );
 void ias15_step(
     int objects_count,
@@ -245,7 +276,8 @@ WIN32DLL_API void initialize_system(
     real **v,
     real **m,
     int *restrict objects_count,
-    real *restrict G
+    real *restrict G,
+    int *restrict custom_sys_flag
 )
 {
     // Conversion factor from km^3 s^-2 to AU^3 d^-2
@@ -792,6 +824,10 @@ WIN32DLL_API void initialize_system(
         (*v)[34] = VEL_VESTA[1] - V_CM[1];
         (*v)[35] = VEL_VESTA[2] - V_CM[2];
     }
+    else
+    {
+        *custom_sys_flag = 1;
+    }
 }
 
 // Find the max absolute value in a 1D array
@@ -931,7 +967,12 @@ WIN32DLL_API Solutions euler(
     int64 npts,
     int store_npts,
     int store_every_n,
-    int *restrict store_count
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count
 )
 {   
     // Initialize system
@@ -940,8 +981,29 @@ WIN32DLL_API Solutions euler(
     real *m = NULL;
     int objects_count;
     real G;
-    initialize_system(system, &x, &v, &m, &objects_count, &G);
+    int custom_sys_flag = 0;
+    initialize_system(system, &x, &v, &m, &objects_count, &G, &custom_sys_flag);
 
+    // Custom system
+    if (custom_sys_flag == 1)
+    {
+        objects_count = custom_sys_objects_count;
+        x = malloc(objects_count * 3 * sizeof(real));
+        v = malloc(objects_count * 3 * sizeof(real));
+        m = malloc(objects_count * sizeof(real));
+
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                x[i * 3 + j] = custom_sys_x[i * 3 + j];
+                v[i * 3 + j] = custom_sys_v[i * 3 + j];
+            }
+            m[i] = custom_sys_m[i];
+        }
+        G = custom_sys_G;
+    }
+    
     // Allocate memory for calculation
     real *temp_x = malloc(objects_count * 3 * sizeof(real));
     real *temp_v = malloc(objects_count * 3 * sizeof(real));
@@ -1055,7 +1117,12 @@ WIN32DLL_API Solutions euler_cromer(
     int64 npts,
     int store_npts,
     int store_every_n,
-    int *restrict store_count
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count
 )
 {   
     // Initialize system
@@ -1064,7 +1131,28 @@ WIN32DLL_API Solutions euler_cromer(
     real *m = NULL;
     int objects_count;
     real G;
-    initialize_system(system, &x, &v, &m, &objects_count, &G);
+    int custom_sys_flag = 0;
+    initialize_system(system, &x, &v, &m, &objects_count, &G, &custom_sys_flag);
+
+    // Custom system
+    if (custom_sys_flag == 1)
+    {
+        objects_count = custom_sys_objects_count;
+        x = malloc(objects_count * 3 * sizeof(real));
+        v = malloc(objects_count * 3 * sizeof(real));
+        m = malloc(objects_count * sizeof(real));
+
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                x[i * 3 + j] = custom_sys_x[i * 3 + j];
+                v[i * 3 + j] = custom_sys_v[i * 3 + j];
+            }
+            m[i] = custom_sys_m[i];
+        }
+        G = custom_sys_G;
+    }
 
     // Allocate memory for calculation
     real *temp_x = malloc(objects_count * 3 * sizeof(real));
@@ -1183,7 +1271,12 @@ WIN32DLL_API Solutions rk4(
     int64 npts,
     int store_npts,
     int store_every_n,
-    int *restrict store_count
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count
 )
 {
     // Initialize system
@@ -1192,7 +1285,28 @@ WIN32DLL_API Solutions rk4(
     real *m = NULL;
     int objects_count;
     real G;
-    initialize_system(system, &x, &v, &m, &objects_count, &G);
+    int custom_sys_flag = 0;
+    initialize_system(system, &x, &v, &m, &objects_count, &G, &custom_sys_flag);
+
+    // Custom system
+    if (custom_sys_flag == 1)
+    {
+        objects_count = custom_sys_objects_count;
+        x = malloc(objects_count * 3 * sizeof(real));
+        v = malloc(objects_count * 3 * sizeof(real));
+        m = malloc(objects_count * sizeof(real));
+
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                x[i * 3 + j] = custom_sys_x[i * 3 + j];
+                v[i * 3 + j] = custom_sys_v[i * 3 + j];
+            }
+            m[i] = custom_sys_m[i];
+        }
+        G = custom_sys_G;
+    }
 
     // Allocate memory for calculation
     real *temp_x = malloc(objects_count * 3 * sizeof(real));
@@ -1363,7 +1477,12 @@ WIN32DLL_API Solutions leapfrog(
     int64 npts,
     int store_npts,
     int store_every_n,
-    int *restrict store_count
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count
 )
 {   
     // Initialize system
@@ -1372,7 +1491,28 @@ WIN32DLL_API Solutions leapfrog(
     real *m = NULL;
     int objects_count;
     real G;
-    initialize_system(system, &x, &v, &m, &objects_count, &G);
+    int custom_sys_flag = 0;
+    initialize_system(system, &x, &v, &m, &objects_count, &G, &custom_sys_flag);
+
+    // Custom system
+    if (custom_sys_flag == 1)
+    {
+        objects_count = custom_sys_objects_count;
+        x = malloc(objects_count * 3 * sizeof(real));
+        v = malloc(objects_count * 3 * sizeof(real));
+        m = malloc(objects_count * sizeof(real));
+
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                x[i * 3 + j] = custom_sys_x[i * 3 + j];
+                v[i * 3 + j] = custom_sys_v[i * 3 + j];
+            }
+            m[i] = custom_sys_m[i];
+        }
+        G = custom_sys_G;
+    }
 
     // Allocate memory for calculation
     real *temp_x = malloc(objects_count * 3 * sizeof(real));
@@ -1503,7 +1643,12 @@ WIN32DLL_API Solutions rk_embedded(
     double input_abs_tolerance,
     double input_rel_tolerance,
     int store_every_n,
-    int *restrict store_count
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count
 )
 {   
     // Initialize system
@@ -1512,7 +1657,29 @@ WIN32DLL_API Solutions rk_embedded(
     real *m = NULL;
     int objects_count;
     real G;
-    initialize_system(system, &x, &v, &m, &objects_count, &G);
+    int custom_sys_flag = 0;
+    initialize_system(system, &x, &v, &m, &objects_count, &G, &custom_sys_flag);
+
+    // Custom system
+    if (custom_sys_flag == 1)
+    {
+        objects_count = custom_sys_objects_count;
+        x = malloc(objects_count * 3 * sizeof(real));
+        v = malloc(objects_count * 3 * sizeof(real));
+        m = malloc(objects_count * sizeof(real));
+
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                x[i * 3 + j] = custom_sys_x[i * 3 + j];
+                v[i * 3 + j] = custom_sys_v[i * 3 + j];
+            }
+            m[i] = custom_sys_m[i];
+        }
+        G = custom_sys_G;
+    }
+    
     real *a = malloc(objects_count * 3 * sizeof(real));
     acceleration(objects_count, x, a, m, G);
 
@@ -2174,7 +2341,12 @@ WIN32DLL_API Solutions ias15(
     double tf, 
     double input_tolerance,
     int store_every_n,
-    int *restrict store_count
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count
 )
 {   
     // Initialize system
@@ -2183,7 +2355,29 @@ WIN32DLL_API Solutions ias15(
     real *m = NULL;
     int objects_count;
     real G;
-    initialize_system(system, &x, &v, &m, &objects_count, &G);
+    int custom_sys_flag = 0;
+    initialize_system(system, &x, &v, &m, &objects_count, &G, &custom_sys_flag);
+
+    // Custom system
+    if (custom_sys_flag == 1)
+    {
+        objects_count = custom_sys_objects_count;
+        x = malloc(objects_count * 3 * sizeof(real));
+        v = malloc(objects_count * 3 * sizeof(real));
+        m = malloc(objects_count * sizeof(real));
+
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                x[i * 3 + j] = custom_sys_x[i * 3 + j];
+                v[i * 3 + j] = custom_sys_v[i * 3 + j];
+            }
+            m[i] = custom_sys_m[i];
+        }
+        G = custom_sys_G;
+    }
+
     real *a = malloc(objects_count * 3 * sizeof(real));
     acceleration(objects_count, x, a, m, G);
 
