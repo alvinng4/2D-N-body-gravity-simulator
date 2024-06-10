@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <stdio.h> // For testing
+#include <stdio.h>
 
 #ifdef WIN32DLL_EXPORTS
     #define WIN32DLL_API __declspec(dllexport)
@@ -11,6 +11,14 @@
 #endif
 
 #define NPTS 50000
+
+// Uncomment if real is long double
+// 
+// #define pow(x, y) powl(x, y)
+// #define fmax(x, y) fmaxl(x, y)
+// #define fmin(x, y) fminl(x, y)
+// #define fabs(x) fabsl(x)
+// #define sqrt(x) sqrtl(x)
 
 typedef int64_t int64;
 typedef double real;

@@ -148,10 +148,11 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                     ctypes.c_int(custom_sys_objects_count),
                 )
 
+        # Close the thread forcefully if not closed
         if store_count.value < (store_npts - 1):
             store_count.value = (
                 store_npts - 1
-            )  # Close the thread forcefully if not closed
+            )
         progress_bar_thread.join()
 
         print()

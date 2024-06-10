@@ -116,7 +116,8 @@ class RK_EMBEDDED:
             ctypes.c_int(custom_sys_objects_count),
         )
 
-        t.value = tf  # Close the thread forcefully if not closed
+        # Close the thread forcefully if not closed
+        t.value = tf
         progress_bar_thread.join()
 
         print()
