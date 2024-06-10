@@ -127,7 +127,11 @@ class GravitySimulator:
             # Restart program once the loop is finished.
             while True:
                 print("\nGravity simulator")
-                print("Exit the program anytime by hitting Ctrl + C\n")
+                if self.is_c_lib:
+                    print(
+                        "Warning: for C library, hitting Ctrl + C will quit AFTER the simulation is done"
+                    )
+                print()
                 self._user_interface_before_simulation()
                 if self.is_simulate == True:
                     self.computed_energy = False
@@ -169,9 +173,10 @@ class GravitySimulator:
             "Select an action:\n"
             + "1. Launch simulation\n"
             + "2. Read simulation data\n"
+            + "3. Exit\n"
             + "Enter action (Number): "
         )
-        action = get_int(msg, larger_than=0, smaller_than=3)
+        action = get_int(msg, larger_than=0, smaller_than=4)
         print()
 
         match action:
@@ -179,6 +184,8 @@ class GravitySimulator:
                 self.is_simulate = True
             case 2:
                 self.is_simulate = False
+            case 3:
+                sys.exit(0)
 
     def _user_interface_after_simulation(self):
         msg = (
@@ -292,7 +299,17 @@ class GravitySimulator:
                 print("")
                 break
 
-        self.simulator.initialize_system(self)
+        self.simulator.store_every_n = grav_plot.store_every_n
+        self.simulator.system = grav_plot.system
+        self.simulator.integrator = grav_plot.integrator
+        self.simulator.tf = grav_plot.tf
+        self.simulator.unit = grav_plot.tf_unit
+        self.simulator.tolerance = grav_plot.tolerance
+        self.simulator.dt = grav_plot.dt
+
+        if not self.is_c_lib:
+            self.simulator.initialize_system_numpy(self)
+
         self.simulator.simulation()
 
     def _get_user_simulation_input(self):
@@ -730,7 +747,7 @@ class GravitySimulator:
         # Read data
         start = timeit.default_timer()
         progress_bar = Progress_bar()
-        
+
         try:
             with open(read_file_path, "r") as file:
                 reader = csv.reader(file)

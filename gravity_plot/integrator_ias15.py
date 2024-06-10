@@ -7,150 +7,117 @@ Simulations Applied to Exoplanetary Systems, Chapter 8
 """
 
 import ctypes
+import threading
 
 import numpy as np
 
 from common import acceleration
+from progress_bar import progress_bar_c_lib_adaptive_integrator
 from progress_bar import Progress_bar_with_data_size
 
 
 class IAS15:
-    def __init__(self, simulator, objects_count, x, v, m, G, tf, tolerance, is_c_lib):
+    def __init__(self, simulator):
         self.store_every_n = simulator.store_every_n
 
-        if is_c_lib == True:
+        if simulator.is_c_lib == True:
             self.c_lib = simulator.c_lib
-            self.sol_state, self.sol_time, self.sol_dt = self.simulation_c_lib(
-                objects_count,
-                x,
-                v,
-                m,
-                G,
-                tf,
-                tolerance,
-            )
-        elif is_c_lib == False:
-            self.sol_state, self.sol_time, self.sol_dt = self.simulation_numpy(
-                objects_count,
-                x,
-                v,
-                m,
-                G,
-                tf,
-                tolerance,
+            (
+                self.sol_state,
+                self.sol_time,
+                self.sol_dt,
+                self.m,
+                self.G,
+                self.objects_count,
+            ) = self.simulation_c_lib(
+                simulator.system.encode("utf-8"),
+                simulator.tf,
+                simulator.tolerance,
             )
 
-    def simulation_c_lib(self, objects_count, x, v, m, G, tf, tolerance):
+        elif simulator.is_c_lib == False:
+            self.sol_state, self.sol_time, self.sol_dt = self.simulation_numpy(
+                simulator.objects_count,
+                simulator.x,
+                simulator.v,
+                simulator.m,
+                simulator.G,
+                simulator.tf,
+                simulator.tolerance,
+            )
+
+    def simulation_c_lib(self, system_name, tf, tolerance):
         # Recommended tolerance: 1e-9
 
-        # Safety factors for step-size control
-        safety_fac = 0.25
+        class Solutions(ctypes.Structure):
+            _fields_ = [
+                ("sol_state", ctypes.POINTER(ctypes.c_double)),
+                ("sol_time", ctypes.POINTER(ctypes.c_double)),
+                ("sol_dt", ctypes.POINTER(ctypes.c_double)),
+                ("m", ctypes.POINTER(ctypes.c_double)),
+                ("G", ctypes.c_double),
+                ("objects_count", ctypes.c_int),
+            ]
 
-        # For fixed step integration, choose exponent = 0
-        exponent = 1.0 / 7.0
+        self.c_lib.ias15.restype = Solutions
 
-        # Allocate for dense output:
-        npts = 50000
-        self.sol_state = np.zeros((npts, objects_count * 2 * 3))
-        self.sol_time = np.zeros(npts)
-        self.sol_dt = np.zeros(npts)
-
-        # Initial values
-        self.sol_state[0] = np.concatenate(
-            (np.reshape(x, objects_count * 3), np.reshape(v, objects_count * 3))
-        )
         t = ctypes.c_double(0.0)
-        self.sol_time[0] = 0.0
-        self.sol_dt[0] = 0.0
+        store_count = ctypes.c_int(0)
 
-        # Tolerance of predictor-corrector algorithm
-        tolerance_pc = 1e-16
+        progress_bar_thread = threading.Thread(
+            target=progress_bar_c_lib_adaptive_integrator, args=(tf, t, store_count)
+        )
+        progress_bar_thread.start()
 
-        # Initializing auxiliary variables
-        nodes, dim_nodes = self.ias15_radau_spacing()
-        aux_c = self.ias15_aux_c().reshape((dim_nodes - 1) * (dim_nodes - 1))
-        aux_r = self.ias15_aux_r().reshape(dim_nodes * dim_nodes)
-
-        aux_b0 = np.zeros(((dim_nodes - 1) * objects_count * 3))
-        aux_b = np.zeros(((dim_nodes - 1) * objects_count * 3))
-        aux_g = np.zeros(((dim_nodes - 1) * objects_count * 3))
-        aux_e = np.zeros(((dim_nodes - 1) * objects_count * 3))
-
-        a = acceleration(objects_count, x, m, G)
-
-        dt = ctypes.c_double(
-            self.ias15_initial_time_step(objects_count, 15, x, v, a, m, G)
+        # parameters are double no matter what "real" is defined
+        solutions = self.c_lib.ias15(
+            ctypes.c_char_p(system_name),
+            ctypes.byref(t),
+            ctypes.c_double(tf),
+            ctypes.c_double(tolerance),
+            ctypes.c_int(self.store_every_n),
+            ctypes.byref(store_count),
         )
 
-        ias15_refine_flag = ctypes.c_int(0)
+        t.value = tf  # Close the thread forcefully if not closed
+        progress_bar_thread.join()
 
-        # Arrays for compensated summation
-        x_err_comp_sum = np.zeros((objects_count, 3))
-        v_err_comp_sum = np.zeros((objects_count, 3))
-
-        count = ctypes.c_int64(0)
-        store_count = ctypes.c_int(0)
-        progress_bar = Progress_bar_with_data_size()
-        with progress_bar:
-            task = progress_bar.add_task("", total=tf, store_count=store_count.value+1)
-            while True:
-                ias15_flag = self.c_lib.ias15(
-                    ctypes.c_int(objects_count),
-                    ctypes.c_int(dim_nodes),
-                    nodes.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    aux_c.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    aux_r.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    aux_b0.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    aux_b.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    aux_g.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    aux_e.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    ctypes.c_double(G),
-                    ctypes.byref(t),
-                    ctypes.byref(dt),
-                    ctypes.c_double(tf),
-                    ctypes.c_int(self.store_every_n),
-                    ctypes.byref(store_count),
-                    ctypes.byref(count),
-                    ctypes.c_double(tolerance),
-                    ctypes.c_double(tolerance_pc),
-                    self.sol_state.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    ctypes.c_int(len(self.sol_time)),
-                    self.sol_time.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    self.sol_dt.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    ctypes.c_double(safety_fac),
-                    ctypes.c_double(exponent),
-                    ctypes.byref(ias15_refine_flag),
-                    x_err_comp_sum.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    v_err_comp_sum.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                )
-
-                # Update progress bar
-                progress_bar.update(task, completed=t.value, store_count=store_count.value+1)
-                if ias15_flag == 0:
-                    pass
-
-                # Detect end of integration
-                elif ias15_flag == 2:
-                    break
-
-                # Check buffer size and extend if needed :
-                elif ias15_flag == 1:
-                    self.sol_state = np.concatenate(
-                        (self.sol_state, np.zeros((npts, objects_count * 2 * 3)))
-                    )
-                    self.sol_time = np.concatenate((self.sol_time, np.zeros(npts)))
-                    self.sol_dt = np.concatenate((self.sol_dt, np.zeros(npts)))
-
-            progress_bar.update(task, completed=tf, store_count=store_count.value+1)
-            return (
-                self.sol_state[0 : store_count.value + 1],
-                self.sol_time[0 : store_count.value + 1],
-                self.sol_dt[0 : store_count.value + 1],
+        print()
+        print("Converting C array to numpy array...")
+        return_sol_state = (
+            np.ctypeslib.as_array(
+                solutions.sol_state,
+                shape=(store_count.value + 1, solutions.objects_count * 6),
             )
+            .copy()
+            .reshape(store_count.value + 1, solutions.objects_count * 6)
+        )
+        # print("test1")
+        return_sol_time = np.ctypeslib.as_array(
+            solutions.sol_time, shape=(store_count.value + 1,)
+        ).copy()
+        # print("test2")
+        return_sol_dt = np.ctypeslib.as_array(
+            solutions.sol_dt, shape=(store_count.value + 1,)
+        ).copy()
+        # print("test3")
+        return_m = np.ctypeslib.as_array(solutions.m, shape=(store_count.value,)).copy()
+
+        print("Freeing C memory...")
+        self.c_lib.free_memory_real(solutions.sol_state)
+        self.c_lib.free_memory_real(solutions.sol_time)
+        self.c_lib.free_memory_real(solutions.sol_dt)
+        self.c_lib.free_memory_real(solutions.m)
+        print()
+
+        return (
+            return_sol_state,
+            return_sol_time,
+            return_sol_dt,
+            return_m,
+            solutions.G,
+            solutions.objects_count,
+        )
 
     def simulation_numpy(self, objects_count, x, v, m, G, tf, tolerance):
         # Recommended tolerance: 1e-9
@@ -194,14 +161,14 @@ class IAS15:
 
         a = acceleration(objects_count, x, m, G)
 
-        dt = self.ias15_initial_time_step(objects_count, 15, x, v, a, m, G)
+        dt = self.ias15_initial_dt(objects_count, 15, x, v, a, m, G)
 
         ias15_refine_flag = 0
         count = 0
         store_count = 0
         progress_bar = Progress_bar_with_data_size()
         with progress_bar:
-            task = progress_bar.add_task("", total=tf, store_count=store_count+1)
+            task = progress_bar.add_task("", total=tf, store_count=store_count + 1)
             while True:
                 (
                     x,
@@ -245,7 +212,7 @@ class IAS15:
                 )
 
                 # Update step
-                progress_bar.update(task, completed=t, store_count=store_count+1)
+                progress_bar.update(task, completed=t, store_count=store_count + 1)
                 count += 1
 
                 # Store step
@@ -282,7 +249,7 @@ class IAS15:
                     sol_time = np.concatenate((sol_time, np.zeros(npts)))
                     sol_dt = np.concatenate((sol_dt, np.zeros(npts)))
 
-            progress_bar.update(task, completed=tf, store_count=store_count+1)
+            progress_bar.update(task, completed=tf, store_count=store_count + 1)
             return (
                 sol_state[0 : store_count + 1],
                 sol_time[0 : store_count + 1],
@@ -548,7 +515,7 @@ class IAS15:
         return v, v_err_comp_sum
 
     @staticmethod
-    def ias15_initial_time_step(
+    def ias15_initial_dt(
         objects_count: int,
         power: int,
         x,
@@ -584,7 +551,7 @@ class IAS15:
     @staticmethod
     def ias15_radau_spacing():
         """
-        Return the the nodes and its dimension for IAS15
+        Return the radau spacing nodes for IAS15
 
         :rtype: numpy.array, int
         """

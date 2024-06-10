@@ -7,29 +7,20 @@ Simulations Applied to Exoplanetary Systems, Chapter 6
 """
 
 import ctypes
+import threading
 
 import numpy as np
 
 from common import acceleration
+from progress_bar import progress_bar_c_lib_adaptive_integrator
 from progress_bar import Progress_bar_with_data_size
 
 
 class RK_EMBEDDED:
-    def __init__(
-        self,
-        simulator,
-        integrator,
-        objects_count,
-        x,
-        v,
-        m,
-        G,
-        tf,
-        abs_tolerance,
-        rel_tolerance,
-        is_c_lib,
-    ):
-        match integrator:
+    def __init__(self, simulator):
+        self.store_every_n = simulator.store_every_n
+
+        match simulator.integrator:
             case "rkf45":
                 order = 45
             case "dopri":
@@ -41,127 +32,121 @@ class RK_EMBEDDED:
             case _:
                 raise ValueError("Invalid integrator!")
 
+        if simulator.is_c_lib:
+            self.c_lib = simulator.c_lib
+            (
+                self.sol_state,
+                self.sol_time,
+                self.sol_dt,
+                self.m,
+                self.G,
+                self.objects_count,
+            ) = self.simulation_c_lib(
+                order,
+                simulator.system.encode("utf-8"),
+                simulator.tf,
+                simulator.tolerance,
+                simulator.tolerance,
+            )
+        else:
+            self.simulation_numpy(
+                order,
+                simulator.objects_count,
+                simulator.x,
+                simulator.v,
+                simulator.m,
+                simulator.G,
+                simulator.tf,
+                simulator.tolerance,
+                simulator.tolerance,
+            )
+
+    def simulation_c_lib(self, order, system_name, tf, abs_tolerance, rel_tolerance):
+        class Solutions(ctypes.Structure):
+            _fields_ = [
+                ("sol_state", ctypes.POINTER(ctypes.c_double)),
+                ("sol_time", ctypes.POINTER(ctypes.c_double)),
+                ("sol_dt", ctypes.POINTER(ctypes.c_double)),
+                ("m", ctypes.POINTER(ctypes.c_double)),
+                ("G", ctypes.c_double),
+                ("objects_count", ctypes.c_int),
+            ]
+
+        self.c_lib.rk_embedded.restype = Solutions
+
+        t = ctypes.c_double(0.0)
+        store_count = ctypes.c_int(0)
+
+        progress_bar_thread = threading.Thread(
+            target=progress_bar_c_lib_adaptive_integrator, args=(tf, t, store_count)
+        )
+        progress_bar_thread.start()
+
+        # parameters are double no matter what "real" is defined
+        solutions = self.c_lib.rk_embedded(
+            ctypes.c_int(order),
+            system_name,
+            ctypes.byref(t),
+            ctypes.c_double(tf),
+            ctypes.c_double(abs_tolerance),
+            ctypes.c_double(rel_tolerance),
+            ctypes.c_int(self.store_every_n),
+            ctypes.byref(store_count),
+        )
+
+        t.value = tf  # Close the thread forcefully if not closed
+        progress_bar_thread.join()
+
+        print()
+        print("Converting C array to numpy array...")
+        return_sol_state = (
+            np.ctypeslib.as_array(
+                solutions.sol_state,
+                shape=(store_count.value + 1, solutions.objects_count * 6),
+            )
+            .copy()
+            .reshape(store_count.value + 1, solutions.objects_count * 6)
+        )
+        # print("test1")
+        return_sol_time = np.ctypeslib.as_array(
+            solutions.sol_time, shape=(store_count.value + 1,)
+        ).copy()
+        # print("test2")
+        return_sol_dt = np.ctypeslib.as_array(
+            solutions.sol_dt, shape=(store_count.value + 1,)
+        ).copy()
+        # print("test3")
+        return_m = np.ctypeslib.as_array(solutions.m, shape=(store_count.value,)).copy()
+
+        print("Freeing C memory...")
+        self.c_lib.free_memory_real(solutions.sol_state)
+        self.c_lib.free_memory_real(solutions.sol_time)
+        self.c_lib.free_memory_real(solutions.sol_dt)
+        self.c_lib.free_memory_real(solutions.m)
+        print()
+
+        return (
+            return_sol_state,
+            return_sol_time,
+            return_sol_dt,
+            return_m,
+            solutions.G,
+            solutions.objects_count,
+        )
+
+    def simulation_numpy(
+        self, order, objects_count, x, v, m, G, tf, abs_tolerance, rel_tolerance
+    ):
         (
             self.power,
             self.power_test,
             self.coeff,
             self.weights,
             self.weights_test,
-        ) = self.rk_embedded_butcher_tableaus(order)
+        ) = self.rk_embedded_butcher_tableaus_numpy(order)
 
-        self.store_every_n = simulator.store_every_n
-
-        if is_c_lib == True:
-            self.c_lib = simulator.c_lib
-            self.simulation_c_lib(
-                objects_count, x, v, m, G, tf, abs_tolerance, rel_tolerance
-            )
-        elif is_c_lib == False:
-            self.simulation_numpy(
-                objects_count, x, v, m, G, tf, abs_tolerance, rel_tolerance
-            )
-
-    def simulation_c_lib(
-        self, objects_count, x, v, m, G, tf, abs_tolerance, rel_tolerance
-    ):
-        progress_bar = Progress_bar_with_data_size()
-        with progress_bar:
-            task = progress_bar.add_task("", total=tf, store_count=1)
-            a = acceleration(objects_count, x, m, G)
-            dt = self.rk_embedded_initial_time_step(
-                objects_count,
-                self.power,
-                x,
-                v,
-                a,
-                m,
-                G,
-                abs_tolerance,
-                rel_tolerance,
-            )
-            # Allocate for dense output:
-            npts = 100000
-            self.sol_state = np.zeros((npts, objects_count * 2 * 3))
-            self.sol_time = np.zeros(npts)
-            self.sol_dt = np.zeros(npts)
-
-            # Initial values
-            self.sol_state[0] = np.concatenate(
-                (
-                    np.reshape(x, objects_count * 3),
-                    np.reshape(v, objects_count * 3),
-                )
-            )
-            self.sol_time[0] = 0.0
-            self.sol_dt[0] = 0.0
-
-            # Arrays for compensated summation
-            x_err_comp_sum = np.zeros((objects_count, 3))
-            v_err_comp_sum = np.zeros((objects_count, 3))
-
-            t = ctypes.c_double(0.0)
-            dt = ctypes.c_double(dt)
-            count = ctypes.c_int64(0)
-            store_count = ctypes.c_int(0)
-            while t.value <= tf:
-                rk_flag = self.c_lib.rk_embedded(
-                    ctypes.c_int(objects_count),
-                    x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    ctypes.byref(t),
-                    ctypes.byref(dt),
-                    ctypes.c_double(tf),
-                    ctypes.c_int(self.store_every_n),
-                    ctypes.byref(store_count),
-                    ctypes.byref(count),
-                    m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    ctypes.c_double(G),
-                    ctypes.c_int(self.power),
-                    ctypes.c_int(self.power_test),
-                    ctypes.c_int(np.shape(self.coeff)[-1]),
-                    self.coeff.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    ctypes.c_int(len(self.weights)),
-                    self.weights.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    self.weights_test.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    ctypes.c_double(abs_tolerance),
-                    ctypes.c_double(rel_tolerance),
-                    self.sol_state.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    ctypes.c_int(len(self.sol_time)),
-                    self.sol_time.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    self.sol_dt.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    x_err_comp_sum.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    v_err_comp_sum.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                )
-
-                # Update percentage bar
-                progress_bar.update(task, completed=t.value, store_count=store_count.value+1)
-                if rk_flag == 0:
-                    pass
-
-                # Extend buffer size if needed
-                elif rk_flag == 1:
-                    self.sol_state = np.concatenate(
-                        (
-                            self.sol_state,
-                            np.zeros((npts, objects_count * 2 * 3)),
-                        )
-                    )
-                    self.sol_time = np.concatenate((self.sol_time, np.zeros(npts)))
-                    self.sol_dt = np.concatenate((self.sol_dt, np.zeros(npts)))
-
-                # End simulation as t = tf
-                elif rk_flag == 2:
-                    progress_bar.update(task, completed=tf, store_count=store_count.value+1)
-                    self.sol_state = self.sol_state[0 : store_count.value + 1]
-                    self.sol_time = self.sol_time[0 : store_count.value + 1]
-                    self.sol_dt = self.sol_dt[0 : store_count.value + 1]
-                    break
-
-    def simulation_numpy(
-        self, objects_count, x, v, m, G, tf, abs_tolerance, rel_tolerance
-    ):
         a = acceleration(objects_count, x, m, G)
-        initial_dt = self.rk_embedded_initial_time_step(
+        initial_dt = self.rk_embedded_initial_dt_numpy(
             objects_count,
             self.power,
             x,
@@ -257,7 +242,7 @@ class RK_EMBEDDED:
         # Launch integration:
         count = 0
         store_count = 0
-        task = progress_bar.add_task("", total=tf, store_count=store_count+1)
+        task = progress_bar.add_task("", total=tf, store_count=store_count + 1)
         while True:
             # Calculate xk and vk
             vk[0] = acceleration(objects_count, x, m, G)
@@ -345,7 +330,7 @@ class RK_EMBEDDED:
                     sol_time[store_count] = t
                     sol_dt[store_count] = dt
 
-                progress_bar.update(task, completed=t, store_count=store_count+1)
+                progress_bar.update(task, completed=t, store_count=store_count + 1)
 
                 # Check buffer size and extend if needed :
                 if (store_count + 1) == len(sol_state):
@@ -372,7 +357,7 @@ class RK_EMBEDDED:
                 dt = tf - t
 
             if t >= tf:
-                progress_bar.update(task, completed=tf, store_count=store_count+1)
+                progress_bar.update(task, completed=tf, store_count=store_count + 1)
                 return (
                     sol_state[0 : store_count + 1],
                     sol_time[0 : store_count + 1],
@@ -380,7 +365,7 @@ class RK_EMBEDDED:
                 )
 
     @staticmethod
-    def rk_embedded_initial_time_step(
+    def rk_embedded_initial_dt_numpy(
         objects_count: int,
         power: int,
         x,
@@ -431,7 +416,7 @@ class RK_EMBEDDED:
         return dt * 1e-2
 
     @staticmethod
-    def rk_embedded_butcher_tableaus(order):
+    def rk_embedded_butcher_tableaus_numpy(order):
         """
         Butcher tableaus for embedded rk
 
