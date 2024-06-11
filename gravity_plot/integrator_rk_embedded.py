@@ -120,8 +120,7 @@ class RK_EMBEDDED:
         t.value = tf
         progress_bar_thread.join()
 
-        print()
-        print("Converting C array to numpy array...")
+        # Convert C arrays to numpy arrays
         return_sol_state = (
             np.ctypeslib.as_array(
                 solutions.sol_state,
@@ -137,14 +136,15 @@ class RK_EMBEDDED:
         return_sol_dt = np.ctypeslib.as_array(
             solutions.sol_dt, shape=(store_count.value + 1,)
         ).copy()
-        return_m = np.ctypeslib.as_array(solutions.m, shape=(solutions.objects_count,)).copy()
+        return_m = np.ctypeslib.as_array(
+            solutions.m, shape=(solutions.objects_count,)
+        ).copy()
 
-        print("Freeing C memory...")
+        # Free memory
         self.c_lib.free_memory_real(solutions.sol_state)
         self.c_lib.free_memory_real(solutions.sol_time)
         self.c_lib.free_memory_real(solutions.sol_dt)
         self.c_lib.free_memory_real(solutions.m)
-        print()
 
         return (
             return_sol_state,

@@ -470,37 +470,22 @@ class Simulator:
 
         match self.integrator:
             case "euler" | "euler_cromer" | "rk4" | "leapfrog":
-                fixed_step_size_integrator = FIXED_STEP_SIZE_INTEGRATOR(self)
-                self.sol_state = fixed_step_size_integrator.sol_state
-                self.sol_time = fixed_step_size_integrator.sol_time
-                self.sol_dt = fixed_step_size_integrator.sol_dt
-
-                if self.is_c_lib:
-                    self.m = fixed_step_size_integrator.m
-                    self.G = fixed_step_size_integrator.G
-                    self.objects_count = fixed_step_size_integrator.objects_count
+                integrator = FIXED_STEP_SIZE_INTEGRATOR(self)
 
             case "rkf45" | "dopri" | "dverk" | "rkf78":
-                rk_embedded = RK_EMBEDDED(self)
-                self.sol_state = rk_embedded.sol_state
-                self.sol_time = rk_embedded.sol_time
-                self.sol_dt = rk_embedded.sol_dt
-
-                if self.is_c_lib:
-                    self.m = rk_embedded.m
-                    self.G = rk_embedded.G
-                    self.objects_count = rk_embedded.objects_count
+                integrator = RK_EMBEDDED(self)
 
             case "ias15":
-                ias15 = IAS15(self)
-                self.sol_state = ias15.sol_state
-                self.sol_time = ias15.sol_time
-                self.sol_dt = ias15.sol_dt
+                integrator = IAS15(self)
 
-                if self.is_c_lib:
-                    self.m = ias15.m
-                    self.G = ias15.G
-                    self.objects_count = ias15.objects_count
+        self.sol_state = integrator.sol_state
+        self.sol_time = integrator.sol_time
+        self.sol_dt = integrator.sol_dt
+
+        if self.is_c_lib:
+            self.m = integrator.m
+            self.G = integrator.G
+            self.objects_count = integrator.objects_count
 
         stop = timeit.default_timer()
         print(f"Run time: {stop - start:.3f} s")

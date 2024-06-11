@@ -88,7 +88,7 @@ class FIXED_STEP_SIZE_INTEGRATOR:
             target=progress_bar_c_lib_fixed_integrator, args=(store_npts, store_count)
         )
         progress_bar_thread.start()
-        
+
         # parameters are double no matter what "real" is defined
         match integrator:
             case "euler":
@@ -150,13 +150,10 @@ class FIXED_STEP_SIZE_INTEGRATOR:
 
         # Close the thread forcefully if not closed
         if store_count.value < (store_npts - 1):
-            store_count.value = (
-                store_npts - 1
-            )
+            store_count.value = store_npts - 1
         progress_bar_thread.join()
 
-        print()
-        print("Converting C array to numpy array...")
+        # Convert C arrays to numpy arrays
         return_sol_state = (
             np.ctypeslib.as_array(
                 solutions.sol_state,
@@ -172,14 +169,15 @@ class FIXED_STEP_SIZE_INTEGRATOR:
         return_sol_dt = np.ctypeslib.as_array(
             solutions.sol_dt, shape=(store_npts,)
         ).copy()
-        return_m = np.ctypeslib.as_array(solutions.m, shape=(solutions.objects_count,)).copy()
+        return_m = np.ctypeslib.as_array(
+            solutions.m, shape=(solutions.objects_count,)
+        ).copy()
 
-        print("Freeing C memory...")
+        # Free memory
         self.c_lib.free_memory_real(solutions.sol_state)
         self.c_lib.free_memory_real(solutions.sol_time)
         self.c_lib.free_memory_real(solutions.sol_dt)
         self.c_lib.free_memory_real(solutions.m)
-        print()
 
         return (
             return_sol_state,
