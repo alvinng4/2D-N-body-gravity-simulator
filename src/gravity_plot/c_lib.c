@@ -479,29 +479,16 @@ WIN32DLL_API void initialize_system(
             V_CM[i] = 1 / M * ((*m)[0] * VEL_SUN[i] + (*m)[1] * VEL_EARTH[i] + (*m)[2] * VEL_MOON[i]);
         }
 
-        (*x)[0] = POS_SUN[0] - R_CM[0];
-        (*x)[1] = POS_SUN[1] - R_CM[1];
-        (*x)[2] = POS_SUN[2] - R_CM[2];
+        for (int i = 0; i < 3; i++)
+        {
+            (*x)[0 * 3 + i] = POS_SUN[i] - R_CM[i];
+            (*x)[1 * 3 + i] = POS_EARTH[i] - R_CM[i];
+            (*x)[2 * 3 + i] = POS_MOON[i] - R_CM[i];
 
-        (*x)[3] = POS_EARTH[0] - R_CM[0];
-        (*x)[4] = POS_EARTH[1] - R_CM[1];
-        (*x)[5] = POS_EARTH[2] - R_CM[2];
-
-        (*x)[6] = POS_MOON[0] - R_CM[0];
-        (*x)[7] = POS_MOON[1] - R_CM[1];
-        (*x)[8] = POS_MOON[2] - R_CM[2];
-
-        (*v)[0] = VEL_SUN[0] - V_CM[0];
-        (*v)[1] = VEL_SUN[1] - V_CM[1];
-        (*v)[2] = VEL_SUN[2] - V_CM[2];
-
-        (*v)[3] = VEL_EARTH[0] - V_CM[0];
-        (*v)[4] = VEL_EARTH[1] - V_CM[1];
-        (*v)[5] = VEL_EARTH[2] - V_CM[2];
-
-        (*v)[6] = VEL_MOON[0] - V_CM[0];
-        (*v)[7] = VEL_MOON[1] - V_CM[1];
-        (*v)[8] = VEL_MOON[2] - V_CM[2];
+            (*v)[0 * 3 + i] = VEL_SUN[i] - V_CM[i];
+            (*v)[1 * 3 + i] = VEL_EARTH[i] - V_CM[i];
+            (*v)[2 * 3 + i] = VEL_MOON[i] - V_CM[i];
+        }
     }
     else if (strcmp(system, "figure-8") == 0) 
     {
@@ -612,77 +599,28 @@ WIN32DLL_API void initialize_system(
             );
         }
 
-        (*x)[0] = POS_SUN[0] - R_CM[0];
-        (*x)[1] = POS_SUN[1] - R_CM[1];
-        (*x)[2] = POS_SUN[2] - R_CM[2];
+        for (int i = 0; i < 3; i++)
+        {
+            (*x)[0 * 3 + i] = POS_SUN[i] - R_CM[i];
+            (*x)[1 * 3 + i] = POS_MERCURY[i] - R_CM[i];
+            (*x)[2 * 3 + i] = POS_VENUS[i] - R_CM[i];
+            (*x)[3 * 3 + i] = POS_EARTH[i] - R_CM[i];
+            (*x)[4 * 3 + i] = POS_MARS[i] - R_CM[i];
+            (*x)[5 * 3 + i] = POS_JUPITER[i] - R_CM[i];
+            (*x)[6 * 3 + i] = POS_SATURN[i] - R_CM[i];
+            (*x)[7 * 3 + i] = POS_URANUS[i] - R_CM[i];
+            (*x)[8 * 3 + i] = POS_NEPTUNE[i] - R_CM[i];
 
-        (*x)[3] = POS_MERCURY[0] - R_CM[0];
-        (*x)[4] = POS_MERCURY[1] - R_CM[1];
-        (*x)[5] = POS_MERCURY[2] - R_CM[2];
-
-        (*x)[6] = POS_VENUS[0] - R_CM[0];
-        (*x)[7] = POS_VENUS[1] - R_CM[1];
-        (*x)[8] = POS_VENUS[2] - R_CM[2];
-
-        (*x)[9] = POS_EARTH[0] - R_CM[0];
-        (*x)[10] = POS_EARTH[1] - R_CM[1];
-        (*x)[11] = POS_EARTH[2] - R_CM[2];
-
-        (*x)[12] = POS_MARS[0] - R_CM[0];
-        (*x)[13] = POS_MARS[1] - R_CM[1];
-        (*x)[14] = POS_MARS[2] - R_CM[2];
-
-        (*x)[15] = POS_JUPITER[0] - R_CM[0];
-        (*x)[16] = POS_JUPITER[1] - R_CM[1];
-        (*x)[17] = POS_JUPITER[2] - R_CM[2];
-
-        (*x)[18] = POS_SATURN[0] - R_CM[0];
-        (*x)[19] = POS_SATURN[1] - R_CM[1];
-        (*x)[20] = POS_SATURN[2] - R_CM[2];
-
-        (*x)[21] = POS_URANUS[0] - R_CM[0];
-        (*x)[22] = POS_URANUS[1] - R_CM[1];
-        (*x)[23] = POS_URANUS[2] - R_CM[2];
-
-        (*x)[24] = POS_NEPTUNE[0] - R_CM[0];
-        (*x)[25] = POS_NEPTUNE[1] - R_CM[1];
-        (*x)[26] = POS_NEPTUNE[2] - R_CM[2];
-
-        (*v)[0] = VEL_SUN[0] - V_CM[0];
-        (*v)[1] = VEL_SUN[1] - V_CM[1];
-        (*v)[2] = VEL_SUN[2] - V_CM[2];
-
-        (*v)[3] = VEL_MERCURY[0] - V_CM[0];
-        (*v)[4] = VEL_MERCURY[1] - V_CM[1];
-        (*v)[5] = VEL_MERCURY[2] - V_CM[2];
-
-        (*v)[6] = VEL_VENUS[0] - V_CM[0];
-        (*v)[7] = VEL_VENUS[1] - V_CM[1];
-        (*v)[8] = VEL_VENUS[2] - V_CM[2];
-
-        (*v)[9] = VEL_EARTH[0] - V_CM[0];
-        (*v)[10] = VEL_EARTH[1] - V_CM[1];
-        (*v)[11] = VEL_EARTH[2] - V_CM[2];
-
-        (*v)[12] = VEL_MARS[0] - V_CM[0];
-        (*v)[13] = VEL_MARS[1] - V_CM[1];
-        (*v)[14] = VEL_MARS[2] - V_CM[2];
-
-        (*v)[15] = VEL_JUPITER[0] - V_CM[0];
-        (*v)[16] = VEL_JUPITER[1] - V_CM[1];
-        (*v)[17] = VEL_JUPITER[2] - V_CM[2];
-
-        (*v)[18] = VEL_SATURN[0] - V_CM[0];
-        (*v)[19] = VEL_SATURN[1] - V_CM[1];
-        (*v)[20] = VEL_SATURN[2] - V_CM[2];
-
-        (*v)[21] = VEL_URANUS[0] - V_CM[0];
-        (*v)[22] = VEL_URANUS[1] - V_CM[1];
-        (*v)[23] = VEL_URANUS[2] - V_CM[2];
-
-        (*v)[24] = VEL_NEPTUNE[0] - V_CM[0];
-        (*v)[25] = VEL_NEPTUNE[1] - V_CM[1];
-        (*v)[26] = VEL_NEPTUNE[2] - V_CM[2];
+            (*v)[0 * 3 + i] = VEL_SUN[i] - V_CM[i];
+            (*v)[1 * 3 + i] = VEL_MERCURY[i] - V_CM[i];
+            (*v)[2 * 3 + i] = VEL_VENUS[i] - V_CM[i];
+            (*v)[3 * 3 + i] = VEL_EARTH[i] - V_CM[i];
+            (*v)[4 * 3 + i] = VEL_MARS[i] - V_CM[i];
+            (*v)[5 * 3 + i] = VEL_JUPITER[i] - V_CM[i];
+            (*v)[6 * 3 + i] = VEL_SATURN[i] - V_CM[i];
+            (*v)[7 * 3 + i] = VEL_URANUS[i] - V_CM[i];
+            (*v)[8 * 3 + i] = VEL_NEPTUNE[i] - V_CM[i];
+        }
     }
     else if (strcmp(system, "solar_system_plus") == 0) 
     {
@@ -728,101 +666,34 @@ WIN32DLL_API void initialize_system(
             );
         }
 
-        (*x)[0] = POS_SUN[0] - R_CM[0];
-        (*x)[1] = POS_SUN[1] - R_CM[1];
-        (*x)[2] = POS_SUN[2] - R_CM[2];
+        for (int i = 0; i < 3; i++)
+        {
+            (*x)[0 * 3 + i] = POS_SUN[i] - R_CM[i];
+            (*x)[1 * 3 + i] = POS_MERCURY[i] - R_CM[i];
+            (*x)[2 * 3 + i] = POS_VENUS[i] - R_CM[i];
+            (*x)[3 * 3 + i] = POS_EARTH[i] - R_CM[i];
+            (*x)[4 * 3 + i] = POS_MARS[i] - R_CM[i];
+            (*x)[5 * 3 + i] = POS_JUPITER[i] - R_CM[i];
+            (*x)[6 * 3 + i] = POS_SATURN[i] - R_CM[i];
+            (*x)[7 * 3 + i] = POS_URANUS[i] - R_CM[i];
+            (*x)[8 * 3 + i] = POS_NEPTUNE[i] - R_CM[i];
+            (*x)[9 * 3 + i] = POS_PLUTO[i] - R_CM[i];
+            (*x)[10 * 3 + i] = POS_CERES[i] - R_CM[i];
+            (*x)[11 * 3 + i] = POS_VESTA[i] - R_CM[i];
 
-        (*x)[3] = POS_MERCURY[0] - R_CM[0];
-        (*x)[4] = POS_MERCURY[1] - R_CM[1];
-        (*x)[5] = POS_MERCURY[2] - R_CM[2];
-
-        (*x)[6] = POS_VENUS[0] - R_CM[0];
-        (*x)[7] = POS_VENUS[1] - R_CM[1];
-        (*x)[8] = POS_VENUS[2] - R_CM[2];
-
-        (*x)[9] = POS_EARTH[0] - R_CM[0];
-        (*x)[10] = POS_EARTH[1] - R_CM[1];
-        (*x)[11] = POS_EARTH[2] - R_CM[2];
-
-        (*x)[12] = POS_MARS[0] - R_CM[0];
-        (*x)[13] = POS_MARS[1] - R_CM[1];
-        (*x)[14] = POS_MARS[2] - R_CM[2];
-
-        (*x)[15] = POS_JUPITER[0] - R_CM[0];
-        (*x)[16] = POS_JUPITER[1] - R_CM[1];
-        (*x)[17] = POS_JUPITER[2] - R_CM[2];
-
-        (*x)[18] = POS_SATURN[0] - R_CM[0];
-        (*x)[19] = POS_SATURN[1] - R_CM[1];
-        (*x)[20] = POS_SATURN[2] - R_CM[2];
-
-        (*x)[21] = POS_URANUS[0] - R_CM[0];
-        (*x)[22] = POS_URANUS[1] - R_CM[1];
-        (*x)[23] = POS_URANUS[2] - R_CM[2];
-
-        (*x)[24] = POS_NEPTUNE[0] - R_CM[0];
-        (*x)[25] = POS_NEPTUNE[1] - R_CM[1];
-        (*x)[26] = POS_NEPTUNE[2] - R_CM[2];
-
-        (*x)[27] = POS_PLUTO[0] - R_CM[0];
-        (*x)[28] = POS_PLUTO[1] - R_CM[1];
-        (*x)[29] = POS_PLUTO[2] - R_CM[2];
-
-        (*x)[30] = POS_CERES[0] - R_CM[0];
-        (*x)[31] = POS_CERES[1] - R_CM[1];
-        (*x)[32] = POS_CERES[2] - R_CM[2];
-
-        (*x)[33] = POS_VESTA[0] - R_CM[0];
-        (*x)[34] = POS_VESTA[1] - R_CM[1];
-        (*x)[35] = POS_VESTA[2] - R_CM[2];
-
-        (*v)[0] = VEL_SUN[0] - V_CM[0];
-        (*v)[1] = VEL_SUN[1] - V_CM[1];
-        (*v)[2] = VEL_SUN[2] - V_CM[2];
-
-        (*v)[3] = VEL_MERCURY[0] - V_CM[0];
-        (*v)[4] = VEL_MERCURY[1] - V_CM[1];
-        (*v)[5] = VEL_MERCURY[2] - V_CM[2];
-
-        (*v)[6] = VEL_VENUS[0] - V_CM[0];
-        (*v)[7] = VEL_VENUS[1] - V_CM[1];
-        (*v)[8] = VEL_VENUS[2] - V_CM[2];
-
-        (*v)[9] = VEL_EARTH[0] - V_CM[0];
-        (*v)[10] = VEL_EARTH[1] - V_CM[1];
-        (*v)[11] = VEL_EARTH[2] - V_CM[2];
-
-        (*v)[12] = VEL_MARS[0] - V_CM[0];
-        (*v)[13] = VEL_MARS[1] - V_CM[1];
-        (*v)[14] = VEL_MARS[2] - V_CM[2];
-
-        (*v)[15] = VEL_JUPITER[0] - V_CM[0];
-        (*v)[16] = VEL_JUPITER[1] - V_CM[1];
-        (*v)[17] = VEL_JUPITER[2] - V_CM[2];
-
-        (*v)[18] = VEL_SATURN[0] - V_CM[0];
-        (*v)[19] = VEL_SATURN[1] - V_CM[1];
-        (*v)[20] = VEL_SATURN[2] - V_CM[2];
-
-        (*v)[21] = VEL_URANUS[0] - V_CM[0];
-        (*v)[22] = VEL_URANUS[1] - V_CM[1];
-        (*v)[23] = VEL_URANUS[2] - V_CM[2];
-
-        (*v)[24] = VEL_NEPTUNE[0] - V_CM[0];
-        (*v)[25] = VEL_NEPTUNE[1] - V_CM[1];
-        (*v)[26] = VEL_NEPTUNE[2] - V_CM[2];
-
-        (*v)[27] = VEL_PLUTO[0] - V_CM[0];
-        (*v)[28] = VEL_PLUTO[1] - V_CM[1];
-        (*v)[29] = VEL_PLUTO[2] - V_CM[2];
-
-        (*v)[30] = VEL_CERES[0] - V_CM[0];
-        (*v)[31] = VEL_CERES[1] - V_CM[1];
-        (*v)[32] = VEL_CERES[2] - V_CM[2];
-
-        (*v)[33] = VEL_VESTA[0] - V_CM[0];
-        (*v)[34] = VEL_VESTA[1] - V_CM[1];
-        (*v)[35] = VEL_VESTA[2] - V_CM[2];
+            (*v)[0 * 3 + i] = VEL_SUN[i] - V_CM[i];
+            (*v)[1 * 3 + i] = VEL_MERCURY[i] - V_CM[i];
+            (*v)[2 * 3 + i] = VEL_VENUS[i] - V_CM[i];
+            (*v)[3 * 3 + i] = VEL_EARTH[i] - V_CM[i];
+            (*v)[4 * 3 + i] = VEL_MARS[i] - V_CM[i];
+            (*v)[5 * 3 + i] = VEL_JUPITER[i] - V_CM[i];
+            (*v)[6 * 3 + i] = VEL_SATURN[i] - V_CM[i];
+            (*v)[7 * 3 + i] = VEL_URANUS[i] - V_CM[i];
+            (*v)[8 * 3 + i] = VEL_NEPTUNE[i] - V_CM[i];
+            (*v)[9 * 3 + i] = VEL_PLUTO[i] - V_CM[i];
+            (*v)[10 * 3 + i] = VEL_CERES[i] - V_CM[i];
+            (*v)[11 * 3 + i] = VEL_VESTA[i] - V_CM[i];
+        }
     }
     else
     {
@@ -888,18 +759,13 @@ WIN32DLL_API void compute_energy(
             // PE
             for (int j = i + 1; j < objects_count; j++)
             {
-                temp_vec[0] = (
-                    sol_state[*count][i * 3 + 0] 
-                    - sol_state[*count][j * 3 + 0]
-                );
-                temp_vec[1] = (
-                    sol_state[*count][i * 3 + 1] 
-                    - sol_state[*count][j * 3 + 1]
-                );
-                temp_vec[2] = (
-                    sol_state[*count][i * 3 + 2] 
-                    - sol_state[*count][j * 3 + 2]
-                );
+                for (int k = 0; k < 3; k++)
+                {
+                    temp_vec[k] = (
+                        sol_state[*count][i * 3 + k]
+                        - sol_state[*count][j * 3 + k]
+                    );
+                }
                 energy[*count] -= (
                     G * m[i] * m[j]
                     / vec_norm(temp_vec, 3)
@@ -1020,14 +886,13 @@ WIN32DLL_API Solutions euler(
     double *sol_dt = malloc(store_npts * sizeof(double));
 
     // Initial value
-    for (int j = 0; j < objects_count; j++)
+    for (int i = 0; i < objects_count; i++)
     {
-        sol_state[j * 3 + 0] = x[j * 3 + 0];
-        sol_state[j * 3 + 1] = x[j * 3 + 1];
-        sol_state[j * 3 + 2] = x[j * 3 + 2];
-        sol_state[objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-        sol_state[objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-        sol_state[objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+        for (int j = 0; j < 3; j++)
+        {
+            sol_state[i * 3 + j] = x[i * 3 + j];
+            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+        }
     }
     sol_time[0] = 0.0;
     for (int i = 0; i < store_npts; i++)
@@ -1042,55 +907,45 @@ WIN32DLL_API Solutions euler(
 
         memcpy(temp_x, x, objects_count * 3 * sizeof(real));
         memcpy(temp_v, v, objects_count * 3 * sizeof(real));
-        for (int j = 0; j < objects_count; j++)
+
+        // Calculation
+        for (int i = 0; i < objects_count; i++) 
         {
-            // Calculation
-            x_err_comp_sum[j * 3 + 0] += v[j * 3 + 0] * dt;
-            x_err_comp_sum[j * 3 + 1] += v[j * 3 + 1] * dt;
-            x_err_comp_sum[j * 3 + 2] += v[j * 3 + 2] * dt;
-            v_err_comp_sum[j * 3 + 0] += a[j * 3 + 0] * dt;
-            v_err_comp_sum[j * 3 + 1] += a[j * 3 + 1] * dt;
-            v_err_comp_sum[j * 3 + 2] += a[j * 3 + 2] * dt;
+            for (int j = 0; j < 3; j++) 
+            {
+                x_err_comp_sum[i * 3 + j] += v[i * 3 + j] * dt;
+                v_err_comp_sum[i * 3 + j] += a[i * 3 + j] * dt;
 
-            x[j * 3 + 0] = temp_x[j * 3 + 0] + x_err_comp_sum[j * 3 + 0];
-            x[j * 3 + 1] = temp_x[j * 3 + 1] + x_err_comp_sum[j * 3 + 1];
-            x[j * 3 + 2] = temp_x[j * 3 + 2] + x_err_comp_sum[j * 3 + 2];
-            v[j * 3 + 0] = temp_v[j * 3 + 0] + v_err_comp_sum[j * 3 + 0];
-            v[j * 3 + 1] = temp_v[j * 3 + 1] + v_err_comp_sum[j * 3 + 1];
-            v[j * 3 + 2] = temp_v[j * 3 + 2] + v_err_comp_sum[j * 3 + 2];
+                x[i * 3 + j] = temp_x[i * 3 + j] + x_err_comp_sum[i * 3 + j];
+                v[i * 3 + j] = temp_v[i * 3 + j] + v_err_comp_sum[i * 3 + j];
 
-            x_err_comp_sum[j * 3 + 0] += temp_x[j * 3 + 0] - x[j * 3 + 0];
-            x_err_comp_sum[j * 3 + 1] += temp_x[j * 3 + 1] - x[j * 3 + 1];
-            x_err_comp_sum[j * 3 + 2] += temp_x[j * 3 + 2] - x[j * 3 + 2];
-            v_err_comp_sum[j * 3 + 0] += temp_v[j * 3 + 0] - v[j * 3 + 0];
-            v_err_comp_sum[j * 3 + 1] += temp_v[j * 3 + 1] - v[j * 3 + 1];
-            v_err_comp_sum[j * 3 + 2] += temp_v[j * 3 + 2] - v[j * 3 + 2];
+                x_err_comp_sum[i * 3 + j] += temp_x[i * 3 + j] - x[i * 3 + j];
+                v_err_comp_sum[i * 3 + j] += temp_v[i * 3 + j] - v[i * 3 + j];
+            }
         }
 
         // Store solution
         if ((count + 1) == npts)
         {
-            for (int j = 0; j < objects_count; j++)
+            for (int i = 0; i < objects_count; i++)
             {
-                sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + 0] = x[j * 3 + 0];
-                sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + 1] = x[j * 3 + 1];
-                sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + 2] = x[j * 3 + 2];
-                sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-                sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-                sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+                for (int j = 0; j < 3; j++)
+                {
+                    sol_state[(store_npts - 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
+                    sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+                }
             }
             sol_time[store_npts - 1] = dt * count;
         }
         else if (((count + 1) % store_every_n == 0))
         {
-            for (int j = 0; j < objects_count; j++)
+            for (int i = 0; i < objects_count; i++)
             {
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 0] = x[j * 3 + 0];
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 1] = x[j * 3 + 1];
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 2] = x[j * 3 + 2];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+                for (int j = 0; j < 3; j++)
+                {
+                    sol_state[(*store_count + 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
+                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+                }
             }
             sol_time[*store_count + 1] = dt * (count + 1);
             if (!((*store_count + 1) == (store_npts - 1)))
@@ -1170,14 +1025,13 @@ WIN32DLL_API Solutions euler_cromer(
     double *sol_dt = malloc(store_npts * sizeof(double));
 
     // Initial value
-    for (int j = 0; j < objects_count; j++)
+    for (int i = 0; i < objects_count; i++)
     {
-        sol_state[j * 3 + 0] = x[j * 3 + 0];
-        sol_state[j * 3 + 1] = x[j * 3 + 1];
-        sol_state[j * 3 + 2] = x[j * 3 + 2];
-        sol_state[objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-        sol_state[objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-        sol_state[objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+        for (int j = 0; j < 3; j++)
+        {
+            sol_state[i * 3 + j] = x[i * 3 + j];
+            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+        }
     }
     sol_time[0] = 0.0;
     for (int i = 0; i < store_npts; i++)
@@ -1192,59 +1046,44 @@ WIN32DLL_API Solutions euler_cromer(
 
         memcpy(temp_x, x, objects_count * 3 * sizeof(real));
         memcpy(temp_v, v, objects_count * 3 * sizeof(real));
-        for (int j = 0; j < objects_count; j++)
+        for (int i = 0; i < objects_count; i++)
         {
-            // Calculate v
-            v_err_comp_sum[j * 3 + 0] += a[j * 3 + 0] * dt;
-            v_err_comp_sum[j * 3 + 1] += a[j * 3 + 1] * dt;
-            v_err_comp_sum[j * 3 + 2] += a[j * 3 + 2] * dt;
+            for (int j = 0; j < 3; j++)
+            {
+                // Calculate v
+                v_err_comp_sum[i * 3 + j] += a[i * 3 + j] * dt;
+                v[i * 3 + j] = temp_v[i * 3 + j] + v_err_comp_sum[i * 3 + j];
+                v_err_comp_sum[i * 3 + j] += temp_v[i * 3 + j] - v[i * 3 + j];
 
-            v[j * 3 + 0] = temp_v[j * 3 + 0] + v_err_comp_sum[j * 3 + 0];
-            v[j * 3 + 1] = temp_v[j * 3 + 1] + v_err_comp_sum[j * 3 + 1];
-            v[j * 3 + 2] = temp_v[j * 3 + 2] + v_err_comp_sum[j * 3 + 2];
-
-            v_err_comp_sum[j * 3 + 0] += temp_v[j * 3 + 0] - v[j * 3 + 0];
-            v_err_comp_sum[j * 3 + 1] += temp_v[j * 3 + 1] - v[j * 3 + 1];
-            v_err_comp_sum[j * 3 + 2] += temp_v[j * 3 + 2] - v[j * 3 + 2];
-
-            // Calculate x
-            x_err_comp_sum[j * 3 + 0] += v[j * 3 + 0] * dt;
-            x_err_comp_sum[j * 3 + 1] += v[j * 3 + 1] * dt;
-            x_err_comp_sum[j * 3 + 2] += v[j * 3 + 2] * dt;
-
-            x[j * 3 + 0] = temp_x[j * 3 + 0] + x_err_comp_sum[j * 3 + 0];
-            x[j * 3 + 1] = temp_x[j * 3 + 1] + x_err_comp_sum[j * 3 + 1];
-            x[j * 3 + 2] = temp_x[j * 3 + 2] + x_err_comp_sum[j * 3 + 2];
-
-            x_err_comp_sum[j * 3 + 0] += temp_x[j * 3 + 0] - x[j * 3 + 0];
-            x_err_comp_sum[j * 3 + 1] += temp_x[j * 3 + 1] - x[j * 3 + 1];
-            x_err_comp_sum[j * 3 + 2] += temp_x[j * 3 + 2] - x[j * 3 + 2];
+                // Calculate x
+                x_err_comp_sum[i * 3 + j] += v[i * 3 + j] * dt;
+                x[i * 3 + j] = temp_x[i * 3 + j] + x_err_comp_sum[i * 3 + j];
+                x_err_comp_sum[i * 3 + j] += temp_x[i * 3 + j] - x[i * 3 + j];
+            }
         }
 
         // Store solution
         if ((count + 1) == npts)
         {
-            for (int j = 0; j < objects_count; j++)
+            for (int i = 0; i < objects_count; i++)
             {
-                sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + 0] = x[j * 3 + 0];
-                sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + 1] = x[j * 3 + 1];
-                sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + 2] = x[j * 3 + 2];
-                sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-                sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-                sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+                for (int j = 0; j < 3; j++)
+                {
+                    sol_state[(store_npts - 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
+                    sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+                }
             }
             sol_time[store_npts - 1] = dt * count;
         }
         else if (((count + 1) % store_every_n == 0))
         {
-            for (int j = 0; j < objects_count; j++)
+            for (int i = 0; i < objects_count; i++)
             {
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 0] = x[j * 3 + 0];
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 1] = x[j * 3 + 1];
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 2] = x[j * 3 + 2];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+                for (int j = 0; j < 3; j++)
+                {
+                    sol_state[(*store_count + 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
+                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+                }
             }
             sol_time[*store_count + 1] = dt * (count + 1);
             if (!((*store_count + 1) == (store_npts - 1)))
@@ -1332,14 +1171,13 @@ WIN32DLL_API Solutions rk4(
     double *sol_dt = malloc(store_npts * sizeof(double));
 
     // Initial value
-    for (int j = 0; j < objects_count; j++)
+    for (int i = 0; i < objects_count; i++)
     {
-        sol_state[j * 3 + 0] = x[j * 3 + 0];
-        sol_state[j * 3 + 1] = x[j * 3 + 1];
-        sol_state[j * 3 + 2] = x[j * 3 + 2];
-        sol_state[objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-        sol_state[objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-        sol_state[objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+        for (int j = 0; j < 3; j++)
+        {
+            sol_state[i * 3 + j] = x[i * 3 + j];
+            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+        }
     }
     sol_time[0] = 0.0;
     for (int i = 0; i < store_npts; i++)
@@ -1355,36 +1193,33 @@ WIN32DLL_API Solutions rk4(
 
         for (int j = 0; j < objects_count; j++)
         {
-            temp_x[j * 3 + 0] = x[j * 3 + 0] + 0.5 * xk1[j * 3 + 0] * dt;
-            temp_x[j * 3 + 1] = x[j * 3 + 1] + 0.5 * xk1[j * 3 + 1] * dt;
-            temp_x[j * 3 + 2] = x[j * 3 + 2] + 0.5 * xk1[j * 3 + 2] * dt;
-            temp_v[j * 3 + 0] = v[j * 3 + 0] + 0.5 * vk1[j * 3 + 0] * dt;
-            temp_v[j * 3 + 1] = v[j * 3 + 1] + 0.5 * vk1[j * 3 + 1] * dt;
-            temp_v[j * 3 + 2] = v[j * 3 + 2] + 0.5 * vk1[j * 3 + 2] * dt;
+            for (int k = 0; k < 3; k++)
+            {
+                temp_x[j * 3 + k] = x[j * 3 + k] + 0.5 * xk1[j * 3 + k] * dt;
+                temp_v[j * 3 + k] = v[j * 3 + k] + 0.5 * vk1[j * 3 + k] * dt;
+            }
         }
         acceleration(objects_count, temp_x, vk2, m, G);
         memcpy(xk2, temp_v, objects_count * 3 * sizeof(real));
 
         for (int j = 0; j < objects_count; j++)
         {
-            temp_x[j * 3 + 0] = x[j * 3 + 0] + 0.5 * xk2[j * 3 + 0] * dt;
-            temp_x[j * 3 + 1] = x[j * 3 + 1] + 0.5 * xk2[j * 3 + 1] * dt;
-            temp_x[j * 3 + 2] = x[j * 3 + 2] + 0.5 * xk2[j * 3 + 2] * dt;
-            temp_v[j * 3 + 0] = v[j * 3 + 0] + 0.5 * vk2[j * 3 + 0] * dt;
-            temp_v[j * 3 + 1] = v[j * 3 + 1] + 0.5 * vk2[j * 3 + 1] * dt;
-            temp_v[j * 3 + 2] = v[j * 3 + 2] + 0.5 * vk2[j * 3 + 2] * dt;
+            for (int k = 0; k < 3; k++)
+            {
+                temp_x[j * 3 + k] = x[j * 3 + k] + 0.5 * xk2[j * 3 + k] * dt;
+                temp_v[j * 3 + k] = v[j * 3 + k] + 0.5 * vk2[j * 3 + k] * dt;
+            }
         }
         acceleration(objects_count, temp_x, vk3, m, G);
         memcpy(xk3, temp_v, objects_count * 3 * sizeof(real));
 
         for (int j = 0; j < objects_count; j++)
         {
-            temp_x[j * 3 + 0] = x[j * 3 + 0] + xk3[j * 3 + 0] * dt;
-            temp_x[j * 3 + 1] = x[j * 3 + 1] + xk3[j * 3 + 1] * dt;
-            temp_x[j * 3 + 2] = x[j * 3 + 2] + xk3[j * 3 + 2] * dt;
-            temp_v[j * 3 + 0] = v[j * 3 + 0] + vk3[j * 3 + 0] * dt;
-            temp_v[j * 3 + 1] = v[j * 3 + 1] + vk3[j * 3 + 1] * dt;
-            temp_v[j * 3 + 2] = v[j * 3 + 2] + vk3[j * 3 + 2] * dt;
+            for (int k = 0; k < 3; k++)
+            {
+                temp_x[j * 3 + k] = x[j * 3 + k] + xk3[j * 3 + k] * dt;
+                temp_v[j * 3 + k] = v[j * 3 + k] + vk3[j * 3 + k] * dt;
+            }
         }
         acceleration(objects_count, temp_x, vk4, m, G);
         memcpy(xk4, temp_v, objects_count * 3 * sizeof(real));
@@ -1395,27 +1230,17 @@ WIN32DLL_API Solutions rk4(
         for (int j = 0; j < objects_count; j++)
         {
             // Calculation
-            v_err_comp_sum[j * 3 + 0] += (vk1[j * 3 + 0] + 2 * vk2[j * 3 + 0] + 2 * vk3[j * 3 + 0] + vk4[j * 3 + 0]) * dt / 6.0;
-            v_err_comp_sum[j * 3 + 1] += (vk1[j * 3 + 1] + 2 * vk2[j * 3 + 1] + 2 * vk3[j * 3 + 1] + vk4[j * 3 + 1]) * dt / 6.0;
-            v_err_comp_sum[j * 3 + 2] += (vk1[j * 3 + 2] + 2 * vk2[j * 3 + 2] + 2 * vk3[j * 3 + 2] + vk4[j * 3 + 2]) * dt / 6.0;
-            x_err_comp_sum[j * 3 + 0] += (xk1[j * 3 + 0] + 2 * xk2[j * 3 + 0] + 2 * xk3[j * 3 + 0] + xk4[j * 3 + 0]) * dt / 6.0;
-            x_err_comp_sum[j * 3 + 1] += (xk1[j * 3 + 1] + 2 * xk2[j * 3 + 1] + 2 * xk3[j * 3 + 1] + xk4[j * 3 + 1]) * dt / 6.0;
-            x_err_comp_sum[j * 3 + 2] += (xk1[j * 3 + 2] + 2 * xk2[j * 3 + 2] + 2 * xk3[j * 3 + 2] + xk4[j * 3 + 2]) * dt / 6.0;
+            for (int k = 0; k < 3; k++)
+            {
+                v_err_comp_sum[j * 3 + k] += (vk1[j * 3 + k] + 2 * vk2[j * 3 + k] + 2 * vk3[j * 3 + k] + vk4[j * 3 + k]) * dt / 6.0;
+                x_err_comp_sum[j * 3 + k] += (xk1[j * 3 + k] + 2 * xk2[j * 3 + k] + 2 * xk3[j * 3 + k] + xk4[j * 3 + k]) * dt / 6.0;
 
-            v[j * 3 + 0] = temp_v[j * 3 + 0] + v_err_comp_sum[j * 3 + 0];
-            v[j * 3 + 1] = temp_v[j * 3 + 1] + v_err_comp_sum[j * 3 + 1];
-            v[j * 3 + 2] = temp_v[j * 3 + 2] + v_err_comp_sum[j * 3 + 2];
-            x[j * 3 + 0] = temp_x[j * 3 + 0] + x_err_comp_sum[j * 3 + 0];
-            x[j * 3 + 1] = temp_x[j * 3 + 1] + x_err_comp_sum[j * 3 + 1];
-            x[j * 3 + 2] = temp_x[j * 3 + 2] + x_err_comp_sum[j * 3 + 2];
+                v[j * 3 + k] = temp_v[j * 3 + k] + v_err_comp_sum[j * 3 + k];
+                x[j * 3 + k] = temp_x[j * 3 + k] + x_err_comp_sum[j * 3 + k];
 
-            v_err_comp_sum[j * 3 + 0] += temp_v[j * 3 + 0] - v[j * 3 + 0];
-            v_err_comp_sum[j * 3 + 1] += temp_v[j * 3 + 1] - v[j * 3 + 1];
-            v_err_comp_sum[j * 3 + 2] += temp_v[j * 3 + 2] - v[j * 3 + 2];
-            x_err_comp_sum[j * 3 + 0] += temp_x[j * 3 + 0] - x[j * 3 + 0];
-            x_err_comp_sum[j * 3 + 1] += temp_x[j * 3 + 1] - x[j * 3 + 1];
-            x_err_comp_sum[j * 3 + 2] += temp_x[j * 3 + 2] - x[j * 3 + 2];
-            
+                v_err_comp_sum[j * 3 + k] += temp_v[j * 3 + k] - v[j * 3 + k];
+                x_err_comp_sum[j * 3 + k] += temp_x[j * 3 + k] - x[j * 3 + k];
+            }
         }
 
         // Store solution
@@ -1423,12 +1248,11 @@ WIN32DLL_API Solutions rk4(
         {
             for (int j = 0; j < objects_count; j++)
             {
-                sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + 0] = x[j * 3 + 0];
-                sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + 1] = x[j * 3 + 1];
-                sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + 2] = x[j * 3 + 2];
-                sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-                sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-                sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+                for (int k = 0; k < 3; k++)
+                {
+                    sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + k] = x[j * 3 + k];
+                    sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + k] = v[j * 3 + k];
+                }
             }
             sol_time[store_npts - 1] = dt * count;
         }
@@ -1436,12 +1260,11 @@ WIN32DLL_API Solutions rk4(
         {
             for (int j = 0; j < objects_count; j++)
             {
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 0] = x[j * 3 + 0];
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 1] = x[j * 3 + 1];
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 2] = x[j * 3 + 2];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+                for (int k = 0; k < 3; k++)
+                {
+                    sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + k] = x[j * 3 + k];
+                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + k] = v[j * 3 + k];
+                }
             }
             sol_time[*store_count + 1] = dt * (count + 1);
             if (!((*store_count + 1) == (store_npts - 1)))
@@ -1533,14 +1356,13 @@ WIN32DLL_API Solutions leapfrog(
     double *sol_dt = malloc(store_npts * sizeof(double));
 
     // Initial value
-    for (int j = 0; j < objects_count; j++)
+    for (int i = 0; i < objects_count; i++)
     {
-        sol_state[j * 3 + 0] = x[j * 3 + 0];
-        sol_state[j * 3 + 1] = x[j * 3 + 1];
-        sol_state[j * 3 + 2] = x[j * 3 + 2];
-        sol_state[objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-        sol_state[objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-        sol_state[objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+        for (int j = 0; j < 3; j++)
+        {
+            sol_state[i * 3 + j] = x[i * 3 + j];
+            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+        }
     }
     sol_time[0] = 0.0;
     for (int i = 0; i < store_npts; i++)
@@ -1556,63 +1378,51 @@ WIN32DLL_API Solutions leapfrog(
 
         // Calculate x
         memcpy(temp_x, x, objects_count * 3 * sizeof(real));
-        for (int j = 0; j < objects_count; j++)
+        for (int i = 0; i < objects_count; i++)
         {
-            x_err_comp_sum[j * 3 + 0] += v[j * 3 + 0] * dt + 0.5 * a_0[j * 3 + 0] * dt * dt;
-            x_err_comp_sum[j * 3 + 1] += v[j * 3 + 1] * dt + 0.5 * a_0[j * 3 + 1] * dt * dt;
-            x_err_comp_sum[j * 3 + 2] += v[j * 3 + 2] * dt + 0.5 * a_0[j * 3 + 2] * dt * dt;
+            for (int j = 0; j < 3; j++)
+            {
+                x_err_comp_sum[i * 3 + j] += v[i * 3 + j] * dt + 0.5 * a_0[i * 3 + j] * dt * dt;
+                x[i * 3 + j] = temp_x[i * 3 + j] + x_err_comp_sum[i * 3 + j];
+                x_err_comp_sum[i * 3 + j] += temp_x[i * 3 + j] - x[i * 3 + j];
+            }
+        }
 
-            x[j * 3 + 0] = temp_x[j * 3 + 0] + x_err_comp_sum[j * 3 + 0];
-            x[j * 3 + 1] = temp_x[j * 3 + 1] + x_err_comp_sum[j * 3 + 1];
-            x[j * 3 + 2] = temp_x[j * 3 + 2] + x_err_comp_sum[j * 3 + 2];
-
-            x_err_comp_sum[j * 3 + 0] += temp_x[j * 3 + 0] - x[j * 3 + 0];
-            x_err_comp_sum[j * 3 + 1] += temp_x[j * 3 + 1] - x[j * 3 + 1];
-            x_err_comp_sum[j * 3 + 2] += temp_x[j * 3 + 2] - x[j * 3 + 2];
-        }    
-
+        // Calculate v
         acceleration(objects_count, x, a_1, m, G);
         memcpy(temp_v, v, objects_count * 3 * sizeof(real));
-        for (int j = 0; j < objects_count; j++)
+        for (int i = 0; i < objects_count; i++)
         {
-            // Calculate v
-            v_err_comp_sum[j * 3 + 0] += 0.5 * (a_0[j * 3 + 0] + a_1[j * 3 + 0]) * dt;
-            v_err_comp_sum[j * 3 + 1] += 0.5 * (a_0[j * 3 + 1] + a_1[j * 3 + 1]) * dt;
-            v_err_comp_sum[j * 3 + 2] += 0.5 * (a_0[j * 3 + 2] + a_1[j * 3 + 2]) * dt;
-
-            v[j * 3 + 0] = temp_v[j * 3 + 0] + v_err_comp_sum[j * 3 + 0];
-            v[j * 3 + 1] = temp_v[j * 3 + 1] + v_err_comp_sum[j * 3 + 1];
-            v[j * 3 + 2] = temp_v[j * 3 + 2] + v_err_comp_sum[j * 3 + 2];
-
-            v_err_comp_sum[j * 3 + 0] += temp_v[j * 3 + 0] - v[j * 3 + 0];
-            v_err_comp_sum[j * 3 + 1] += temp_v[j * 3 + 1] - v[j * 3 + 1];
-            v_err_comp_sum[j * 3 + 2] += temp_v[j * 3 + 2] - v[j * 3 + 2];
-        }    
+            for (int j = 0; j < 3; j++)
+            {
+                v_err_comp_sum[i * 3 + j] += 0.5 * (a_0[i * 3 + j] + a_1[i * 3 + j]) * dt;
+                v[i * 3 + j] = temp_v[i * 3 + j] + v_err_comp_sum[i * 3 + j];
+                v_err_comp_sum[i * 3 + j] += temp_v[i * 3 + j] - v[i * 3 + j];
+            }
+        }
 
         // Store solution
         if ((count + 1) == npts)
         {
-            for (int j = 0; j < objects_count; j++)
+            for (int i = 0; i < objects_count; i++)
             {
-                sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + 0] = x[j * 3 + 0];
-                sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + 1] = x[j * 3 + 1];
-                sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + 2] = x[j * 3 + 2];
-                sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-                sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-                sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+                for (int j = 0; j < 3; j++)
+                {
+                    sol_state[(store_npts - 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
+                    sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+                }
             }
             sol_time[store_npts - 1] = dt * count;
         }
         else if (((count + 1) % store_every_n == 0))
         {
-            for (int j = 0; j < objects_count; j++)
+            for (int i = 0; i < objects_count; i++)
             {
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 0] = x[j * 3 + 0];
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 1] = x[j * 3 + 1];
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 2] = x[j * 3 + 2];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+                for (int j = 0; j < 3; j++)
+                {
+                    sol_state[(*store_count + 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
+                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+                }
             }
             sol_time[*store_count + 1] = dt * (count + 1);
             if (!((*store_count + 1) == (store_npts - 1)))
@@ -1737,14 +1547,13 @@ WIN32DLL_API Solutions rk_embedded(
     int buffer_size = NPTS;
 
     // Initial value
-    for (int j = 0; j < objects_count; j++)
+    for (int i = 0; i < objects_count; i++)
     {
-        sol_state[j * 3 + 0] = x[j * 3 + 0];
-        sol_state[j * 3 + 1] = x[j * 3 + 1];
-        sol_state[j * 3 + 2] = x[j * 3 + 2];
-        sol_state[objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-        sol_state[objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-        sol_state[objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+        for (int j = 0; j < 3; j++)
+        {
+            sol_state[i * 3 + j] = x[i * 3 + j];
+            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+        }
     }
     sol_time[*store_count + 1] = 0.0;
     real dt = rk_embedded_initial_dt(objects_count, power, x, v, a, m, G, abs_tolerance, rel_tolerance);
@@ -1769,27 +1578,25 @@ WIN32DLL_API Solutions rk_embedded(
                 temp_x[i * 3 + 2] = 0.0;
             }       
 
-            for (int j = 0; j < stage; j++)
+            for (int i = 0; i < stage; i++)
             {
-                for (int k = 0; k < objects_count; k++)
+                for (int j = 0; j < objects_count; j++)
                 {
-                    temp_v[k * 3 + 0] += coeff[(stage - 1) * (stages - 1) + j] * vk[j * objects_count * 3 + k * 3 + 0];
-                    temp_v[k * 3 + 1] += coeff[(stage - 1) * (stages - 1) + j] * vk[j * objects_count * 3 + k * 3 + 1];
-                    temp_v[k * 3 + 2] += coeff[(stage - 1) * (stages - 1) + j] * vk[j * objects_count * 3 + k * 3 + 2];
-                    temp_x[k * 3 + 0] += coeff[(stage - 1) * (stages - 1) + j] * xk[j * objects_count * 3 + k * 3 + 0];
-                    temp_x[k * 3 + 1] += coeff[(stage - 1) * (stages - 1) + j] * xk[j * objects_count * 3 + k * 3 + 1];
-                    temp_x[k * 3 + 2] += coeff[(stage - 1) * (stages - 1) + j] * xk[j * objects_count * 3 + k * 3 + 2];
+                    for (int k = 0; k < 3; k++)
+                    {
+                        temp_v[j * 3 + k] += coeff[(stage - 1) * (stages - 1) + i] * vk[i * objects_count * 3 + j * 3 + k];
+                        temp_x[j * 3 + k] += coeff[(stage - 1) * (stages - 1) + i] * xk[i * objects_count * 3 + j * 3 + k];
+                    }
                 }
             }
 
-            for (int k = 0; k < objects_count; k++)
+            for (int i = 0; i < objects_count; i++)
             {
-                temp_v[k * 3 + 0] = v[k * 3 + 0] + dt * temp_v[k * 3 + 0] + v_err_comp_sum[k * 3 + 0];
-                temp_v[k * 3 + 1] = v[k * 3 + 1] + dt * temp_v[k * 3 + 1] + v_err_comp_sum[k * 3 + 1];
-                temp_v[k * 3 + 2] = v[k * 3 + 2] + dt * temp_v[k * 3 + 2] + v_err_comp_sum[k * 3 + 2];
-                temp_x[k * 3 + 0] = x[k * 3 + 0] + dt * temp_x[k * 3 + 0] + x_err_comp_sum[k * 3 + 0];
-                temp_x[k * 3 + 1] = x[k * 3 + 1] + dt * temp_x[k * 3 + 1] + x_err_comp_sum[k * 3 + 1];
-                temp_x[k * 3 + 2] = x[k * 3 + 2] + dt * temp_x[k * 3 + 2] + x_err_comp_sum[k * 3 + 2];
+                for (int j = 0; j < 3; j++)
+                {
+                    temp_v[i * 3 + j] = v[i * 3 + j] + dt * temp_v[i * 3 + j] + v_err_comp_sum[i * 3 + j];
+                    temp_x[i * 3 + j] = x[i * 3 + j] + dt * temp_x[i * 3 + j] + x_err_comp_sum[i * 3 + j];
+                }
             }
             acceleration(objects_count, temp_x, &vk[stage * objects_count * 3], m, G);
             memcpy(&xk[stage * objects_count * 3], temp_v, objects_count * 3 * sizeof(real));
@@ -1815,72 +1622,59 @@ WIN32DLL_API Solutions rk_embedded(
         // Calculate x_1, v_1 and also delta x, delta v for error estimation
         for(int stage = 0; stage < stages; stage++)
         {
-            for (int k = 0; k < objects_count; k++)
+            for (int i = 0; i < objects_count; i++)
             {
-                temp_v[k * 3 + 0] += weights[stage] * vk[stage * objects_count * 3 + k * 3 + 0];
-                temp_v[k * 3 + 1] += weights[stage] * vk[stage * objects_count * 3 + k * 3 + 1];
-                temp_v[k * 3 + 2] += weights[stage] * vk[stage * objects_count * 3 + k * 3 + 2];
-                temp_x[k * 3 + 0] += weights[stage] * xk[stage * objects_count * 3 + k * 3 + 0];
-                temp_x[k * 3 + 1] += weights[stage] * xk[stage * objects_count * 3 + k * 3 + 1];
-                temp_x[k * 3 + 2] += weights[stage] * xk[stage * objects_count * 3 + k * 3 + 2];
+                for (int j = 0; j < 3; j++)
+                {
+                    temp_v[i * 3 + j] += weights[stage] * vk[stage * objects_count * 3 + i * 3 + j];
+                    temp_x[i * 3 + j] += weights[stage] * xk[stage * objects_count * 3 + i * 3 + j];
 
-                error_estimation_delta_v[k * 3 + 0] += dt * error_estimation_delta_weights[stage] * vk[stage * objects_count * 3 + k * 3 + 0];
-                error_estimation_delta_v[k * 3 + 1] += dt * error_estimation_delta_weights[stage] * vk[stage * objects_count * 3 + k * 3 + 1];
-                error_estimation_delta_v[k * 3 + 2] += dt * error_estimation_delta_weights[stage] * vk[stage * objects_count * 3 + k * 3 + 2];
-                error_estimation_delta_x[k * 3 + 0] += dt * error_estimation_delta_weights[stage] * xk[stage * objects_count * 3 + k * 3 + 0];
-                error_estimation_delta_x[k * 3 + 1] += dt * error_estimation_delta_weights[stage] * xk[stage * objects_count * 3 + k * 3 + 1];
-                error_estimation_delta_x[k * 3 + 2] += dt * error_estimation_delta_weights[stage] * xk[stage * objects_count * 3 + k * 3 + 2];
+                    error_estimation_delta_v[i * 3 + j] += dt * error_estimation_delta_weights[stage] * vk[stage * objects_count * 3 + i * 3 + j];
+                    error_estimation_delta_x[i * 3 + j] += dt * error_estimation_delta_weights[stage] * xk[stage * objects_count * 3 + i * 3 + j];
+                }
             }
         }
 
         memcpy(temp_x_err_comp_sum, x_err_comp_sum, objects_count * 3 * sizeof(real));
         memcpy(temp_v_err_comp_sum, v_err_comp_sum, objects_count * 3 * sizeof(real));
-        for (int k = 0; k < objects_count; k++)
+        for (int i = 0; i < objects_count; i++)
         {
-            temp_v_err_comp_sum[k * 3 + 0] += dt * temp_v[k * 3 + 0];
-            temp_v_err_comp_sum[k * 3 + 1] += dt * temp_v[k * 3 + 1];
-            temp_v_err_comp_sum[k * 3 + 2] += dt * temp_v[k * 3 + 2];
-            temp_x_err_comp_sum[k * 3 + 0] += dt * temp_x[k * 3 + 0];
-            temp_x_err_comp_sum[k * 3 + 1] += dt * temp_x[k * 3 + 1];
-            temp_x_err_comp_sum[k * 3 + 2] += dt * temp_x[k * 3 + 2];
+            for (int j = 0; j < 3; j++)
+            {
+                temp_v_err_comp_sum[i * 3 + j] += dt * temp_v[i * 3 + j];
+                temp_x_err_comp_sum[i * 3 + j] += dt * temp_x[i * 3 + j];
 
-            v_1[k * 3 + 0] = v[k * 3 + 0] + temp_v_err_comp_sum[k * 3 + 0];
-            v_1[k * 3 + 1] = v[k * 3 + 1] + temp_v_err_comp_sum[k * 3 + 1];
-            v_1[k * 3 + 2] = v[k * 3 + 2] + temp_v_err_comp_sum[k * 3 + 2];
-            x_1[k * 3 + 0] = x[k * 3 + 0] + temp_x_err_comp_sum[k * 3 + 0];
-            x_1[k * 3 + 1] = x[k * 3 + 1] + temp_x_err_comp_sum[k * 3 + 1];
-            x_1[k * 3 + 2] = x[k * 3 + 2] + temp_x_err_comp_sum[k * 3 + 2];
+                v_1[i * 3 + j] = v[i * 3 + j] + temp_v_err_comp_sum[i * 3 + j];
+                x_1[i * 3 + j] = x[i * 3 + j] + temp_x_err_comp_sum[i * 3 + j];
 
-            temp_v_err_comp_sum[k * 3 + 0] += v[k * 3 + 0] - v_1[k * 3 + 0];
-            temp_v_err_comp_sum[k * 3 + 1] += v[k * 3 + 1] - v_1[k * 3 + 1];
-            temp_v_err_comp_sum[k * 3 + 2] += v[k * 3 + 2] - v_1[k * 3 + 2];
-            temp_x_err_comp_sum[k * 3 + 0] += x[k * 3 + 0] - x_1[k * 3 + 0];
-            temp_x_err_comp_sum[k * 3 + 1] += x[k * 3 + 1] - x_1[k * 3 + 1];
-            temp_x_err_comp_sum[k * 3 + 2] += x[k * 3 + 2] - x_1[k * 3 + 2];
+                temp_v_err_comp_sum[i * 3 + j] += v[i * 3 + j] - v_1[i * 3 + j];
+                temp_x_err_comp_sum[i * 3 + j] += x[i * 3 + j] - x_1[i * 3 + j];
+            }
         }
 
         // Error calculation
-        for (int k = 0; k < objects_count; k++)
+        for (int i = 0; i < objects_count; i++)
         {
-            tolerance_scale_v[k * 3 + 0] = abs_tolerance + fmax(fabs(v[k * 3 + 0]), fabs(v_1[k * 3 + 0])) * rel_tolerance;
-            tolerance_scale_v[k * 3 + 1] = abs_tolerance + fmax(fabs(v[k * 3 + 1]), fabs(v_1[k * 3 + 1])) * rel_tolerance;
-            tolerance_scale_v[k * 3 + 2] = abs_tolerance + fmax(fabs(v[k * 3 + 2]), fabs(v_1[k * 3 + 2])) * rel_tolerance;
-            tolerance_scale_x[k * 3 + 0] = abs_tolerance + fmax(fabs(x[k * 3 + 0]), fabs(x_1[k * 3 + 0])) * rel_tolerance;
-            tolerance_scale_x[k * 3 + 1] = abs_tolerance + fmax(fabs(x[k * 3 + 1]), fabs(x_1[k * 3 + 1])) * rel_tolerance;
-            tolerance_scale_x[k * 3 + 2] = abs_tolerance + fmax(fabs(x[k * 3 + 2]), fabs(x_1[k * 3 + 2])) * rel_tolerance;
+            for (int j = 0; j < 3; j++)
+            {
+                tolerance_scale_v[i * 3 + j] = abs_tolerance + fmax(fabs(v[i * 3 + j]), fabs(v_1[i * 3 + j])) * rel_tolerance;
+                tolerance_scale_x[i * 3 + j] = abs_tolerance + fmax(fabs(x[i * 3 + j]), fabs(x_1[i * 3 + j])) * rel_tolerance;
+            }
         }
 
         // Sum up all the elements of x/tol and v/tol, 
         // square and divide by the total number of elements
         sum = 0.0;
-        for (int k = 0; k < objects_count; k++)
+        for (int i = 0; i < objects_count; i++)
         {
-            sum += (error_estimation_delta_v[k * 3 + 0] / tolerance_scale_v[k * 3 + 0]) * (error_estimation_delta_v[k * 3 + 0] / tolerance_scale_v[k * 3 + 0]);
-            sum += (error_estimation_delta_v[k * 3 + 1] / tolerance_scale_v[k * 3 + 1]) * (error_estimation_delta_v[k * 3 + 1] / tolerance_scale_v[k * 3 + 1]);
-            sum += (error_estimation_delta_v[k * 3 + 2] / tolerance_scale_v[k * 3 + 2]) * (error_estimation_delta_v[k * 3 + 2] / tolerance_scale_v[k * 3 + 2]);
-            sum += (error_estimation_delta_x[k * 3 + 0] / tolerance_scale_x[k * 3 + 0]) * (error_estimation_delta_x[k * 3 + 0] / tolerance_scale_x[k * 3 + 0]);
-            sum += (error_estimation_delta_x[k * 3 + 1] / tolerance_scale_x[k * 3 + 1]) * (error_estimation_delta_x[k * 3 + 1] / tolerance_scale_x[k * 3 + 1]);
-            sum += (error_estimation_delta_x[k * 3 + 2] / tolerance_scale_x[k * 3 + 2]) * (error_estimation_delta_x[k * 3 + 2] / tolerance_scale_x[k * 3 + 2]);
+            real temp;
+            for (int j = 0; j < 3; j++)
+            {
+                temp = error_estimation_delta_v[i * 3 + j] / tolerance_scale_v[i * 3 + j];
+                sum += temp * temp;
+                temp = error_estimation_delta_x[i * 3 + j] / tolerance_scale_x[i * 3 + j];
+                sum += temp * temp;
+            }
         }
         error = sqrt(sum / (objects_count * 3 * 2));
 
@@ -1900,15 +1694,14 @@ WIN32DLL_API Solutions rk_embedded(
             {
                 sol_time[*store_count + 1] = *t;
                 sol_dt[*store_count + 1] = dt;
-                for (int j = 0; j < objects_count; j++)
+                for (int i = 0; i < objects_count; i++)
                 {
-                    sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 0] = x[j * 3 + 0];
-                    sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 1] = x[j * 3 + 1];
-                    sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 2] = x[j * 3 + 2];
-                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
-                }  
+                    for (int j = 0; j < 3; j++)
+                    {
+                        sol_state[(*store_count + 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
+                        sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+                    }
+                }
                 *store_count += 1;
             }
 
@@ -1916,15 +1709,14 @@ WIN32DLL_API Solutions rk_embedded(
             {
                 sol_time[*store_count] = *t;
                 sol_dt[*store_count] = dt;
-                for (int j = 0; j < objects_count; j++)
+                for (int i = 0; i < objects_count; i++)
                 {
-                    sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 0] = x[j * 3 + 0];
-                    sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 1] = x[j * 3 + 1];
-                    sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 2] = x[j * 3 + 2];
-                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
-                }  
+                    for (int j = 0; j < 3; j++)
+                    {
+                        sol_state[(*store_count + 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
+                        sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+                    }
+                } 
             }
 
             // End simulation as t >= tf
@@ -2038,12 +1830,11 @@ WIN32DLL_API real rk_embedded_initial_dt(
     // tolerance_scale_v = abs_tol + rel_tol * abs(v)
     for (int i = 0; i < objects_count; i++)
     {
-        tolerance_scale_x[i * 3 + 0] = abs_tolerance + rel_tolerance * fabs(x[i * 3 + 0]);
-        tolerance_scale_x[i * 3 + 1] = abs_tolerance + rel_tolerance * fabs(x[i * 3 + 1]);
-        tolerance_scale_x[i * 3 + 2] = abs_tolerance + rel_tolerance * fabs(x[i * 3 + 2]);
-        tolerance_scale_v[i * 3 + 0] = abs_tolerance + rel_tolerance * fabs(v[i * 3 + 0]);
-        tolerance_scale_v[i * 3 + 1] = abs_tolerance + rel_tolerance * fabs(v[i * 3 + 1]);
-        tolerance_scale_v[i * 3 + 2] = abs_tolerance + rel_tolerance * fabs(v[i * 3 + 2]);
+        for (int j = 0; j < 3; j++)
+        {
+            tolerance_scale_x[i * 3 + j] = abs_tolerance + rel_tolerance * fabs(x[i * 3 + j]);
+            tolerance_scale_v[i * 3 + j] = abs_tolerance + rel_tolerance * fabs(v[i * 3 + j]);
+        }
     }
 
     // sum_0 = sum(square(x / tolerance_scale_x)) + sum(square(v / tolerance_scale_v))
@@ -2073,13 +1864,11 @@ WIN32DLL_API real rk_embedded_initial_dt(
 
     for (int i = 0; i < objects_count; i++)
     {
-        x_1[i * 3 + 0] = x[i * 3 + 0] + (dt_0 / 100.0L) * v[i * 3 + 0];
-        x_1[i * 3 + 1] = x[i * 3 + 1] + (dt_0 / 100.0L) * v[i * 3 + 1];
-        x_1[i * 3 + 2] = x[i * 3 + 2] + (dt_0 / 100.0L) * v[i * 3 + 2];
-
-        v_1[i * 3 + 0] = v[i * 3 + 0] + (dt_0 / 100.0L) * a[i * 3 + 0];
-        v_1[i * 3 + 1] = v[i * 3 + 1] + (dt_0 / 100.0L) * a[i * 3 + 1];
-        v_1[i * 3 + 2] = v[i * 3 + 2] + (dt_0 / 100.0L) * a[i * 3 + 2];
+        for (int j = 0; j < 3; j++)
+        {
+            x_1[i * 3 + j] = x[i * 3 + j] + (dt_0 / 100.0L) * v[i * 3 + j];
+            v_1[i * 3 + j] = v[i * 3 + j] + (dt_0 / 100.0L) * a[i * 3 + j];
+        }
     }
     
     acceleration(objects_count, x_1, a_1, m, G);
@@ -2438,14 +2227,13 @@ WIN32DLL_API Solutions ias15(
     int buffer_size = NPTS;
 
     // Initial value
-    for (int j = 0; j < objects_count; j++)
+    for (int i = 0; i < objects_count; i++)
     {
-        sol_state[j * 3 + 0] = x[j * 3 + 0];
-        sol_state[j * 3 + 1] = x[j * 3 + 1];
-        sol_state[j * 3 + 2] = x[j * 3 + 2];
-        sol_state[objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-        sol_state[objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-        sol_state[objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+        for (int j = 0; j < 3; j++)
+        {
+            sol_state[i * 3 + j] = x[i * 3 + j];
+            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+        }
     }
     sol_time[*store_count + 1] = 0.0;
     real dt = ias15_initial_dt(15, x, v, a, m, objects_count, G);
@@ -2501,12 +2289,11 @@ WIN32DLL_API Solutions ias15(
             sol_dt[*store_count + 1] = dt;
             for (int j = 0; j < objects_count; j++)
             {
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 0] = x[j * 3 + 0];
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 1] = x[j * 3 + 1];
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 2] = x[j * 3 + 2];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+                for (int k = 0; k < 3; k++)
+                {
+                    sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + k] = x[j * 3 + k];
+                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + k] = v[j * 3 + k];
+                }
             }  
             *store_count += 1;
         }
@@ -2516,12 +2303,11 @@ WIN32DLL_API Solutions ias15(
             sol_dt[*store_count + 1] = dt;
             for (int j = 0; j < objects_count; j++)
             {
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 0] = x[j * 3 + 0];
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 1] = x[j * 3 + 1];
-                sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + 2] = x[j * 3 + 2];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 0] = v[j * 3 + 0];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 1] = v[j * 3 + 1];
-                sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + 2] = v[j * 3 + 2];
+                for (int k = 0; k < 3; k++)
+                {
+                    sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + k] = x[j * 3 + k];
+                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + k] = v[j * 3 + k];
+                }
             }  
         }
 
@@ -2619,7 +2405,6 @@ WIN32DLL_API void ias15_step(
                 ias15_approx_pos_pc(objects_count, x, x0, v0, a0, nodes[i], aux_b, *dt, x_err_comp_sum);
                 ias15_approx_vel_pc(objects_count, v, v0, a0, nodes[i], aux_b, *dt, v_err_comp_sum);
 
-
                 // Evaluate force function and store result
                 acceleration(objects_count, x, &aux_a[i * objects_count * 3], m, G);
 
@@ -2630,9 +2415,10 @@ WIN32DLL_API void ias15_step(
             // Estimate convergence
             for (int i = 0; i < objects_count; i++)
             {
-                delta_b7[i * 3 + 0] = aux_b[dim_nodes_minus_2 * objects_count * 3 + i * 3 + 0] - aux_b0[dim_nodes_minus_2 * objects_count * 3 + i * 3 + 0];
-                delta_b7[i * 3 + 1] = aux_b[dim_nodes_minus_2 * objects_count * 3 + i * 3 + 1] - aux_b0[dim_nodes_minus_2 * objects_count * 3 + i * 3 + 1];
-                delta_b7[i * 3 + 2] = aux_b[dim_nodes_minus_2 * objects_count * 3 + i * 3 + 2] - aux_b0[dim_nodes_minus_2 * objects_count * 3 + i * 3 + 2];
+                for (int j = 0; j < 3; j++)
+                {
+                    delta_b7[i * 3 + j] = aux_b[dim_nodes_minus_2 * objects_count * 3 + i * 3 + j] - aux_b0[dim_nodes_minus_2 * objects_count * 3 + i * 3 + j];
+                }
             }
             memcpy(aux_b0, aux_b, dim_nodes_minus_1 * objects_count * 3 * sizeof(real));
             if ((abs_max_vec(delta_b7, objects_count * 3) / abs_max_vec(&aux_a[dim_nodes_minus_1 * objects_count * 3], objects_count * 3)) < tolerance_pc)
@@ -3172,15 +2958,12 @@ WIN32DLL_API void ias15_refine_aux_b(
         {
             for (int j = 0; j < objects_count; j++)
             {
-                delta_aux_b[i * objects_count * 3 + j * 3 + 0] = (
-                    aux_b[i * objects_count * 3 + j * 3 + 0] - aux_e[i * objects_count * 3 + j * 3 + 0]
-                );
-                delta_aux_b[i * objects_count * 3 + j * 3 + 1] = (
-                    aux_b[i * objects_count * 3 + j * 3 + 1] - aux_e[i * objects_count * 3 + j * 3 + 1]
-                );
-                delta_aux_b[i * objects_count * 3 + j * 3 + 2] = (
-                    aux_b[i * objects_count * 3 + j * 3 + 2] - aux_e[i * objects_count * 3 + j * 3 + 2]
-                );
+                for (int k = 0; k < 3; k++)
+                {
+                    delta_aux_b[i * objects_count * 3 + j * 3 + k] = (
+                        aux_b[i * objects_count * 3 + j * 3 + k] - aux_e[i * objects_count * 3 + j * 3 + k]
+                    );
+                }
             }
         }
     }
@@ -3189,9 +2972,10 @@ WIN32DLL_API void ias15_refine_aux_b(
         // Empty delta_aux_b
         for (int i = 0; i < dim_nodes_minus_1 * objects_count; i++)
         {
-            delta_aux_b[i * 3 + 0] = 0.0;
-            delta_aux_b[i * 3 + 1] = 0.0;
-            delta_aux_b[i * 3 + 2] = 0.0;
+            for (int j = 0; j < 3; j++)
+            {
+                delta_aux_b[i * 3 + j] = 0.0;
+            }
         }
     }
 
@@ -3255,15 +3039,12 @@ WIN32DLL_API void ias15_refine_aux_b(
     {
         for (int j = 0; j < objects_count; j++)
         {
-            aux_b[i * objects_count * 3 + j * 3 + 0] = (
-                    aux_e[i * objects_count * 3 + j * 3 + 0] + delta_aux_b[i * objects_count * 3 + j * 3 + 0]
+            for (int k = 0; k < 3; k++)
+            {
+                aux_b[i * objects_count * 3 + j * 3 + k] = (
+                    aux_e[i * objects_count * 3 + j * 3 + k] + delta_aux_b[i * objects_count * 3 + j * 3 + k]
                 );
-            aux_b[i * objects_count * 3 + j * 3 + 1] = (
-                aux_e[i * objects_count * 3 + j * 3 + 1] + delta_aux_b[i * objects_count * 3 + j * 3 + 1]
-            );
-            aux_b[i * objects_count * 3 + j * 3 + 2] = (
-                aux_e[i * objects_count * 3 + j * 3 + 2] + delta_aux_b[i * objects_count * 3 + j * 3 + 2]
-            );
+            }
         }
     }
 }
