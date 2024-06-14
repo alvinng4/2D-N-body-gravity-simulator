@@ -1936,6 +1936,7 @@ WIN32DLL_API Solutions rk_embedded(
                 free(coeff);
                 free(weights);
                 free(weights_test);
+                free(error_estimation_delta_weights);
                 free(v_1);
                 free(x_1);
                 free(vk);
