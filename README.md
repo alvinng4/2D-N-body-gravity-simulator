@@ -1,5 +1,5 @@
 # Gravity Simulator
-This is a Newtonian N-body gravity simulator.
+Newtonian N-body gravity simulator accelerated with C library.
 
 * Interactive module: real time interactive N-body simulation
 * Plotting module: customize your own system and generating plots
