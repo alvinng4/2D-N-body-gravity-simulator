@@ -5,6 +5,7 @@ Euler, Euler-Cromer, Runge-Kutta 4th order, Leapfrog
 
 import ctypes
 import math
+import time
 import threading
 
 import numpy as np
@@ -172,6 +173,13 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                 )
 
         fixed_step_size_integrator_thread.start()
+
+        # Keeps the main thread running to catch keyboard interrupt
+        # This is added since the main thread is not catching
+        # exceptions on Windows
+        while fixed_step_size_integrator_thread.is_alive():
+            time.sleep(0.5)
+
         fixed_step_size_integrator_thread.join()
 
         # Close the progress_bar_thread

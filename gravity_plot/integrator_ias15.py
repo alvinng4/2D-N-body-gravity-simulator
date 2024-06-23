@@ -7,6 +7,7 @@ Simulations Applied to Exoplanetary Systems, Chapter 8
 """
 
 import ctypes
+import time
 import threading
 
 import numpy as np
@@ -107,6 +108,13 @@ class IAS15:
             ),
         )
         ias15_thread.start()
+
+        # Keeps the main thread running to catch keyboard interrupt
+        # This is added since the main thread is not catching
+        # exceptions on Windows
+        while ias15_thread.is_alive():
+            time.sleep(0.5)
+
         ias15_thread.join()
 
         # Close the progress_bar_thread
