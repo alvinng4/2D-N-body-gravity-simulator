@@ -941,26 +941,14 @@ WIN32DLL_API void euler(
         // Store solution
         if ((count + 1) == npts)
         {
-            for (int i = 0; i < objects_count; i++)
-            {
-                for (int j = 0; j < 3; j++)
-                {
-                    sol_state[(store_npts - 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
-                    sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
-                }
-            }
+            memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+            memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
             sol_time[store_npts - 1] = dt * count;
         }
         else if (((count + 1) % store_every_n == 0))
         {
-            for (int i = 0; i < objects_count; i++)
-            {
-                for (int j = 0; j < 3; j++)
-                {
-                    sol_state[(*store_count + 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
-                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
-                }
-            }
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
             sol_time[*store_count + 1] = dt * (count + 1);
             if (!((*store_count + 1) == (store_npts - 1)))
             {
@@ -1102,26 +1090,14 @@ WIN32DLL_API void euler_cromer(
         // Store solution
         if ((count + 1) == npts)
         {
-            for (int i = 0; i < objects_count; i++)
-            {
-                for (int j = 0; j < 3; j++)
-                {
-                    sol_state[(store_npts - 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
-                    sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
-                }
-            }
+            memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+            memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
             sol_time[store_npts - 1] = dt * count;
         }
         else if (((count + 1) % store_every_n == 0))
         {
-            for (int i = 0; i < objects_count; i++)
-            {
-                for (int j = 0; j < 3; j++)
-                {
-                    sol_state[(*store_count + 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
-                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
-                }
-            }
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
             sol_time[*store_count + 1] = dt * (count + 1);
             if (!((*store_count + 1) == (store_npts - 1)))
             {
@@ -1306,26 +1282,14 @@ WIN32DLL_API void rk4(
         // Store solution
         if ((count + 1) == npts)
         {
-            for (int j = 0; j < objects_count; j++)
-            {
-                for (int k = 0; k < 3; k++)
-                {
-                    sol_state[(store_npts - 1) * objects_count * 6 + j * 3 + k] = x[j * 3 + k];
-                    sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + j * 3 + k] = v[j * 3 + k];
-                }
-            }
+            memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+            memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
             sol_time[store_npts - 1] = dt * count;
         }
         else if (((count + 1) % store_every_n == 0))
         {
-            for (int j = 0; j < objects_count; j++)
-            {
-                for (int k = 0; k < 3; k++)
-                {
-                    sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + k] = x[j * 3 + k];
-                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + k] = v[j * 3 + k];
-                }
-            }
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
             sol_time[*store_count + 1] = dt * (count + 1);
             if (!((*store_count + 1) == (store_npts - 1)))
             {
@@ -1495,26 +1459,14 @@ WIN32DLL_API void leapfrog(
         // Store solution
         if ((count + 1) == npts)
         {
-            for (int i = 0; i < objects_count; i++)
-            {
-                for (int j = 0; j < 3; j++)
-                {
-                    sol_state[(store_npts - 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
-                    sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
-                }
-            }
+            memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+            memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
             sol_time[store_npts - 1] = dt * count;
         }
         else if (((count + 1) % store_every_n == 0))
         {
-            for (int i = 0; i < objects_count; i++)
-            {
-                for (int j = 0; j < 3; j++)
-                {
-                    sol_state[(*store_count + 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
-                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
-                }
-            }
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
             sol_time[*store_count + 1] = dt * (count + 1);
             if (!((*store_count + 1) == (store_npts - 1)))
             {
@@ -1809,14 +1761,8 @@ WIN32DLL_API void rk_embedded(
             {
                 sol_time[*store_count + 1] = *t;
                 sol_dt[*store_count + 1] = dt;
-                for (int i = 0; i < objects_count; i++)
-                {
-                    for (int j = 0; j < 3; j++)
-                    {
-                        sol_state[(*store_count + 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
-                        sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
-                    }
-                }
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
                 *store_count += 1;
             }
 
@@ -1824,14 +1770,8 @@ WIN32DLL_API void rk_embedded(
             {
                 sol_time[*store_count] = *t;
                 sol_dt[*store_count] = dt;
-                for (int i = 0; i < objects_count; i++)
-                {
-                    for (int j = 0; j < 3; j++)
-                    {
-                        sol_state[(*store_count + 1) * objects_count * 6 + i * 3 + j] = x[i * 3 + j];
-                        sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + i * 3 + j] = v[i * 3 + j];
-                    }
-                } 
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
             }
 
             // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
@@ -2440,30 +2380,18 @@ WIN32DLL_API void ias15(
         {
             sol_time[*store_count + 1] = *t;
             sol_dt[*store_count + 1] = dt;
-            for (int j = 0; j < objects_count; j++)
-            {
-                for (int k = 0; k < 3; k++)
-                {
-                    sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + k] = x[j * 3 + k];
-                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + k] = v[j * 3 + k];
-                }
-            }  
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
             *store_count += 1;
         }
         else if (*t >= tf)
         {
             sol_time[*store_count + 1] = *t;
             sol_dt[*store_count + 1] = dt;
-            for (int j = 0; j < objects_count; j++)
-            {
-                for (int k = 0; k < 3; k++)
-                {
-                    sol_state[(*store_count + 1) * objects_count * 6 + j * 3 + k] = x[j * 3 + k];
-                    sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3 + j * 3 + k] = v[j * 3 + k];
-                }
-            }  
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
         }
-        
+
         // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
         if (*is_exit)
         {

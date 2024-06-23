@@ -667,20 +667,28 @@ class GravitySimulator:
         """
 
         # Estimate file size
-        num_entries = 3                                 # Time, energy and dt data
-        num_entries += self.simulator.objects_count * 7 # velocity * 3, position * 3, mass
-        file_size = num_entries * self.data_size * 19   # 20 is an approximated empirical value obtained from testing
-        file_size /= (1000 * 1000)                      # Convert to MB
-        
+        num_entries = 3  # Time, energy and dt data
+        num_entries += (
+            self.simulator.objects_count * 7
+        )  # velocity * 3, position * 3, mass
+        file_size = (
+            num_entries * self.data_size * 18
+        )  # 18 is an approximated empirical value obtained from testing
+        file_size /= 1000 * 1000  # Convert to MB
+
         if 1 < file_size < 1000:
-            if not get_bool(f"File size is estimated to be {file_size:.1f} MB. Continue?"):
+            if not get_bool(
+                f"File size is estimated to be {file_size:.1f} MB. Continue?"
+            ):
                 print()
                 return None
         elif 1000 <= file_size:
-            if not get_bool(f"File size is estimated to be {(file_size / 1000):.1f} GB. Continue?"):
+            if not get_bool(
+                f"File size is estimated to be {(file_size / 1000):.1f} GB. Continue?"
+            ):
                 print()
                 return None
-            
+
         print()
 
         # Normally the energy will be calculated automatically before _save_result is called.

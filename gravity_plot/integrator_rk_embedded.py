@@ -139,14 +139,10 @@ class RK_EMBEDDED:
         progress_bar_thread.join()
 
         # Convert C arrays to numpy arrays
-        return_sol_state = (
-            np.ctypeslib.as_array(
-                solution.sol_state,
-                shape=(store_count.value + 1, solution.objects_count * 6),
-            )
-            .copy()
-            .reshape(store_count.value + 1, solution.objects_count * 6)
-        )
+        return_sol_state = np.ctypeslib.as_array(
+            solution.sol_state,
+            shape=(store_count.value + 1, solution.objects_count * 6),
+        ).copy()
 
         return_sol_time = np.ctypeslib.as_array(
             solution.sol_time, shape=(store_count.value + 1,)
