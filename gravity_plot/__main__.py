@@ -673,11 +673,11 @@ class GravitySimulator:
         file_size /= (1000 * 1000)                      # Convert to MB
         
         if 1 < file_size < 1000:
-            if not get_bool(f"File size will be about {file_size:.1f} MB. Continue?"):
+            if not get_bool(f"File size is estimated to be {file_size:.1f} MB. Continue?"):
                 print()
                 return None
         elif 1000 <= file_size:
-            if not get_bool(f"File size will be about {(file_size / 1000):.1f} GB. Continue?"):
+            if not get_bool(f"File size is estimated to be {(file_size / 1000):.1f} GB. Continue?"):
                 print()
                 return None
             

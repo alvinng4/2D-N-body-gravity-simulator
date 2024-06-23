@@ -229,12 +229,12 @@ To generate the animation, the program would ask for the following information:
 * File name without extension
 * Dots per inch (dpi): the resolution of the output file
 * Dynamic axes limit: rescale the axes limit dynamically
-* Maintain fixed dt: useful if you are using variable time step integrators
+* Maintain fixed dt: attempt to maintain fixed step size with variable time step data
 
 ### Saving the data
 If you choose to save the data, the numerical data will be stored in the following folder:
 ```
-gravity-simulator/gravity_plot/results
+Gravity-Simulator/gravity_plot/results
 ```
 The data will be in the default unit (solar masses, AU and days), and follow this format:
 ```
