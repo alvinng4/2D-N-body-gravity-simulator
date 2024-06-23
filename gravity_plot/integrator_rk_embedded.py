@@ -90,7 +90,7 @@ class RK_EMBEDDED:
                 ("objects_count", ctypes.c_int),
             ]
 
-        self.c_lib.rk_embedded.restype = Solutions
+        self.c_lib.rk_embedded.restype = None
 
         t = ctypes.c_double(0.0)
         store_count = ctypes.c_int(0)

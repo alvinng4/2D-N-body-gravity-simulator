@@ -75,7 +75,7 @@ class IAS15:
                 ("objects_count", ctypes.c_int),
             ]
 
-        self.c_lib.ias15.restype = Solutions
+        self.c_lib.ias15.restype = None
 
         t = ctypes.c_double(0.0)
         store_count = ctypes.c_int(0)

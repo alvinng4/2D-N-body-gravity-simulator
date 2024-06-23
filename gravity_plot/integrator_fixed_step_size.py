@@ -72,10 +72,10 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                 ("objects_count", ctypes.c_int),
             ]
 
-        self.c_lib.euler.restype = Solutions
-        self.c_lib.euler_cromer.restype = Solutions
-        self.c_lib.rk4.restype = Solutions
-        self.c_lib.leapfrog.restype = Solutions
+        self.c_lib.euler.restype = None
+        self.c_lib.euler_cromer.restype = None
+        self.c_lib.rk4.restype = None
+        self.c_lib.leapfrog.restype = None
 
         npts = int(np.floor((tf / dt))) + 1  # + 1 for t0
         if self.store_every_n != 1:
