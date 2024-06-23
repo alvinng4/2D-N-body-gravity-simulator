@@ -163,6 +163,7 @@ class Simulator:
         if grav_plot.is_c_lib:
             self.c_lib = grav_plot.c_lib
 
+        self.is_exit = grav_plot.is_exit
         self.x = np.zeros(0)
         self.v = np.zeros(0)
         self.m = np.zeros(0)

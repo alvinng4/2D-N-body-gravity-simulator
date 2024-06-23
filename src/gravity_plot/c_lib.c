@@ -47,7 +47,7 @@ void compute_energy(
     real G
 );
 void acceleration(int objects_count, real *restrict x, real *restrict a, const real *restrict m, real G);
-Solutions euler(
+void euler(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -58,9 +58,11 @@ Solutions euler(
     const double *restrict custom_sys_v,
     const double *restrict custom_sys_m,
     double custom_sys_G,
-    int custom_sys_objects_count
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
 );
-Solutions euler_cromer(
+void euler_cromer(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -71,9 +73,11 @@ Solutions euler_cromer(
     const double *restrict custom_sys_v,
     const double *restrict custom_sys_m,
     double custom_sys_G,
-    int custom_sys_objects_count
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
 );
-Solutions rk4(
+void rk4(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -84,9 +88,11 @@ Solutions rk4(
     const double *restrict custom_sys_v,
     const double *restrict custom_sys_m,
     double custom_sys_G,
-    int custom_sys_objects_count
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
 );
-Solutions leapfrog(
+void leapfrog(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -97,9 +103,11 @@ Solutions leapfrog(
     const double *restrict custom_sys_v,
     const double *restrict custom_sys_m,
     double custom_sys_G,
-    int custom_sys_objects_count
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
 );
-Solutions rk_embedded(
+void rk_embedded(
     int order,
     const char *restrict system,
     double *restrict t,
@@ -112,7 +120,9 @@ Solutions rk_embedded(
     const double *restrict custom_sys_v,
     const double *restrict custom_sys_m,
     double custom_sys_G,
-    int custom_sys_objects_count
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
 );
 real rk_embedded_initial_dt(
     int objects_count,
@@ -134,7 +144,7 @@ void rk_embedded_butcher_tableaus(
     real **weights,
     real **weights_test
 );
-Solutions ias15(
+void ias15(
     const char *restrict system,
     double *restrict t,
     double tf, 
@@ -145,7 +155,9 @@ Solutions ias15(
     const double *restrict custom_sys_v,
     const double *restrict custom_sys_m,
     double custom_sys_G,
-    int custom_sys_objects_count
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
 );
 void ias15_step(
     int objects_count,
@@ -827,7 +839,7 @@ WIN32DLL_API void acceleration(int objects_count, real *restrict x, real *restri
     }
 }
 
-WIN32DLL_API Solutions euler(
+WIN32DLL_API void euler(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -838,7 +850,9 @@ WIN32DLL_API Solutions euler(
     const double *restrict custom_sys_v,
     const double *restrict custom_sys_m,
     double custom_sys_G,
-    int custom_sys_objects_count
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
 )
 {   
     // Initialize system
@@ -954,6 +968,20 @@ WIN32DLL_API Solutions euler(
             }
         }
         count++;
+
+        // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
+        if (*is_exit)
+        {
+            free(x);
+            free(v);
+            free(a);
+            free(temp_x);
+            free(temp_v);
+            free(x_err_comp_sum);
+            free(v_err_comp_sum);
+
+            return;
+        }
     }
     free(x);
     free(v);
@@ -963,10 +991,17 @@ WIN32DLL_API Solutions euler(
     free(x_err_comp_sum);
     free(v_err_comp_sum);
 
-    return (Solutions) {sol_state, sol_time, sol_dt, m, G, objects_count};
+    solution->sol_state = sol_state;
+    solution->sol_time = sol_time;
+    solution->sol_dt = sol_dt;
+    solution->m = m;
+    solution->G = G;
+    solution->objects_count = objects_count;
+
+    return;
 }
 
-WIN32DLL_API Solutions euler_cromer(
+WIN32DLL_API void euler_cromer(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -977,7 +1012,9 @@ WIN32DLL_API Solutions euler_cromer(
     const double *restrict custom_sys_v,
     const double *restrict custom_sys_m,
     double custom_sys_G,
-    int custom_sys_objects_count
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
 )
 {   
     // Initialize system
@@ -1092,6 +1129,20 @@ WIN32DLL_API Solutions euler_cromer(
             }
         }
         count++;
+
+        // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
+        if (*is_exit)
+        {
+            free(x);
+            free(v);
+            free(a);
+            free(temp_x);
+            free(temp_v);
+            free(x_err_comp_sum);
+            free(v_err_comp_sum);
+
+            return;
+        }
     }
     free(x);
     free(v);
@@ -1101,10 +1152,17 @@ WIN32DLL_API Solutions euler_cromer(
     free(x_err_comp_sum);
     free(v_err_comp_sum);
 
-    return (Solutions) {sol_state, sol_time, sol_dt, m, G, objects_count};
+    solution->sol_state = sol_state;
+    solution->sol_time = sol_time;
+    solution->sol_dt = sol_dt;
+    solution->m = m;
+    solution->G = G;
+    solution->objects_count = objects_count;
+
+    return;
 }
 
-WIN32DLL_API Solutions rk4(
+WIN32DLL_API void rk4(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -1115,7 +1173,9 @@ WIN32DLL_API Solutions rk4(
     const double *restrict custom_sys_v,
     const double *restrict custom_sys_m,
     double custom_sys_G,
-    int custom_sys_objects_count
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
 )
 {
     // Initialize system
@@ -1273,6 +1333,28 @@ WIN32DLL_API Solutions rk4(
             }
         }
         count++;
+
+        // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
+        if (*is_exit)
+        {
+            free(x);
+            free(v);
+            free(a);
+            free(temp_x);
+            free(temp_v);
+            free(vk1);
+            free(vk2);
+            free(vk3);
+            free(vk4);
+            free(xk1);
+            free(xk2);
+            free(xk3);
+            free(xk4);
+            free(x_err_comp_sum);
+            free(v_err_comp_sum);
+
+            return;
+        }
     }
 
     free(x);
@@ -1291,10 +1373,17 @@ WIN32DLL_API Solutions rk4(
     free(x_err_comp_sum);
     free(v_err_comp_sum);
 
-    return (Solutions) {sol_state, sol_time, sol_dt, m, G, objects_count};
+    solution->sol_state = sol_state;
+    solution->sol_time = sol_time;
+    solution->sol_dt = sol_dt;
+    solution->m = m;
+    solution->G = G;
+    solution->objects_count = objects_count;
+
+    return;
 }
 
-WIN32DLL_API Solutions leapfrog(
+WIN32DLL_API void leapfrog(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -1305,7 +1394,9 @@ WIN32DLL_API Solutions leapfrog(
     const double *restrict custom_sys_v,
     const double *restrict custom_sys_m,
     double custom_sys_G,
-    int custom_sys_objects_count
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
 )
 {   
     // Initialize system
@@ -1431,6 +1522,21 @@ WIN32DLL_API Solutions leapfrog(
             }
         }
         count++;
+
+        // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
+        if (*is_exit)
+        {
+            free(x);
+            free(v);
+            free(temp_x);
+            free(temp_v);
+            free(a_0);
+            free(a_1);
+            free(x_err_comp_sum);
+            free(v_err_comp_sum);
+
+            return;
+        }
     }
 
     free(x);
@@ -1442,10 +1548,17 @@ WIN32DLL_API Solutions leapfrog(
     free(x_err_comp_sum);
     free(v_err_comp_sum);
 
-    return (Solutions) {sol_state, sol_time, sol_dt, m, G, objects_count};
+    solution->sol_state = sol_state;
+    solution->sol_time = sol_time;
+    solution->sol_dt = sol_dt;
+    solution->m = m;
+    solution->G = G;
+    solution->objects_count = objects_count;
+
+    return;
 }
 
-WIN32DLL_API Solutions rk_embedded(
+WIN32DLL_API void rk_embedded(
     int order,
     const char *restrict system,
     double *restrict t,
@@ -1458,7 +1571,9 @@ WIN32DLL_API Solutions rk_embedded(
     const double *restrict custom_sys_v,
     const double *restrict custom_sys_m,
     double custom_sys_G,
-    int custom_sys_objects_count
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
 )
 {   
     // Initialize system
@@ -1555,9 +1670,9 @@ WIN32DLL_API Solutions rk_embedded(
             sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
         }
     }
-    sol_time[*store_count + 1] = 0.0;
+    sol_time[0] = 0.0;
     real dt = rk_embedded_initial_dt(objects_count, power, x, v, a, m, G, abs_tolerance, rel_tolerance);
-    sol_dt[*store_count + 1] = dt;
+    sol_dt[0] = dt;
 
     // Main Loop
     while (1)
@@ -1719,8 +1834,8 @@ WIN32DLL_API Solutions rk_embedded(
                 } 
             }
 
-            // End simulation as t >= tf
-            if (*t >= tf)
+            // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
+            if (*is_exit)
             {
                 free(x);
                 free(v);
@@ -1745,7 +1860,43 @@ WIN32DLL_API Solutions rk_embedded(
                 free(temp_x_err_comp_sum);
                 free(temp_v_err_comp_sum);
 
-                return (Solutions) {sol_state, sol_time, sol_dt, m, G, objects_count};
+                return;
+            }
+
+            // End simulation as t >= tf
+            else if (*t >= tf)
+            {
+                free(x);
+                free(v);
+                free(a);
+                free(coeff);
+                free(weights);
+                free(weights_test);
+                free(error_estimation_delta_weights);
+                free(v_1);
+                free(x_1);
+                free(vk);
+                free(xk);
+                free(temp_a);
+                free(temp_v);
+                free(temp_x);
+                free(error_estimation_delta_v);
+                free(error_estimation_delta_x);
+                free(tolerance_scale_v);
+                free(tolerance_scale_x);
+                free(x_err_comp_sum);
+                free(v_err_comp_sum);
+                free(temp_x_err_comp_sum);
+                free(temp_v_err_comp_sum);
+
+                solution->sol_state = sol_state;
+                solution->sol_time = sol_time;
+                solution->sol_dt = sol_dt;
+                solution->m = m;
+                solution->G = G;
+                solution->objects_count = objects_count;
+
+                return;
             }
 
             // Check buffer size and extend if full
@@ -2125,7 +2276,7 @@ WIN32DLL_API void rk_embedded_butcher_tableaus(
     }
 }
 
-WIN32DLL_API Solutions ias15(
+WIN32DLL_API void ias15(
     const char *restrict system,
     double *restrict t,
     double tf, 
@@ -2136,7 +2287,9 @@ WIN32DLL_API Solutions ias15(
     const double *restrict custom_sys_v,
     const double *restrict custom_sys_m,
     double custom_sys_G,
-    int custom_sys_objects_count
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
 )
 {   
     // Initialize system
@@ -2235,9 +2388,9 @@ WIN32DLL_API Solutions ias15(
             sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
         }
     }
-    sol_time[*store_count + 1] = 0.0;
+    sol_time[0] = 0.0;
     real dt = ias15_initial_dt(15, x, v, a, m, objects_count, G);
-    sol_dt[*store_count + 1] = dt;
+    sol_dt[0] = dt;
 
     while (1)
     {
@@ -2310,9 +2463,37 @@ WIN32DLL_API Solutions ias15(
                 }
             }  
         }
+        
+        // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
+        if (*is_exit)
+        {
+            free(x);
+            free(v);
+            free(a);
+            free(nodes);
+            free(aux_c);
+            free(aux_r);
+            free(aux_b0);
+            free(aux_b);
+            free(aux_g);
+            free(aux_e);
+            free(aux_a);
+            free(x_step);
+            free(v_step);
+            free(a_step);
+            free(delta_b7); 
+            free(F);
+            free(delta_aux_b);
+            free(x_err_comp_sum);
+            free(v_err_comp_sum);
+            free(temp_x_err_comp_sum);
+            free(temp_v_err_comp_sum);
+
+            return;
+        }
 
         // End simulation as t >= tf
-        if (*t >= tf)
+        else if (*t >= tf)
         {
             free(x);
             free(v);
@@ -2336,7 +2517,14 @@ WIN32DLL_API Solutions ias15(
             free(temp_x_err_comp_sum);
             free(temp_v_err_comp_sum);
             
-            return (Solutions) {sol_state, sol_time, sol_dt, m, G, objects_count};
+            solution->sol_state = sol_state;
+            solution->sol_time = sol_time;
+            solution->sol_dt = sol_dt;
+            solution->m = m;
+            solution->G = G;
+            solution->objects_count = objects_count;
+
+            return;
         }
 
         // Check buffer size and extend if full

@@ -53,6 +53,7 @@ class GravitySimulator:
             )
 
         # --------------------Initialize attributes--------------------
+        self.is_exit = ctypes.c_bool(False)
         self.simulator = Simulator(self)
         self.tolerance = None
         self.dt = None
@@ -127,11 +128,8 @@ class GravitySimulator:
             # Restart program once the loop is finished.
             while True:
                 print("\nGravity simulator")
-                if self.is_c_lib:
-                    print(
-                        "Warning: for C library, hitting Ctrl + C will quit AFTER the simulation is done"
-                    )
-                print()
+                print("Exit the program anytime by hitting Ctrl + C\n")
+
                 self._user_interface_before_simulation()
                 if self.is_simulate == True:
                     self.computed_energy = False
@@ -166,7 +164,8 @@ class GravitySimulator:
                 self._user_interface_after_simulation()
 
         except KeyboardInterrupt:
-            print("\nKeyboard Interrupt detected (Cltr + C). Exiting the program...")
+            self.is_exit.value = True
+            sys.exit("\nKeyboard Interrupt detected (Cltr + C). Exiting the program...")
 
     def _user_interface_before_simulation(self):
         msg = (

@@ -18,6 +18,7 @@ from progress_bar import Progress_bar_with_data_size
 
 class RK_EMBEDDED:
     def __init__(self, simulator):
+        self.is_exit = simulator.is_exit
         self.store_every_n = simulator.store_every_n
 
         match simulator.integrator:
@@ -95,64 +96,73 @@ class RK_EMBEDDED:
         store_count = ctypes.c_int(0)
 
         progress_bar_thread = threading.Thread(
-            target=progress_bar_c_lib_adaptive_integrator, args=(tf, t, store_count)
+            target=progress_bar_c_lib_adaptive_integrator,
+            args=(tf, t, store_count, self.is_exit),
         )
         progress_bar_thread.start()
 
         # parameters are double no matter what "real" is defined
-        solutions = self.c_lib.rk_embedded(
-            ctypes.c_int(order),
-            system_name,
-            ctypes.byref(t),
-            ctypes.c_double(tf),
-            ctypes.c_double(abs_tolerance),
-            ctypes.c_double(rel_tolerance),
-            ctypes.c_int(self.store_every_n),
-            ctypes.byref(store_count),
-            custom_sys_x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            custom_sys_v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            custom_sys_m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            ctypes.c_double(custom_sys_G),
-            ctypes.c_int(custom_sys_objects_count),
+        solution = Solutions()
+        rk_embedded_thread = threading.Thread(
+            target=self.c_lib.rk_embedded,
+            args=(
+                ctypes.c_int(order),
+                system_name,
+                ctypes.byref(t),
+                ctypes.c_double(tf),
+                ctypes.c_double(abs_tolerance),
+                ctypes.c_double(rel_tolerance),
+                ctypes.c_int(self.store_every_n),
+                ctypes.byref(store_count),
+                custom_sys_x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                custom_sys_v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                custom_sys_m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.c_double(custom_sys_G),
+                ctypes.c_int(custom_sys_objects_count),
+                ctypes.byref(solution),
+                ctypes.byref(self.is_exit),
+            ),
         )
+        rk_embedded_thread.start()
+        rk_embedded_thread.join()
 
-        # Close the thread forcefully if not closed
+        # Close the progress_bar_thread
         t.value = tf
         progress_bar_thread.join()
 
         # Convert C arrays to numpy arrays
         return_sol_state = (
             np.ctypeslib.as_array(
-                solutions.sol_state,
-                shape=(store_count.value + 1, solutions.objects_count * 6),
+                solution.sol_state,
+                shape=(store_count.value + 1, solution.objects_count * 6),
             )
             .copy()
-            .reshape(store_count.value + 1, solutions.objects_count * 6)
+            .reshape(store_count.value + 1, solution.objects_count * 6)
         )
 
         return_sol_time = np.ctypeslib.as_array(
-            solutions.sol_time, shape=(store_count.value + 1,)
+            solution.sol_time, shape=(store_count.value + 1,)
         ).copy()
         return_sol_dt = np.ctypeslib.as_array(
-            solutions.sol_dt, shape=(store_count.value + 1,)
+            solution.sol_dt, shape=(store_count.value + 1,)
         ).copy()
         return_m = np.ctypeslib.as_array(
-            solutions.m, shape=(solutions.objects_count,)
+            solution.m, shape=(solution.objects_count,)
         ).copy()
 
         # Free memory
-        self.c_lib.free_memory_real(solutions.sol_state)
-        self.c_lib.free_memory_real(solutions.sol_time)
-        self.c_lib.free_memory_real(solutions.sol_dt)
-        self.c_lib.free_memory_real(solutions.m)
+        self.c_lib.free_memory_real(solution.sol_state)
+        self.c_lib.free_memory_real(solution.sol_time)
+        self.c_lib.free_memory_real(solution.sol_dt)
+        self.c_lib.free_memory_real(solution.m)
 
         return (
             return_sol_state,
             return_sol_time,
             return_sol_dt,
             return_m,
-            solutions.G,
-            solutions.objects_count,
+            solution.G,
+            solution.objects_count,
         )
 
     def simulation_numpy(
