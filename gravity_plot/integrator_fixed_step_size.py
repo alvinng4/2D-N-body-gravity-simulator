@@ -178,7 +178,7 @@ class FIXED_STEP_SIZE_INTEGRATOR:
         # This is added since the main thread is not catching
         # exceptions on Windows
         while fixed_step_size_integrator_thread.is_alive():
-            time.sleep(0.5)
+            time.sleep(0.1)
 
         fixed_step_size_integrator_thread.join()
 

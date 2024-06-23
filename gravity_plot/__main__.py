@@ -665,6 +665,26 @@ class GravitySimulator:
         Unit: Solar masses, AU, day
         Format: time, dt, total energy, x1, y1, z1, x2, y2, z2, ... vx1, vy1, vz1, vx2, vy2, vz2, ...
         """
+
+        # Estimate file size
+        num_entries = 3                                 # Time, energy and dt data
+        num_entries += self.simulator.objects_count * 7 # velocity * 3, position * 3, mass
+        file_size = num_entries * self.data_size * 19   # 20 is an approximated empirical value obtained from testing
+        file_size /= (1000 * 1000)                      # Convert to MB
+        
+        if 1 < file_size < 1000:
+            if not get_bool(f"File size will be about {file_size:.1f} MB. Continue?"):
+                print()
+                return None
+        elif 1000 <= file_size:
+            if not get_bool(f"File size will be about {(file_size / 1000):.1f} GB. Continue?"):
+                print()
+                return None
+            
+        print()
+
+        # Normally the energy will be calculated automatically before _save_result is called.
+        # This is an extra fail safe
         if not self.computed_energy:
             if get_bool("WARNING: Energy has not been computed. Compute energy?"):
                 self.simulator.compute_energy()

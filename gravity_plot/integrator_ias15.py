@@ -113,7 +113,7 @@ class IAS15:
         # This is added since the main thread is not catching
         # exceptions on Windows
         while ias15_thread.is_alive():
-            time.sleep(0.5)
+            time.sleep(0.1)
 
         ias15_thread.join()
 
