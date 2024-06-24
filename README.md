@@ -40,7 +40,6 @@ This online demo is built with the pygbag package.
 * [Plotting module](#plotting-module)
     - [Running the program](#running-the-program-2)
     - [C library / Numpy (Optional)](#c-library--numpy-optional-1)
-    - [Store every nth point (Optional)](#store-every-nth-point-optional)
     - [Available systems](#available-systems-1)
     - [Customizing system](#customizing-system)
     - [Output animation in .gif](#output-animation-in-gif)
@@ -162,7 +161,7 @@ For RK4, the largest dt to produce desired result is 2e-8 days.
 
 Once you have downloaded the source files, navigate to the directory of the source files in terminal and run
 ```
-python gravity_plot [-n|--numpy] [-s|--store_every_n=<int>]
+python gravity_plot [-n|--numpy]
 ```
 
 ### C library / Numpy (Optional)
@@ -173,16 +172,6 @@ If you want to use numpy, run the program with
 ```
 python gravity_plot [-n|--numpy]
 ```
-
-### Store every nth point (Optional)
-With long integration time and short dt, there would be a lot of unnecessary solutions stored in the memory, 
-which causes the program to slow down significantly and may even terminates itself. 
-In general, a data size of 50000 - 100000 points should be enough for most purposes.
-To fix this, run the following command to store every nth point
-```
-python gravity_plot [-s|--store_every_n=<int>]
-```
-You may also trim the data after the simulation is finished.
 
 ### Available systems
 | System | Description |

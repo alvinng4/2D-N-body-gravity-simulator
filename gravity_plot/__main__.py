@@ -46,12 +46,6 @@ class GravitySimulator:
                 print("System message: Loading c_lib failed. Running with numpy.")
                 self.is_c_lib = False
 
-        self.store_every_n = self.args.store_every_n
-        if self.store_every_n < 1:
-            raise argparse.ArgumentTypeError(
-                "Store every nth points should be larger than 1!"
-            )
-
         # --------------------Initialize attributes--------------------
         self.is_exit = ctypes.c_bool(False)
         self.simulator = Simulator(self)
@@ -111,15 +105,15 @@ class GravitySimulator:
             "Vesta": None,
         }
         self.recommended_settings = {
-            # "template": ["tf", "tf unit", "tolerance"],
-            "circular_binary_orbit": [50, "days", 1e-9],
-            "eccentric_binary_orbit": [2.6, "years", 1e-9],
-            "3d_helix": [20, "days", 1e-9],
-            "sun_earth_moon": [1, "years", 1e-9],
-            "figure-8": [20, "days", 1e-9],
-            "pyth-3-body": [70, "days", 1e-9],
-            "solar_system": [200, "years", 1e-9],
-            "solar_system_plus": [250, "years", 1e-9],
+            # "template": ["tf", "tf unit", "tolerance", "store_every_n"],
+            "circular_binary_orbit": [50, "days", 1e-9, 1],
+            "eccentric_binary_orbit": [2.6, "years", 1e-9, 1],
+            "3d_helix": [20, "days", 1e-9, 1],
+            "sun_earth_moon": [1, "years", 1e-9, 1],
+            "figure-8": [20, "days", 1e-9, 1],
+            "pyth-3-body": [70, "days", 1e-9, 1],
+            "solar_system": [200, "years", 1e-9, 1],
+            "solar_system_plus": [250, "years", 1e-9, 1],
         }
 
     def run_prog(self):
@@ -426,9 +420,12 @@ class GravitySimulator:
             if get_bool("Do you want to use the recommended settings for this system?"):
                 print("")
                 self.integrator = "ias15"
-                self.tf, self.tf_unit, self.tolerance = self.recommended_settings[
-                    self.system
-                ]
+                (
+                    self.tf,
+                    self.tf_unit,
+                    self.tolerance,
+                    self.store_every_n,
+                ) = self.recommended_settings[self.system]
                 if self.tf_unit == "years":
                     self.tf *= self.DAYS_PER_YEAR
 
@@ -436,6 +433,7 @@ class GravitySimulator:
 
         print()
 
+        # If user did not choose recommended settings:
         # --------------------Input integrators--------------------
         while True:
             print("Available integrators: ")
@@ -538,7 +536,12 @@ class GravitySimulator:
         elif self.integrator in ["rkf45", "dopri", "dverk", "rkf78", "ias15"]:
             self.tolerance = get_float("Enter tolerance: ", larger_than=0)
 
+        # --------------------Input store_every_n--------------------
+        self.store_every_n = get_int("Store every nth point (int): ", 0)
         print()
+
+        # Exit
+        return None
 
     def _print_user_simulation_input(self):
         print(f"System: {self.system}")
@@ -579,13 +582,6 @@ class GravitySimulator:
             "-n",
             action="store_false",
             help="disable c_lib and use numpy",
-        )
-        parser.add_argument(
-            "--store_every_n",
-            "-s",
-            type=int,
-            default=1,
-            help="Store every nth points",
         )
         self.args = parser.parse_args()
 
