@@ -22,51 +22,20 @@ class RK_EMBEDDED:
         self.is_exit = simulator.is_exit
         self.store_every_n = simulator.store_every_n
 
-        match simulator.integrator:
-            case "rkf45":
-                order = 45
-            case "dopri":
-                order = 54
-            case "dverk":
-                order = 65
-            case "rkf78":
-                order = 78
-            case _:
-                raise ValueError("Invalid integrator!")
-
         if simulator.is_c_lib:
             self.c_lib = simulator.c_lib
-            (
-                self.sol_state,
-                self.sol_time,
-                self.sol_dt,
-                self.m,
-                self.G,
-                self.objects_count,
-            ) = self.simulation_c_lib(
-                order,
-                simulator.system.encode("utf-8"),
-                simulator.tf,
-                simulator.tolerance,
-                simulator.tolerance,
-                simulator.x,  #######################
-                simulator.v,  #                     #
-                simulator.m,  #  For Custom system  #
-                simulator.G,  #                     #
-                simulator.objects_count,  #######################
-            )
-        else:
-            self.simulation_numpy(
-                order,
-                simulator.objects_count,
-                simulator.x,
-                simulator.v,
-                simulator.m,
-                simulator.G,
-                simulator.tf,
-                simulator.tolerance,
-                simulator.tolerance,
-            )
+
+        match simulator.integrator:
+            case "rkf45":
+                self.order = 45
+            case "dopri":
+                self.order = 54
+            case "dverk":
+                self.order = 65
+            case "rkf78":
+                self.order = 78
+            case _:
+                raise ValueError("Invalid integrator!")
 
     def simulation_c_lib(
         self,
@@ -195,7 +164,7 @@ class RK_EMBEDDED:
 
         progress_bar = Progress_bar_with_data_size()
         with progress_bar:
-            self.sol_state, self.sol_time, self.sol_dt = self.simulation(
+            return self.simulation(
                 progress_bar,
                 objects_count,
                 x,

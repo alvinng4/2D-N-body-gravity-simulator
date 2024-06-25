@@ -178,25 +178,130 @@ class Simulator:
         if is_custom_sys:
             self.x.resize((self.objects_count * 3,))
             self.v.resize((self.objects_count * 3,))
-        
-        match self.integrator:
-            case "euler" | "euler_cromer" | "rk4" | "leapfrog":
-                integrator = FIXED_STEP_SIZE_INTEGRATOR(self)
-
-            case "rkf45" | "dopri" | "dverk" | "rkf78":
-                integrator = RK_EMBEDDED(self)
-
-            case "ias15":
-                integrator = IAS15(self)
-
-        self.sol_state = integrator.sol_state
-        self.sol_time = integrator.sol_time
-        self.sol_dt = integrator.sol_dt
 
         if self.is_c_lib:
-            self.m = integrator.m
-            self.G = integrator.G
-            self.objects_count = integrator.objects_count
+            match self.integrator:
+                case "euler" | "euler_cromer" | "rk4" | "leapfrog":
+                    integrator = FIXED_STEP_SIZE_INTEGRATOR(self)
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                        self.m,
+                        self.G,
+                        self.objects_count,
+                    ) = integrator.simulation_c_lib(
+                        self.system.encode("utf-8"),
+                        self.integrator,
+                        self.dt,
+                        self.tf,
+                        self.x,  # x, v, m, G, objects_count are for custom system
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.objects_count,
+                    )
+
+                case "rkf45" | "dopri" | "dverk" | "rkf78":
+                    integrator = RK_EMBEDDED(self)
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                        self.m,
+                        self.G,
+                        self.objects_count,
+                    ) = integrator.simulation_c_lib(
+                        integrator.order,
+                        self.system.encode("utf-8"),
+                        self.tf,
+                        self.tolerance,
+                        self.tolerance,
+                        self.x,  # x, v, m, G, objects_count are for custom system
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.objects_count,
+                    )
+
+                case "ias15":
+                    integrator = IAS15(self)
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                        self.m,
+                        self.G,
+                        self.objects_count,
+                    ) = integrator.simulation_c_lib(
+                        self.system.encode("utf-8"),
+                        self.tf,
+                        self.tolerance,
+                        self.x,  # x, v, m, G, objects_count are for custom system
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.objects_count,
+                    )
+
+        else:
+            match self.integrator:
+                case "euler" | "euler_cromer" | "rk4" | "leapfrog":
+                    integrator = FIXED_STEP_SIZE_INTEGRATOR(self)
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                    ) = integrator.simulation_numpy(
+                        self.integrator,
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.dt,
+                        self.tf,
+                    )
+
+                case "rkf45" | "dopri" | "dverk" | "rkf78":
+                    integrator = RK_EMBEDDED(self)
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                    ) = integrator.simulation_numpy(
+                        integrator.order,
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.tf,
+                        self.tolerance,
+                        self.tolerance,
+                    )
+
+                case "ias15":
+                    integrator = IAS15(self)
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                    ) = integrator.simulation_numpy(
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.tf,
+                        self.tolerance,
+                    )
 
         stop = timeit.default_timer()
         self.run_time = stop - start

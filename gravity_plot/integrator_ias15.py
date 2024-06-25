@@ -22,36 +22,8 @@ class IAS15:
         self.is_exit = simulator.is_exit
         self.store_every_n = simulator.store_every_n
 
-        if simulator.is_c_lib == True:
+        if simulator.is_c_lib:
             self.c_lib = simulator.c_lib
-            (
-                self.sol_state,
-                self.sol_time,
-                self.sol_dt,
-                self.m,
-                self.G,
-                self.objects_count,
-            ) = self.simulation_c_lib(
-                simulator.system.encode("utf-8"),
-                simulator.tf,
-                simulator.tolerance,
-                simulator.x,  #######################
-                simulator.v,  #                     #
-                simulator.m,  #  For Custom system  #
-                simulator.G,  #                     #
-                simulator.objects_count,  #######################
-            )
-
-        elif simulator.is_c_lib == False:
-            self.sol_state, self.sol_time, self.sol_dt = self.simulation_numpy(
-                simulator.objects_count,
-                simulator.x,
-                simulator.v,
-                simulator.m,
-                simulator.G,
-                simulator.tf,
-                simulator.tolerance,
-            )
 
     def simulation_c_lib(
         self,

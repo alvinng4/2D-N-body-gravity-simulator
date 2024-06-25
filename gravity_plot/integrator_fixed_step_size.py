@@ -19,37 +19,9 @@ class FIXED_STEP_SIZE_INTEGRATOR:
     def __init__(self, simulator):
         self.is_exit = simulator.is_exit
         self.store_every_n = simulator.store_every_n
+
         if simulator.is_c_lib:
             self.c_lib = simulator.c_lib
-            (
-                self.sol_state,
-                self.sol_time,
-                self.sol_dt,
-                self.m,
-                self.G,
-                self.objects_count,
-            ) = self.simulation_c_lib(
-                simulator.system.encode("utf-8"),
-                simulator.integrator,
-                simulator.dt,
-                simulator.tf,
-                simulator.x,  #######################
-                simulator.v,  #                     #
-                simulator.m,  #  For Custom system  #
-                simulator.G,  #                     #
-                simulator.objects_count,  #######################
-            )
-        else:
-            self.simulation_numpy(
-                simulator.integrator,
-                simulator.objects_count,
-                simulator.x,
-                simulator.v,
-                simulator.m,
-                simulator.G,
-                simulator.dt,
-                simulator.tf,
-            )
 
     def simulation_c_lib(
         self,
@@ -375,6 +347,8 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                     progress_bar.update(
                         task, completed=store_npts, store_count=store_npts
                     )
+
+        return self.sol_state, self.sol_time, self.sol_dt
 
     @staticmethod
     def euler(x, v, a, dt, x_err_comp_sum, v_err_comp_sum):
