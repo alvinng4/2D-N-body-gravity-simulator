@@ -125,19 +125,13 @@ class GravitySimulator:
                 print("Exit the program anytime by hitting Ctrl + C\n")
 
                 self._user_interface_before_simulation()
-                if self.is_simulate == True:
+                if self.is_simulate:
                     self.computed_energy = False
                     self._launch_simulation()
 
                 else:
                     self.computed_energy = True
-                    (
-                        self.simulator.objects_count,
-                        self.simulator.sol_time,
-                        self.simulator.sol_dt,
-                        self.simulator.energy,
-                        self.simulator.sol_state,
-                    ) = self._read_simulation_data()
+                    self._read_simulation_data()
 
                 self.data_size = len(self.simulator.sol_time)
                 if self.data_size > 50000:
@@ -300,10 +294,10 @@ class GravitySimulator:
         self.simulator.tolerance = self.tolerance
         self.simulator.dt = self.dt
 
-        if (not self.is_c_lib) or (self.system not in self.default_systems):
+        if (not self.is_c_lib) or (self.simulator.system not in self.default_systems):
             self.simulator.initialize_system_numpy(self)
 
-        if self.system not in self.default_systems:
+        if self.simulator.system not in self.default_systems:
             self.simulator.simulation(is_custom_sys=True)
         else:
             self.simulator.simulation(is_custom_sys=False)
@@ -694,36 +688,43 @@ class GravitySimulator:
                 self.simulator.compute_energy()
                 self.computed_energy = True
 
+        # Storing the result
         print("Storing simulation results...")
         file_path = Path(__file__).parent / "results"
         file_path.mkdir(parents=True, exist_ok=True)
-        if self.is_simulate:
-            file_path = (
-                Path(__file__).parent
-                / "results"
-                / (
-                    str(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-                    + f"_{self.system}_"
-                    + f"{(self.tf / self.DAYS_PER_YEAR):g}{self.tf_unit[0]}_"
-                    + f"{self.integrator}"
-                    + ".csv"
-                )
+        file_path = (
+            Path(__file__).parent
+            / "results"
+            / (
+                str(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+                + "_result.csv"
             )
-        else:
-            file_path = (
-                Path(__file__).parent
-                / "results"
-                / (
-                    str(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-                    + f"_{self.system}"
-                    + ".csv"
-                )
-            )
+        )
+        
+        # Storing metadata
+        with open(file_path, "w", newline="") as file:
+            writer = csv.writer(file, quoting=csv.QUOTE_NONE)
+            writer.writerow([f"# Data saved on (YYYY-MM-DD): {str(datetime.datetime.now().strftime('%Y-%m-%d'))}"])
+            writer.writerow([f"# System Name: {self.simulator.system}"])
+
+            try:
+                integrator_name = self.available_integrators_to_printable_names[self.simulator.integrator]
+            except KeyError:
+                integrator_name = None
+
+            writer.writerow([f"# Integrator: {integrator_name}"])
+            writer.writerow([f"# Number of objects: {self.simulator.objects_count}"])
+            writer.writerow([f"# Simulation time (days): {self.simulator.tf}"])
+            writer.writerow([f"# dt (seconds): {self.simulator.dt}"])
+            writer.writerow([f"# Tolerance: {self.simulator.tolerance}"])
+            writer.writerow([f"# Data size: {self.data_size}"])
+            writer.writerow([f"# Store every nth point: {self.store_every_n}"])
+            writer.writerow([f"# Run time (s): {self.simulator.run_time}"])
 
         if self.computed_energy:
             progress_bar = Progress_bar()
             with progress_bar:
-                with open(file_path, "w", newline="") as file:
+                with open(file_path, "a", newline="") as file:
                     writer = csv.writer(file)
                     for count in progress_bar.track(range(self.data_size)):
                         row = np.insert(
@@ -741,7 +742,7 @@ class GravitySimulator:
             ):
                 progress_bar = Progress_bar()
                 with progress_bar:
-                    with open(file_path, "w", newline="") as file:
+                    with open(file_path, "a", newline="") as file:
                         writer = csv.writer(file)
                         for count in progress_bar.track(range(self.data_size)):
                             row = np.insert(self.simulator.sol_state[count], 0, 0)
@@ -754,7 +755,11 @@ class GravitySimulator:
         print("")
 
     def _read_simulation_data(self):
-        self.system = "read_data"
+        self.simulator.system = None
+        self.simulator.integrator = None
+        self.simulator.dt = None
+        self.simulator.tolerance = None
+        self.store_every_n = None
         read_folder_path = Path(__file__).parent / "results"
 
         while True:
@@ -773,23 +778,89 @@ class GravitySimulator:
         # Read data
         start = timeit.default_timer()
         progress_bar = Progress_bar()
+        
+        # Read metadata
+        has_proper_metadata = [False, False, False]  # to check if objects_count, simulation time and data size can be obtained properly
+        with open(read_file_path, "r") as file:
+            reader = csv.reader(row for row in file if row.startswith("#"))
+            
+            for row in reader:
+                if row[0].startswith("# System Name: "):
+                    self.simulator.system = row[0].replace("# System Name: ", "")
+
+                if row[0].startswith("# Integrator: "):
+                    integrator = row[0].replace("# Integrator: ", "")
+
+                    try:
+                        self.simulator.integrator = list(self.available_integrators_to_printable_names.keys())[list(self.available_integrators_to_printable_names.values()).index(integrator)]
+                    except KeyError:
+                        pass
+
+                if row[0].startswith("# Number of objects: "):
+                    try:
+                        self.simulator.objects_count = int(row[0].replace("# Number of objects: ", ""))
+                        has_proper_metadata[0] = True
+                    except ValueError:
+                        pass
+
+                if row[0].startswith("# Simulation time (days): "):
+                    try:
+                        self.simulator.tf = float(row[0].replace("# Simulation time (days): ", ""))
+                        has_proper_metadata[1] = True
+                    except ValueError:
+                        pass
+
+                if row[0].startswith("# dt (seconds): "):
+                    try:
+                        self.simulator.dt = float(row[0].replace("# dt (seconds): ", ""))
+                    except ValueError:
+                        pass
+
+                if row[0].startswith("# Tolerance: "):
+                    try:
+                        self.simulator.tolerance = float(row[0].replace("# Tolerance: ", ""))
+                    except ValueError:
+                        pass
+
+                if row[0].startswith("# Data size: "):
+                    try:
+                        self.simulator.data_size = int(row[0].replace("# Data size: ", ""))
+                        has_proper_metadata[2] = True
+                    except ValueError:
+                        pass
+
+                if row[0].startswith("# Store every nth point: "):
+                    try:
+                        self.store_every_n = int(row[0].replace("# Store every nth point: ", ""))
+                    except ValueError:
+                        pass
+
+
+                if row[0].startswith("# Run time (s): "):
+                    try:
+                        self.simulator.run_time = float(row[0].strip("# Run time (s): "))
+                    except ValueError:
+                        pass
 
         try:
             with open(read_file_path, "r") as file:
-                reader = csv.reader(file)
+                reader = csv.reader(row for row in file if not row.startswith("#"))
 
                 # Get object_count and file size
-                objects_count = round((len(next(reader)) - 3) / (3 * 2))
-                file_size = sum(1 for _ in file) + 1
+                if not has_proper_metadata[0]:
+                    self.simulator.objects_count = round((len(next(reader)) - 3) / (3 * 2))
+
+                if not has_proper_metadata[2]:
+                    self.simulator.data_size = sum(1 for _ in file) + 1
 
                 with progress_bar:
-                    task = progress_bar.add_task("", total=file_size)
+                    task = progress_bar.add_task("", total=self.simulator.data_size)
 
                     # Allocate memory
-                    sol_time = np.zeros(50000)
-                    sol_dt = np.zeros(50000)
-                    energy = np.zeros(50000)
-                    sol_state = np.zeros((50000, objects_count * 3 * 2))
+                    self.simulator.sol_time = np.zeros(50000)
+                    self.simulator.sol_dt = np.zeros(50000)
+                    self.simulator.energy = np.zeros(50000)
+                    self.simulator.sol_state = np.zeros((50000, self.simulator.objects_count * 3 * 2))
 
                     print()
                     print("Reading data...")
@@ -797,21 +868,21 @@ class GravitySimulator:
                     i = 0
                     file.seek(0)
                     for row in reader:
-                        sol_time[i] = row[0]
-                        sol_dt[i] = row[1]
-                        energy[i] = row[2]
-                        for j in range(objects_count):
-                            sol_state[i][j * 3 + 0] = row[3 + j * 3 + 0]
-                            sol_state[i][j * 3 + 1] = row[3 + j * 3 + 1]
-                            sol_state[i][j * 3 + 2] = row[3 + j * 3 + 2]
-                            sol_state[i][objects_count * 3 + j * 3 + 0] = row[
-                                3 + objects_count * 3 + j * 3 + 0
+                        self.simulator.sol_time[i] = row[0]
+                        self.simulator.sol_dt[i] = row[1]
+                        self.simulator.energy[i] = row[2]
+                        for j in range(self.simulator.objects_count):
+                            self.simulator.sol_state[i][j * 3 + 0] = row[3 + j * 3 + 0]
+                            self.simulator.sol_state[i][j * 3 + 1] = row[3 + j * 3 + 1]
+                            self.simulator.sol_state[i][j * 3 + 2] = row[3 + j * 3 + 2]
+                            self.simulator.sol_state[i][self.simulator.objects_count * 3 + j * 3 + 0] = row[
+                                3 + self.simulator.objects_count * 3 + j * 3 + 0
                             ]
-                            sol_state[i][objects_count * 3 + j * 3 + 1] = row[
-                                3 + objects_count * 3 + j * 3 + 1
+                            self.simulator.sol_state[i][self.simulator.objects_count * 3 + j * 3 + 1] = row[
+                                3 + self.simulator.objects_count * 3 + j * 3 + 1
                             ]
-                            sol_state[i][objects_count * 3 + j * 3 + 2] = row[
-                                3 + objects_count * 3 + j * 3 + 2
+                            self.simulator.sol_state[i][self.simulator.objects_count * 3 + j * 3 + 2] = row[
+                                3 + self.simulator.objects_count * 3 + j * 3 + 2
                             ]
 
                         i += 1
@@ -819,13 +890,21 @@ class GravitySimulator:
 
                         # Extending memory buffer
                         if i % 50000 == 0:
-                            sol_time = np.concatenate((sol_time, np.zeros(50000)))
-                            sol_dt = np.concatenate((sol_dt, np.zeros(50000)))
-                            energy = np.concatenate((energy, np.zeros(50000)))
-                            sol_state = np.concatenate(
-                                (sol_state, np.zeros((50000, objects_count * 3 * 2)))
+                            self.simulator.sol_time = np.concatenate((self.simulator.sol_time, np.zeros(50000)))
+                            self.simulator.sol_dt = np.concatenate((self.simulator.sol_dt, np.zeros(50000)))
+                            self.simulator.energy = np.concatenate((self.simulator.energy, np.zeros(50000)))
+                            self.simulator.sol_state = np.concatenate(
+                                (self.simulator.sol_state, np.zeros((50000, self.simulator.objects_count * 3 * 2)))
                             )
 
+                    self.simulator.sol_time = self.simulator.sol_time[:i]
+                    self.simulator.sol_dt = self.simulator.sol_dt[:i]
+                    self.simulator.energy = self.simulator.energy[:i]
+                    self.simulator.sol_state = self.simulator.sol_state[:i]
+
+                if not has_proper_metadata[1]:
+                    self.simulator.tf = self.simulator.sol_time[-1]
+                    
                 stop = timeit.default_timer()
                 print("Reading completed.\n")
                 print(f"Run time: {(stop - start):.3f} s")
@@ -842,15 +921,8 @@ class GravitySimulator:
                             self.tf_unit = "years"
 
                         if get_bool(f"Unit for tf is {self.tf_unit}. Proceed?"):
+                            print()
                             break
-
-                return (
-                    objects_count,
-                    sol_time[:i],
-                    sol_dt[:i],
-                    energy[:i],
-                    sol_state[:i],
-                )
 
         except FileNotFoundError:
             sys.exit("Error: file is not found. Exiting the program")

@@ -164,11 +164,44 @@ class Simulator:
             self.c_lib = grav_plot.c_lib
 
         self.is_exit = grav_plot.is_exit
+        self.run_time = None
         self.x = np.zeros(0)
         self.v = np.zeros(0)
         self.m = np.zeros(0)
         self.objects_count = 0
         self.G = 0.0
+
+    def simulation(self, is_custom_sys):
+        print("Simulating the system...")
+        start = timeit.default_timer()
+
+        if is_custom_sys:
+            self.x.resize((self.objects_count * 3,))
+            self.v.resize((self.objects_count * 3,))
+        
+        match self.integrator:
+            case "euler" | "euler_cromer" | "rk4" | "leapfrog":
+                integrator = FIXED_STEP_SIZE_INTEGRATOR(self)
+
+            case "rkf45" | "dopri" | "dverk" | "rkf78":
+                integrator = RK_EMBEDDED(self)
+
+            case "ias15":
+                integrator = IAS15(self)
+
+        self.sol_state = integrator.sol_state
+        self.sol_time = integrator.sol_time
+        self.sol_dt = integrator.sol_dt
+
+        if self.is_c_lib:
+            self.m = integrator.m
+            self.G = integrator.G
+            self.objects_count = integrator.objects_count
+
+        stop = timeit.default_timer()
+        self.run_time = stop - start
+        print(f"Run time: {self.run_time:.3f} s")
+        print("")
 
     def initialize_system_numpy(self, grav_plot):
         self.G = self.CONSTANT_G
@@ -460,37 +493,6 @@ class Simulator:
                         [V1, V2, V3, V4, V5, V6, V7, V8, V9, V10, V11, V12]
                     )
                     self.objects_count = 12
-
-    def simulation(self, is_custom_sys):
-        print("Simulating the system...")
-        start = timeit.default_timer()
-
-        if is_custom_sys:
-            self.x.resize((self.objects_count * 3,))
-            self.v.resize((self.objects_count * 3,))
-
-        match self.integrator:
-            case "euler" | "euler_cromer" | "rk4" | "leapfrog":
-                integrator = FIXED_STEP_SIZE_INTEGRATOR(self)
-
-            case "rkf45" | "dopri" | "dverk" | "rkf78":
-                integrator = RK_EMBEDDED(self)
-
-            case "ias15":
-                integrator = IAS15(self)
-
-        self.sol_state = integrator.sol_state
-        self.sol_time = integrator.sol_time
-        self.sol_dt = integrator.sol_dt
-
-        if self.is_c_lib:
-            self.m = integrator.m
-            self.G = integrator.G
-            self.objects_count = integrator.objects_count
-
-        stop = timeit.default_timer()
-        print(f"Run time: {stop - start:.3f} s")
-        print("")
 
     def compute_energy(self):
         """

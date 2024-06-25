@@ -225,10 +225,25 @@ If you choose to save the data, the numerical data will be stored in the followi
 ```
 Gravity-Simulator/gravity_plot/results
 ```
-The data will be in the default unit (solar masses, AU and days), and follow this format:
+The file will starts with the metadata which will always follows the same format.
+Missing information will be saved as `None`. Below is an example:
+```
+# Data saved on (YYYY-MM-DD): 2024-06-25
+# System Name: solar_system
+# Integrator: IAS15
+# Number of objects: 9
+# Simulation time (days): 73048.4378
+# dt (seconds): None
+# Tolerance: 1e-09
+# Data size: 64596
+# Store every nth point: 1
+```
+Then, the actual data will be saved in the default unit (solar masses, AU and days), and follow this format:
 ```
 time, dt, total energy, x1, y1, z1, ... vx1, vy1, vz1, ...
 ```
+The saved data file can be read by the program.
+Even if the metadata is corrupted or missing, the program can still read the data file, although some information could be missing.
 
 ## Compensated summation
 

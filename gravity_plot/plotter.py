@@ -23,7 +23,7 @@ class Plotter:
         ax.set_ylabel("$y$ (AU)")
 
         # Get specific colors if the system is solar-like
-        match grav_plot.system:
+        match grav_plot.simulator.system:
             case "sun_earth_moon":
                 objs_name = ["Sun", "Earth", "Moon"]
             case "solar_system":
@@ -54,7 +54,7 @@ class Plotter:
                     "Vesta",
                 ]
 
-        if grav_plot.system in grav_plot.solar_like_systems:
+        if grav_plot.simulator.system in grav_plot.solar_like_systems:
             colors = [
                 grav_plot.solar_like_systems_colors[objs_name[i]]
                 for i in range(grav_plot.simulator.objects_count)
@@ -79,7 +79,7 @@ class Plotter:
                 label=labels[i],
             )
 
-        if grav_plot.system in grav_plot.solar_like_systems:
+        if grav_plot.simulator.system in grav_plot.solar_like_systems:
             fig.legend(loc="center right", borderaxespad=0.2)
             fig.tight_layout()
 
@@ -97,7 +97,7 @@ class Plotter:
         ax.set_zlabel("$z$ (AU)")
 
         # Get specific colors if the system is solar-like
-        match grav_plot.system:
+        match grav_plot.simulator.system:
             case "sun_earth_moon":
                 objs_name = ["Sun", "Earth", "Moon"]
             case "solar_system":
@@ -128,7 +128,7 @@ class Plotter:
                     "Vesta",
                 ]
 
-        if grav_plot.system in grav_plot.solar_like_systems:
+        if grav_plot.simulator.system in grav_plot.solar_like_systems:
             colors = [
                 grav_plot.solar_like_systems_colors[objs_name[i]]
                 for i in range(grav_plot.simulator.objects_count)
@@ -159,7 +159,7 @@ class Plotter:
         Plotter.set_3d_axes_equal(ax)
 
         # Legend for solar_like systems
-        if grav_plot.system in grav_plot.solar_like_systems:
+        if grav_plot.simulator.system in grav_plot.solar_like_systems:
             ax.legend(loc="center right", bbox_to_anchor=(1.325, 0.5))
             fig.subplots_adjust(
                 right=0.7
@@ -302,7 +302,7 @@ class Plotter:
         ax = fig.add_subplot(111, aspect="equal")
 
         # Get specific colors if the system is solar-like
-        match grav_plot.system:
+        match grav_plot.simulator.system:
             case "sun_earth_moon":
                 objs_name = ["Sun", "Earth", "Moon"]
             case "solar_system":
@@ -333,7 +333,7 @@ class Plotter:
                     "Vesta",
                 ]
 
-        if grav_plot.system in grav_plot.solar_like_systems:
+        if grav_plot.simulator.system in grav_plot.solar_like_systems:
             colors = [
                 grav_plot.solar_like_systems_colors[objs_name[i]]
                 for i in range(grav_plot.simulator.objects_count)
@@ -388,7 +388,7 @@ class Plotter:
                             )
                         # Add legend at the beginning
                         if (i == 0) and (
-                            grav_plot.system in grav_plot.solar_like_systems
+                            grav_plot.simulator.system in grav_plot.solar_like_systems
                         ):
                             fig.legend(loc="center right", borderaxespad=0.2)
 
@@ -444,7 +444,7 @@ class Plotter:
                             )
                         # Add legend at the beginning
                         if (i == 0) and (
-                            grav_plot.system in grav_plot.solar_like_systems
+                            grav_plot.simulator.system in grav_plot.solar_like_systems
                         ):
                             fig.legend(loc="center right", borderaxespad=0.2)
 
@@ -485,7 +485,7 @@ class Plotter:
         ax = fig.add_subplot(111, projection="3d")
 
         # Get specific colors if the system is solar-like
-        match grav_plot.system:
+        match grav_plot.simulator.system:
             case "sun_earth_moon":
                 objs_name = ["Sun", "Earth", "Moon"]
             case "solar_system":
@@ -516,7 +516,7 @@ class Plotter:
                     "Vesta",
                 ]
 
-        if grav_plot.system in grav_plot.solar_like_systems:
+        if grav_plot.simulator.system in grav_plot.solar_like_systems:
             colors = [
                 grav_plot.solar_like_systems_colors[objs_name[i]]
                 for i in range(grav_plot.simulator.objects_count)
@@ -576,7 +576,7 @@ class Plotter:
                             )
 
                         # Add legend
-                        if grav_plot.system in grav_plot.solar_like_systems:
+                        if grav_plot.simulator.system in grav_plot.solar_like_systems:
                             ax.legend(loc="center right", bbox_to_anchor=(1.325, 0.5))
 
                             # Adjust figure for the legend
@@ -643,7 +643,7 @@ class Plotter:
                             )
 
                         # Add legend
-                        if grav_plot.system in grav_plot.solar_like_systems:
+                        if grav_plot.simulator.system in grav_plot.solar_like_systems:
                             ax.legend(loc="center right", bbox_to_anchor=(1.325, 0.5))
 
                             # Adjust figure for the legend
