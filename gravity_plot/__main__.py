@@ -721,7 +721,7 @@ class GravitySimulator:
             writer.writerow([f"# Integrator: {integrator_name}"])
             writer.writerow([f"# Number of objects: {self.simulator.objects_count}"])
             writer.writerow([f"# Simulation time (days): {self.simulator.tf}"])
-            writer.writerow([f"# dt (seconds): {self.simulator.dt}"])
+            writer.writerow([f"# dt (days): {self.simulator.dt}"])
             writer.writerow([f"# Tolerance: {self.simulator.tolerance}"])
             writer.writerow([f"# Data size: {self.data_size}"])
             writer.writerow([f"# Store every nth point: {self.store_every_n}"])

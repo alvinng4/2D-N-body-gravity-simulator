@@ -233,7 +233,7 @@ Missing information will be saved as `None`. Below is an example:
 # Integrator: IAS15
 # Number of objects: 9
 # Simulation time (days): 73048.4378
-# dt (seconds): None
+# dt (days): None
 # Tolerance: 1e-09
 # Data size: 64596
 # Store every nth point: 1
