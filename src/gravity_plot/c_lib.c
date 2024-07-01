@@ -1,8 +1,8 @@
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <stdio.h>
 
 #ifdef WIN32DLL_EXPORTS
     #define WIN32DLL_API __declspec(dllexport)
@@ -26,14 +26,13 @@ typedef struct Solutions
 } Solutions;
 
 void free_memory_real(real *ptr);
-void initialize_system(
+int initialize_system(
     const char *restrict system,
     real **x,
     real **v,
     real **m,
     int *restrict objects_count,
-    real *restrict G,
-    int *restrict custom_sys_flag
+    real *restrict G
 );
 real abs_max_vec(const real *restrict vec, int vec_length);
 real vec_norm(const real *restrict vec, int vec_length);
@@ -46,6 +45,7 @@ void compute_energy(
     const double *restrict m, 
     real G
 );
+
 void acceleration(int objects_count, real *restrict x, real *restrict a, const real *restrict m, real G);
 void euler(
     const char *restrict system,
@@ -267,29 +267,55 @@ void ias15_radau_spacing(real *restrict nodes);
 void ias15_aux_c(real *restrict aux_c);
 void ias15_aux_r(real *aux_r);
 real ias15_initial_dt(
+    int objects_count,
     int power,
     real *restrict x,
     real *restrict v,
     real *restrict a,
     const real *m,
-    int objects_count,
     real G
 );
 
-// Free memory in type real
+/**
+ * \brief Frees allocated memory for pointers of type 'real'.
+ * 
+ *        This function should be called to free the allocated 
+ *        memories after the python wrapper made a copy of the 
+ *        arrays.
+ * 
+ * \param ptr Pointer to the memory block of type 'real' to be freed.
+ * 
+ * \return None
+ */
 WIN32DLL_API void free_memory_real(real *ptr)
 {
     free(ptr);
 }
 
-WIN32DLL_API void initialize_system(
+/**
+ * \brief Initialize default systems for gravity simulator.
+ *        if the system name is recognized to be one of the 
+ *        default system *x, *v and *m, *objects_count and 
+ *        *G would be modified. Specifically, *x, *v and *m
+ *        would be assigned a new block of memory.
+ * 
+ * \param system Name of the system to be initialized
+ * \param x Pointer to pointer x, where x is the array of position vectors of all objects
+ * \param v Pointer to pointer v, where v is the array of velocity vectors of all objects 
+ * \param m Pointer to pointer m, where a is the array of acceleration vectors of all objects
+ * \param objects_count Number of objects in the system
+ * \param G Pointer to gravitational constant
+ * 
+ * \retval 0, if the system is successfully initialized
+ * \retval 1, if the system is not recognized
+ */     
+WIN32DLL_API int initialize_system(
     const char *restrict system,
     real **x,
     real **v,
     real **m,
     int *restrict objects_count,
-    real *restrict G,
-    int *restrict custom_sys_flag
+    real *restrict G
 )
 {
     // Conversion factor from km^3 s^-2 to AU^3 d^-2
@@ -389,6 +415,11 @@ WIN32DLL_API void initialize_system(
         *v = malloc(*objects_count * 3 * sizeof(real));
         *m = malloc(*objects_count * sizeof(real));
 
+        if (!*x || !*v || !*m)
+        {
+            goto err_memory;
+        }
+
         (*x)[0] = 1.0;
         (*x)[1] = 0.0;
         (*x)[2] = 0.0;
@@ -407,6 +438,8 @@ WIN32DLL_API void initialize_system(
         
         (*m)[0] = 1.0 / *G;
         (*m)[1] = 1.0 / *G;
+
+        return 0;
     }
     else if (strcmp(system, "eccentric_binary_orbit") == 0) 
     {
@@ -414,6 +447,11 @@ WIN32DLL_API void initialize_system(
         *x = malloc(*objects_count * 3 * sizeof(real));
         *v = malloc(*objects_count * 3 * sizeof(real));
         *m = malloc(*objects_count * sizeof(real));
+
+        if (!*x || !*v || !*m)
+        {
+            goto err_memory;
+        }
 
         (*x)[0] = 1.0;
         (*x)[1] = 0.0;
@@ -433,6 +471,8 @@ WIN32DLL_API void initialize_system(
         
         (*m)[0] = 1.0 / *G;
         (*m)[1] = 0.8 / *G;
+
+        return 0;
     }
     else if (strcmp(system, "3d_helix") == 0) 
     {
@@ -440,6 +480,11 @@ WIN32DLL_API void initialize_system(
         *x = malloc(*objects_count * 3 * sizeof(real));
         *v = malloc(*objects_count * 3 * sizeof(real));
         *m = malloc(*objects_count * sizeof(real));
+
+        if (!*x || !*v || !*m)
+        {
+            goto err_memory;
+        }
         
         (*x)[0] = 0.0;
         (*x)[1] = 0.0;
@@ -470,6 +515,8 @@ WIN32DLL_API void initialize_system(
         (*m)[0] = 1.0 / *G;
         (*m)[1] = 1.0 / *G;
         (*m)[2] = 1.0 / *G;
+
+        return 0;
     }
     else if (strcmp(system, "sun_earth_moon") == 0) 
     {
@@ -477,6 +524,11 @@ WIN32DLL_API void initialize_system(
         *x = malloc(*objects_count * 3 * sizeof(real));
         *v = malloc(*objects_count * 3 * sizeof(real));
         *m = malloc(*objects_count * sizeof(real));
+
+        if (!*x || !*v || !*m)
+        {
+            goto err_memory;
+        }
 
         (*m)[0] = MASS_SUN;
         (*m)[1] = MASS_EARTH;
@@ -501,6 +553,8 @@ WIN32DLL_API void initialize_system(
             (*v)[1 * 3 + i] = VEL_EARTH[i] - V_CM[i];
             (*v)[2 * 3 + i] = VEL_MOON[i] - V_CM[i];
         }
+
+        return 0;
     }
     else if (strcmp(system, "figure-8") == 0) 
     {
@@ -508,6 +562,11 @@ WIN32DLL_API void initialize_system(
         *x = malloc(*objects_count * 3 * sizeof(real));
         *v = malloc(*objects_count * 3 * sizeof(real));
         *m = malloc(*objects_count * sizeof(real));
+
+        if (!*x || !*v || !*m)
+        {
+            goto err_memory;
+        }
 
         (*x)[0] = 0.970043;
         (*x)[1] = -0.24308753;
@@ -536,6 +595,8 @@ WIN32DLL_API void initialize_system(
         (*m)[0] = 1.0 / *G;
         (*m)[1] = 1.0 / *G;
         (*m)[2] = 1.0 / *G;
+
+        return 0;
     }
     else if (strcmp(system, "pyth-3-body") == 0) 
     {
@@ -543,6 +604,11 @@ WIN32DLL_API void initialize_system(
         *x = malloc(*objects_count * 3 * sizeof(real));
         *v = malloc(*objects_count * 3 * sizeof(real));
         *m = malloc(*objects_count * sizeof(real));
+
+        if (!*x || !*v || !*m)
+        {
+            goto err_memory;
+        }
 
         (*x)[0] = 1.0;
         (*x)[1] = 3.0;
@@ -571,6 +637,8 @@ WIN32DLL_API void initialize_system(
         (*m)[0] = 3.0 / *G;
         (*m)[1] = 4.0 / *G;
         (*m)[2] = 5.0 / *G;
+
+        return 0;
     }
     else if (strcmp(system, "solar_system") == 0) 
     {
@@ -578,6 +646,11 @@ WIN32DLL_API void initialize_system(
         *x = malloc(*objects_count * 3 * sizeof(real));
         *v = malloc(*objects_count * 3 * sizeof(real));
         *m = malloc(*objects_count * sizeof(real));
+
+        if (!*x || !*v || !*m)
+        {
+            goto err_memory;
+        }
 
         (*m)[0] = MASS_SUN;
         (*m)[1] = MASS_MERCURY;
@@ -633,6 +706,8 @@ WIN32DLL_API void initialize_system(
             (*v)[7 * 3 + i] = VEL_URANUS[i] - V_CM[i];
             (*v)[8 * 3 + i] = VEL_NEPTUNE[i] - V_CM[i];
         }
+
+        return 0;
     }
     else if (strcmp(system, "solar_system_plus") == 0) 
     {
@@ -640,6 +715,11 @@ WIN32DLL_API void initialize_system(
         *x = malloc(*objects_count * 3 * sizeof(real));
         *v = malloc(*objects_count * 3 * sizeof(real));
         *m = malloc(*objects_count * sizeof(real));
+
+        if (!*x || !*v || !*m)
+        {
+            goto err_memory;
+        }
         
         (*m)[0] = MASS_SUN;
         (*m)[1] = MASS_MERCURY;
@@ -706,14 +786,26 @@ WIN32DLL_API void initialize_system(
             (*v)[10 * 3 + i] = VEL_CERES[i] - V_CM[i];
             (*v)[11 * 3 + i] = VEL_VESTA[i] - V_CM[i];
         }
+
+        return 0;
     }
-    else
-    {
-        *custom_sys_flag = 1;
-    }
+
+    return 1;   // returns 1 since no system is recognized
+
+err_memory:
+    printf("Error: Failed to allocate memory to initialize default system\n");
+    free(x);
+    free(v);
+    free(m);
+    exit(EXIT_FAILURE);
 }
 
-// Find the max absolute value in a 1D array
+/**
+ * \brief Find the max absolute value in a 1D array
+ * 
+ * \param vec A 1D array
+ * \param vec_length Length of the 1D array
+ */
 WIN32DLL_API real abs_max_vec(const real *restrict vec, int vec_length)
 {
     real max = fabs(vec[0]);
@@ -725,7 +817,12 @@ WIN32DLL_API real abs_max_vec(const real *restrict vec, int vec_length)
     return max;
 }
 
-// Find the norm of 1D vector
+/**
+ * \brief Find the norm of a 1D array
+ * 
+ * \param vec A 1D array
+ * \param vec_length Length of the 1D array
+ */
 WIN32DLL_API real vec_norm(const real *restrict vec, int vec_length)
 {   
     real sum = 0.0;
@@ -743,6 +840,20 @@ WIN32DLL_API real vec_norm(const real *restrict vec, int vec_length)
     return sqrt(sum);
 }
 
+/**
+ * \brief Compute the total energy in the newtonian system
+ * 
+ * \param objects_count Number of objects in the system
+ * \param npts Length of the solution
+ * \param count Pointer to the count of current progress
+ * \param energy 1D array of size npts. Computed energy will 
+ *               be stored into this array.
+ * \param sol_state Array of state vectors of the solution
+ * \param m Array of masses of the system
+ * \param G Gravitational Constant
+ * 
+ * \return None
+ */
 WIN32DLL_API void compute_energy(
     int objects_count, 
     int npts,
@@ -754,7 +865,7 @@ WIN32DLL_API void compute_energy(
 )
 {
     // Round down current progress percentage as int
-    int progress_percentage = (*count / npts * 100);
+    int progress_percentage = (double) *count / npts * 100.0;
 
     real temp_vec[3];
 
@@ -799,13 +910,25 @@ WIN32DLL_API void compute_energy(
     }
 }
 
+/**
+ * \brief Compute acceleration based on Newton's law of gravitational. 
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors of all objects
+ * \param a Array of acceleration vectors of all objects.
+ *                   Values inside this array will be replaced
+ *                   by the computed acceleration.
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
+ * 
+ * \return None
+ */
 WIN32DLL_API void acceleration(int objects_count, real *restrict x, real *restrict a, const real *restrict m, real G)
 {   
     real R_norm;
     real temp_value;
     real temp_vec[3];
     real R[3];
-
+    
     // Empty the input array
     for (int i = 0; i < objects_count; i++)
     {
@@ -839,6 +962,25 @@ WIN32DLL_API void acceleration(int objects_count, real *restrict x, real *restri
     }
 }
 
+/**
+ * \brief Euler integrator
+ * 
+ * \param system Name of the system
+ * \param dt Time step of the system
+ * \param npts Number of time steps to be integrated
+ * \param store_npts Number of points to be stored
+ * \param store_every_n Store every nth point
+ * \param store_count Pointer to the store count
+ * \param custom_sys_x Array of the position vectors of customized system 
+ * \param custom_sys_v Array of the velocity vectors of customized system 
+ * \param custom_sys_m Array of the masses of customized system 
+ * \param custom_sys_G Gravitational constant of customized system
+ * \param custom_sys_object_count Number of objects in customized system
+ * \param solution Pointer to a Solution struct, in order to store the solution
+ * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
+ * 
+ * \return None
+ */
 WIN32DLL_API void euler(
     const char *restrict system,
     double dt,
@@ -855,14 +997,13 @@ WIN32DLL_API void euler(
     int *restrict is_exit
 )
 {   
-    // Initialize system
+    // Initialize default system
     real *x = NULL;
     real *v = NULL;
     real *m = NULL;
     int objects_count;
     real G;
-    int custom_sys_flag = 0;
-    initialize_system(system, &x, &v, &m, &objects_count, &G, &custom_sys_flag);
+    int custom_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
 
     // Custom system
     if (custom_sys_flag == 1)
@@ -871,6 +1012,12 @@ WIN32DLL_API void euler(
         x = malloc(objects_count * 3 * sizeof(real));
         v = malloc(objects_count * 3 * sizeof(real));
         m = malloc(objects_count * sizeof(real));
+
+        if (!x || !v || !m)
+        {
+            printf("Error: Failed to allocate memory for customized system\n");
+            goto err_custom_sys_memory;
+        }
 
         for (int i = 0; i < objects_count; i++)
         {
@@ -893,11 +1040,23 @@ WIN32DLL_API void euler(
     real *x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
     real *v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
 
+    if (!temp_x || !temp_v || !a || !x_err_comp_sum || !v_err_comp_sum)
+    {
+        printf("Error: Failed to allocate memory for calculation\n");
+        goto err_calc_memory;
+    }
+
     // Allocate memory for solution output
     int64 count = 0;
     double *sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
     double *sol_time = malloc(store_npts * sizeof(double));
     double *sol_dt = malloc(store_npts * sizeof(double));
+
+    if (!sol_state || !sol_time || !sol_dt)
+    {
+        printf("Error: Failed to allocate memory for solution output\n");
+        goto err_sol_output_memory;
+    }
 
     // Initial value
     for (int i = 0; i < objects_count; i++)
@@ -957,18 +1116,10 @@ WIN32DLL_API void euler(
         }
         count++;
 
-        // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
+        // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)
         {
-            free(x);
-            free(v);
-            free(a);
-            free(temp_x);
-            free(temp_v);
-            free(x_err_comp_sum);
-            free(v_err_comp_sum);
-
-            return;
+            goto err_user_exit;
         }
     }
     free(x);
@@ -987,8 +1138,44 @@ WIN32DLL_API void euler(
     solution->objects_count = objects_count;
 
     return;
+
+err_user_exit: // User sends KeyboardInterrupt in main thread
+err_sol_output_memory:
+    free(sol_state);
+    free(sol_time);
+    free(sol_dt);
+err_calc_memory:
+    free(temp_x);
+    free(temp_v);
+    free(a);
+    free(x_err_comp_sum);
+    free(v_err_comp_sum);
+err_custom_sys_memory:
+    free(x);
+    free(v);
+    free(m);
+    exit(EXIT_FAILURE);
 }
 
+/**
+ * \brief Euler-cromer integrator
+ * 
+ * \param system Name of the system
+ * \param dt Time step of the system
+ * \param npts Number of time steps to be integrated
+ * \param store_npts Number of points to be stored
+ * \param store_every_n Store every nth point
+ * \param store_count Pointer to the store count
+ * \param custom_sys_x Array of the position vectors of customized system 
+ * \param custom_sys_v Array of the velocity vectors of customized system 
+ * \param custom_sys_m Array of the masses of customized system 
+ * \param custom_sys_G Gravitational constant of customized system
+ * \param custom_sys_object_count Number of objects in customized system
+ * \param solution Pointer to a Solution struct, in order to store the solution
+ * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
+ * 
+ * \return None
+ */
 WIN32DLL_API void euler_cromer(
     const char *restrict system,
     double dt,
@@ -1005,14 +1192,13 @@ WIN32DLL_API void euler_cromer(
     int *restrict is_exit
 )
 {   
-    // Initialize system
+    // Initialize default system
     real *x = NULL;
     real *v = NULL;
     real *m = NULL;
     int objects_count;
     real G;
-    int custom_sys_flag = 0;
-    initialize_system(system, &x, &v, &m, &objects_count, &G, &custom_sys_flag);
+    int custom_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
 
     // Custom system
     if (custom_sys_flag == 1)
@@ -1021,6 +1207,12 @@ WIN32DLL_API void euler_cromer(
         x = malloc(objects_count * 3 * sizeof(real));
         v = malloc(objects_count * 3 * sizeof(real));
         m = malloc(objects_count * sizeof(real));
+
+        if (!x || !v || !m)
+        {
+            printf("Error: Failed to allocate memory for customized system\n");
+            goto err_custom_sys_memory;
+        }
 
         for (int i = 0; i < objects_count; i++)
         {
@@ -1042,12 +1234,24 @@ WIN32DLL_API void euler_cromer(
     // Allocate memory for compensated summation
     real *x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
     real *v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    
+    if (!temp_x || !temp_v || !a || !x_err_comp_sum || !v_err_comp_sum)
+    {
+        printf("Error: Failed to allocate memory for calculation\n");
+        goto err_calc_memory;
+    }
 
     // Allocate memory for solution output
     int64 count = 0;
     double *sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
     double *sol_time = malloc(store_npts * sizeof(double));
     double *sol_dt = malloc(store_npts * sizeof(double));
+
+    if (!sol_state || !sol_time || !sol_dt)
+    {
+        printf("Error: Failed to allocate memory for solution output\n");
+        goto err_sol_output_memory;
+    }
 
     // Initial value
     for (int i = 0; i < objects_count; i++)
@@ -1106,18 +1310,10 @@ WIN32DLL_API void euler_cromer(
         }
         count++;
 
-        // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
+        // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)
         {
-            free(x);
-            free(v);
-            free(a);
-            free(temp_x);
-            free(temp_v);
-            free(x_err_comp_sum);
-            free(v_err_comp_sum);
-
-            return;
+            goto err_user_exit;
         }
     }
     free(x);
@@ -1136,8 +1332,44 @@ WIN32DLL_API void euler_cromer(
     solution->objects_count = objects_count;
 
     return;
+
+err_user_exit: // User sends KeyboardInterrupt in main thread
+err_sol_output_memory:
+    free(sol_state);
+    free(sol_time);
+    free(sol_dt);
+err_calc_memory:
+    free(temp_x);
+    free(temp_v);
+    free(a);
+    free(x_err_comp_sum);
+    free(v_err_comp_sum);
+err_custom_sys_memory:
+    free(x);
+    free(v);
+    free(m);
+    exit(EXIT_FAILURE);
 }
 
+/**
+ * \brief RK4 integrator
+ * 
+ * \param system Name of the system
+ * \param dt Time step of the system
+ * \param npts Number of time steps to be integrated
+ * \param store_npts Number of points to be stored
+ * \param store_every_n Store every nth point
+ * \param store_count Pointer to the store count
+ * \param custom_sys_x Array of the position vectors of customized system 
+ * \param custom_sys_v Array of the velocity vectors of customized system 
+ * \param custom_sys_m Array of the masses of customized system 
+ * \param custom_sys_G Gravitational constant of customized system
+ * \param custom_sys_object_count Number of objects in customized system
+ * \param solution Pointer to a Solution struct, in order to store the solution
+ * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
+ * 
+ * \return None
+ */
 WIN32DLL_API void rk4(
     const char *restrict system,
     double dt,
@@ -1154,14 +1386,13 @@ WIN32DLL_API void rk4(
     int *restrict is_exit
 )
 {
-    // Initialize system
+    // Initialize default system
     real *x = NULL;
     real *v = NULL;
     real *m = NULL;
     int objects_count;
     real G;
-    int custom_sys_flag = 0;
-    initialize_system(system, &x, &v, &m, &objects_count, &G, &custom_sys_flag);
+    int custom_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
 
     // Custom system
     if (custom_sys_flag == 1)
@@ -1170,6 +1401,12 @@ WIN32DLL_API void rk4(
         x = malloc(objects_count * 3 * sizeof(real));
         v = malloc(objects_count * 3 * sizeof(real));
         m = malloc(objects_count * sizeof(real));
+
+        if (!x || !v || !m)
+        {
+            printf("Error: Failed to allocate memory for customized system\n");
+            goto err_custom_sys_memory;
+        }
 
         for (int i = 0; i < objects_count; i++)
         {
@@ -1200,11 +1437,23 @@ WIN32DLL_API void rk4(
     real *x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
     real *v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
 
+    if (!temp_x || !temp_v || !a || !vk1 || !vk2 || !vk3 || !vk4 || !xk1 || !xk2 || !xk3 || !xk4 || !x_err_comp_sum || !v_err_comp_sum)
+    {
+        printf("Error: Failed to allocate memory for calculation\n");
+        goto err_calc_memory;
+    }
+
     // Allocate memory for solution output
     int64 count = 0;
     double *sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
     double *sol_time = malloc(store_npts * sizeof(double));
     double *sol_dt = malloc(store_npts * sizeof(double));
+
+    if (!sol_state || !sol_time || !sol_dt)
+    {
+        printf("Error: Failed to allocate memory for solution output\n");
+        goto err_sol_output_memory;
+    }
 
     // Initial value
     for (int i = 0; i < objects_count; i++)
@@ -1298,26 +1547,10 @@ WIN32DLL_API void rk4(
         }
         count++;
 
-        // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
+        // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)
         {
-            free(x);
-            free(v);
-            free(a);
-            free(temp_x);
-            free(temp_v);
-            free(vk1);
-            free(vk2);
-            free(vk3);
-            free(vk4);
-            free(xk1);
-            free(xk2);
-            free(xk3);
-            free(xk4);
-            free(x_err_comp_sum);
-            free(v_err_comp_sum);
-
-            return;
+            goto err_user_exit;
         }
     }
 
@@ -1345,8 +1578,52 @@ WIN32DLL_API void rk4(
     solution->objects_count = objects_count;
 
     return;
+
+err_user_exit: // User sends KeyboardInterrupt in main thread
+err_sol_output_memory:
+    free(sol_state);
+    free(sol_time);
+    free(sol_dt);
+err_calc_memory:
+    free(temp_x);
+    free(temp_v);
+    free(a);
+    free(vk1);
+    free(vk2);
+    free(vk3);
+    free(vk4);
+    free(xk1);
+    free(xk2);
+    free(xk3);
+    free(xk4);
+    free(x_err_comp_sum);
+    free(v_err_comp_sum);
+err_custom_sys_memory:
+    free(x);
+    free(v);
+    free(m);
+    exit(EXIT_FAILURE);
 }
 
+/**
+ * \brief LeapFrog integrator
+ * 
+ * \param system Name of the system
+ * \param dt Time step of the system
+ * \param npts Number of time steps to be integrated
+ * \param store_npts Number of points to be stored
+ * \param store_every_n Store every nth point
+ * \param store_count Pointer to the store count
+ * \param custom_sys_x Array of the position vectors of customized system 
+ * \param custom_sys_v Array of the velocity vectors of customized system 
+ * \param custom_sys_m Array of the masses of customized system 
+ * \param custom_sys_G Gravitational constant of customized system
+ * \param custom_sys_object_count Number of objects in customized system
+ * \param solution Pointer to a Solution struct, in order to store the solution
+ * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
+ * 
+ * \return None
+ */
 WIN32DLL_API void leapfrog(
     const char *restrict system,
     double dt,
@@ -1363,14 +1640,13 @@ WIN32DLL_API void leapfrog(
     int *restrict is_exit
 )
 {   
-    // Initialize system
+    // Initialize default system
     real *x = NULL;
     real *v = NULL;
     real *m = NULL;
     int objects_count;
     real G;
-    int custom_sys_flag = 0;
-    initialize_system(system, &x, &v, &m, &objects_count, &G, &custom_sys_flag);
+    int custom_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
 
     // Custom system
     if (custom_sys_flag == 1)
@@ -1379,6 +1655,12 @@ WIN32DLL_API void leapfrog(
         x = malloc(objects_count * 3 * sizeof(real));
         v = malloc(objects_count * 3 * sizeof(real));
         m = malloc(objects_count * sizeof(real));
+
+        if (!x || !v || !m)
+        {
+            printf("Error: Failed to allocate memory for customized system\n");
+            goto err_custom_sys_memory;
+        }
 
         for (int i = 0; i < objects_count; i++)
         {
@@ -1398,17 +1680,27 @@ WIN32DLL_API void leapfrog(
     real *a_0 = malloc(objects_count * 3 * sizeof(real));
     real *a_1 = malloc(objects_count * 3 * sizeof(real));
 
-    acceleration(objects_count, x, a_1, m, G);
-
     // Allocate memory for compensated summation
     real *x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
     real *v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+
+    if (!temp_x || !temp_v || !a_0 || !a_1 || !x_err_comp_sum || !v_err_comp_sum)
+    {
+        printf("Error: Failed to allocate memory for calculation\n");
+        goto err_calc_memory;
+    }
 
     // Allocate memory for solution output
     int64 count = 0;
     double *sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
     double *sol_time = malloc(store_npts * sizeof(double));
     double *sol_dt = malloc(store_npts * sizeof(double));
+
+    if (!sol_state || !sol_time || !sol_dt)
+    {
+        printf("Error: Failed to allocate memory for solution output\n");
+        goto err_sol_output_memory;
+    }
 
     // Initial value
     for (int i = 0; i < objects_count; i++)
@@ -1426,6 +1718,7 @@ WIN32DLL_API void leapfrog(
     }
 
     // Main Loop
+    acceleration(objects_count, x, a_1, m, G);
     while ((count + 1) <= npts)
     {       
         // Use a_1 from last iteration as a_0
@@ -1475,19 +1768,10 @@ WIN32DLL_API void leapfrog(
         }
         count++;
 
-        // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
+        // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)
         {
-            free(x);
-            free(v);
-            free(temp_x);
-            free(temp_v);
-            free(a_0);
-            free(a_1);
-            free(x_err_comp_sum);
-            free(v_err_comp_sum);
-
-            return;
+            goto err_user_exit;
         }
     }
 
@@ -1508,8 +1792,47 @@ WIN32DLL_API void leapfrog(
     solution->objects_count = objects_count;
 
     return;
+
+err_user_exit: // User sends KeyboardInterrupt in main thread
+err_sol_output_memory:
+    free(sol_state);
+    free(sol_time);
+    free(sol_dt);
+err_calc_memory:
+    free(temp_x);
+    free(temp_v);
+    free(a_0);
+    free(a_1);
+    free(x_err_comp_sum);
+    free(v_err_comp_sum);
+err_custom_sys_memory:
+    free(x);
+    free(v);
+    free(m);
+    exit(EXIT_FAILURE);
 }
 
+/**
+ * \brief Embedded RK integrator
+ * 
+ * \param order Order of the integrator
+ * \param system Name of the system
+ * \param t Pointer to the current simulation time
+ * \param tf Total time to be integrated
+ * \param input_abs_tolerance Absolute tolerance of the integrator
+ * \param input_rel_tolerance Relative tolerance of the integrator
+ * \param store_every_n Store every nth point
+ * \param store_count Pointer to the store count
+ * \param custom_sys_x Array of the position vectors of customized system 
+ * \param custom_sys_v Array of the velocity vectors of customized system 
+ * \param custom_sys_m Array of the masses of customized system 
+ * \param custom_sys_G Gravitational constant of customized system
+ * \param custom_sys_object_count Number of objects in customized system
+ * \param solution Pointer to a Solution struct, in order to store the solution
+ * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
+ * 
+ * \return None
+ */
 WIN32DLL_API void rk_embedded(
     int order,
     const char *restrict system,
@@ -1528,14 +1851,13 @@ WIN32DLL_API void rk_embedded(
     int *restrict is_exit
 )
 {   
-    // Initialize system
+    // Initialize default system
     real *x = NULL;
     real *v = NULL;
     real *m = NULL;
     int objects_count;
     real G;
-    int custom_sys_flag = 0;
-    initialize_system(system, &x, &v, &m, &objects_count, &G, &custom_sys_flag);
+    int custom_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
 
     // Custom system
     if (custom_sys_flag == 1)
@@ -1544,6 +1866,12 @@ WIN32DLL_API void rk_embedded(
         x = malloc(objects_count * 3 * sizeof(real));
         v = malloc(objects_count * 3 * sizeof(real));
         m = malloc(objects_count * sizeof(real));
+
+        if (!x || !v || !m)
+        {
+            printf("Error: Failed to allocate memory for customized system\n");
+            goto err_custom_sys_memory;
+        }
 
         for (int i = 0; i < objects_count; i++)
         {
@@ -1557,9 +1885,6 @@ WIN32DLL_API void rk_embedded(
         G = custom_sys_G;
     }
     
-    real *a = malloc(objects_count * 3 * sizeof(real));
-    acceleration(objects_count, x, a, m, G);
-
     // Initialization
     int power;
     int power_test;
@@ -1569,17 +1894,30 @@ WIN32DLL_API void rk_embedded(
     real *weights_test = NULL;
     rk_embedded_butcher_tableaus(order, &power, &power_test, &coeff, &len_weights, &weights, &weights_test);
 
-    real abs_tolerance = input_abs_tolerance;
-    real rel_tolerance = input_rel_tolerance;
+    if (!coeff || !weights || !weights_test)
+    {
+        printf("Error: Failed to initialize values from butcher table for Embedded RK integrator\n");
+        goto err_rk_embedded_butcher_tableaus;
+    }
 
     int stages = len_weights;
     int min_power = power < power_test ? power : power_test;
 
     real *error_estimation_delta_weights = malloc(len_weights * sizeof(real));
+    if (!error_estimation_delta_weights)
+    {
+        printf("Error: Failed to allocate memory for error_estimation_delta_weights variable in rk_embedded()\n");
+        goto err_error_estimation_delta_weights;
+    }
+
     for (int stage = 0; stage < stages; stage++)
     {
         error_estimation_delta_weights[stage] = weights[stage] - weights_test[stage];
     }
+
+    // Convert the tolerance from double to type real
+    real abs_tolerance = input_abs_tolerance;
+    real rel_tolerance = input_rel_tolerance;
 
     // Safety factors for step-size control:
     real safety_fac_max = 6.0;
@@ -1588,6 +1926,7 @@ WIN32DLL_API void rk_embedded(
 
     // Initialize memory for calculation
     real sum, error, dt_new; 
+    real *a = malloc(objects_count * 3 * sizeof(real));
     real *v_1 = calloc(objects_count * 3, sizeof(real));
     real *x_1 = calloc(objects_count * 3, sizeof(real));
     real *vk = calloc(stages * objects_count * 3, sizeof(real));
@@ -1606,12 +1945,46 @@ WIN32DLL_API void rk_embedded(
     real *temp_x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
     real *temp_v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
 
+    if (
+        !a ||
+        !v_1 || 
+        !x_1 || 
+        !vk || 
+        !xk || 
+        !temp_a || 
+        !temp_v || 
+        !temp_x || 
+        !error_estimation_delta_v || 
+        !error_estimation_delta_x || 
+        !tolerance_scale_v || 
+        !tolerance_scale_x || 
+        !x_err_comp_sum || 
+        !v_err_comp_sum || 
+        !temp_x_err_comp_sum || 
+        !temp_v_err_comp_sum
+    ) 
+    {
+        printf("Error: Failed to allocate memory for calculation\n");
+        goto err_calc_memory;
+    }
+
     // Allocate memory for solution output
     int64 count = 0;
     double *sol_state = malloc(NPTS * objects_count * 6 * sizeof(double));
     double *sol_time = malloc(NPTS * sizeof(double));
     double *sol_dt = malloc(NPTS * sizeof(double));
     int buffer_size = NPTS;
+
+    if (!sol_state || !sol_time || !sol_dt)
+    {
+        printf("Error: Failed to allocate memory for solution output\n");
+        goto err_sol_output_memory;
+    }
+    
+    // For realloc solution output
+    double *temp_sol_state = NULL;
+    double *temp_sol_time = NULL;
+    double *temp_sol_dt = NULL;
 
     // Initial value
     for (int i = 0; i < objects_count; i++)
@@ -1774,33 +2147,10 @@ WIN32DLL_API void rk_embedded(
                 memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
             }
 
-            // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
+            // Check if user sends KeyboardInterrupt in main thread
             if (*is_exit)
             {
-                free(x);
-                free(v);
-                free(a);
-                free(coeff);
-                free(weights);
-                free(weights_test);
-                free(error_estimation_delta_weights);
-                free(v_1);
-                free(x_1);
-                free(vk);
-                free(xk);
-                free(temp_a);
-                free(temp_v);
-                free(temp_x);
-                free(error_estimation_delta_v);
-                free(error_estimation_delta_x);
-                free(tolerance_scale_v);
-                free(tolerance_scale_x);
-                free(x_err_comp_sum);
-                free(v_err_comp_sum);
-                free(temp_x_err_comp_sum);
-                free(temp_v_err_comp_sum);
-
-                return;
+                goto err_user_exit;
             }
 
             // End simulation as t >= tf
@@ -1842,10 +2192,20 @@ WIN32DLL_API void rk_embedded(
             // Check buffer size and extend if full
             if ((*store_count + 1) == buffer_size)
             {   
-                buffer_size += NPTS;
-                sol_state = realloc(sol_state, buffer_size * objects_count * 6 * sizeof(real));
-                sol_time = realloc(sol_time, buffer_size * sizeof(real));
-                sol_dt = realloc(sol_dt, buffer_size * sizeof(real));
+                buffer_size *= 2;
+                temp_sol_state = realloc(sol_state, buffer_size * objects_count * 6 * sizeof(real));
+                temp_sol_time = realloc(sol_time, buffer_size * sizeof(real));
+                temp_sol_dt = realloc(sol_dt, buffer_size * sizeof(real));
+
+                if (!temp_sol_state || !temp_sol_time || !temp_sol_dt)
+                {
+                    printf("Error: Failed to allocate extra memory to extend array for solution output\n");
+                    goto err_sol_output_memory;
+                }
+                
+                sol_state = temp_sol_state;
+                sol_time = temp_sol_time;
+                sol_dt = temp_sol_dt;
             }
         }
 
@@ -1883,13 +2243,59 @@ WIN32DLL_API void rk_embedded(
             dt = tf - *t;
         }
     }
+
+err_user_exit: // User sends KeyboardInterrupt in main thread
+err_sol_output_memory:
+    free(sol_state);
+    free(sol_time);
+    free(sol_dt);
+err_calc_memory:
+    free(a);
+    free(v_1);
+    free(x_1);
+    free(vk);
+    free(xk);
+    free(temp_a);
+    free(temp_v);
+    free(temp_x);
+    free(error_estimation_delta_v);
+    free(error_estimation_delta_x);
+    free(tolerance_scale_v);
+    free(tolerance_scale_x);
+    free(x_err_comp_sum);
+    free(v_err_comp_sum);
+    free(temp_x_err_comp_sum);
+    free(temp_v_err_comp_sum);
+err_error_estimation_delta_weights:
+    free(error_estimation_delta_weights);
+err_rk_embedded_butcher_tableaus:
+    free(coeff);
+    free(weights);
+    free(weights_test);
+err_custom_sys_memory:
+    free(x);
+    free(v);
+    free(m);
+    exit(EXIT_FAILURE);
 }
 
-/* 
-*   Calculate the initial time step for the Embedded RK method
-*
-*   Modified: Return dt * 1e-2 since this function gives initial dt thats too large
-*/
+/**
+ * \brief Calculate the initial time step for Embedded RK integrator
+ * 
+ * \param objects_count Number of objects in the system
+ * \param power Power of the integrator
+ * \param x Array of position vectors of all objects
+ * \param v Array of velocity vectors of all objects
+ * \param a Array of acceleration vectors of all objects
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
+ * \param abs_tolerance Absolute tolerance of the integrator
+ * \param rel_tolerance Relative tolerance of the integrator
+ * 
+ * \warning: Modified to return dt * 1e-2 since this function gives initial dt thats too large
+ * 
+ * \return initial dt for Embedded RK integrator
+ */
 WIN32DLL_API real rk_embedded_initial_dt(
     int objects_count,
     int power,
@@ -1916,6 +2322,25 @@ WIN32DLL_API real rk_embedded_initial_dt(
     real *x_1 = malloc(objects_count * 3 * sizeof(real));
     real *v_1 = malloc(objects_count * 3 * sizeof(real));
     real *a_1 = malloc(objects_count * 3 * sizeof(real));
+
+    if (
+        !tolerance_scale_x ||
+        !tolerance_scale_v ||
+        !x_1 ||
+        !v_1 ||
+        !a_1
+    )
+    {
+        printf("Error: Failed to allocate memory for rk_embedded_initial_dt()\n");
+        free(tolerance_scale_x);
+        free(tolerance_scale_v);
+        free(x_1);
+        free(v_1);
+        free(a_1);
+        exit(EXIT_FAILURE);
+    }
+
+    acceleration(objects_count, x, a, m, G);
 
     // tolerance_scale_x = abs_tol + rel_tol * abs(x)
     // tolerance_scale_v = abs_tol + rel_tol * abs(v)
@@ -1995,12 +2420,19 @@ WIN32DLL_API real rk_embedded_initial_dt(
     return dt * 1e-2;
 }
 
-/*
-*   Butcher tableaus for embedded rk
-*
-*   Parameters: order (Must be one of 45 / 54 / 78 / 65)
-*               power, power_test, coeff, weights, weights_test
-*/
+/**
+ * \brief Butcher tableaus for Embedded RK integrator
+ * 
+ * \param order Order of the integrator, must be one of 45 / 54 / 78 / 65
+ * \param power Power of the integrator
+ * \param power_test Power for error calculation
+ * \param coeff Pointer to array of coefficients for the integrator
+ * \param len_weights Length of the weights array
+ * \param weights Pointer to the array of weights for RK integrator
+ * \param weights_test Pointer to the array of weights for error calculation
+ * 
+ * \return None
+ */
 WIN32DLL_API void rk_embedded_butcher_tableaus(
     int order,
     int *restrict power,
@@ -2011,7 +2443,8 @@ WIN32DLL_API void rk_embedded_butcher_tableaus(
     real **weights_test
 )
 {
-    /*  Select integrator
+    /*  
+    *   Select integrator
     *   45) Runge-Kutta-Fehleberg 4(5)
     *   54) Dormand-Prince 5(4)
     *   78) Runge-Kutta-Fehlberg 7(8)
@@ -2210,12 +2643,42 @@ WIN32DLL_API void rk_embedded_butcher_tableaus(
             break;
 
         default:
-            printf("Error: Unknown order for RK Embedded Integrator");
+            printf("Error: Invalid order for Embedded RK integrator\n");
             exit(EXIT_FAILURE);
             break;
     }
+
+    if (!*coeff || !*weights || !weights_test)
+    {
+        printf("Error: Failed to allocate memory for rk_embedded_butcher_tableaus()\n");
+        free(*coeff);
+        free(*weights);
+        free(*weights_test);
+
+        exit(EXIT_FAILURE);
+    }
+    return;
 }
 
+/**
+ * \brief IAS15 integrator
+ * 
+ * \param system Name of the system
+ * \param t Pointer to the current simulation time
+ * \param tf Total time to be integrated
+ * \param input_tolerance Tolerance of the integrator
+ * \param store_every_n Store every nth point
+ * \param store_count Pointer to the store count
+ * \param custom_sys_x Array of the position vectors of customized system 
+ * \param custom_sys_v Array of the velocity vectors of customized system 
+ * \param custom_sys_m Array of the masses of customized system 
+ * \param custom_sys_G Gravitational constant of customized system
+ * \param custom_sys_object_count Number of objects in customized system
+ * \param solution Pointer to a Solution struct, in order to store the solution
+ * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
+ * 
+ * \return None
+ */
 WIN32DLL_API void ias15(
     const char *restrict system,
     double *restrict t,
@@ -2232,14 +2695,13 @@ WIN32DLL_API void ias15(
     int *restrict is_exit
 )
 {   
-    // Initialize system
+    // Initialize default system
     real *x = NULL;
     real *v = NULL;
     real *m = NULL;
     int objects_count;
     real G;
-    int custom_sys_flag = 0;
-    initialize_system(system, &x, &v, &m, &objects_count, &G, &custom_sys_flag);
+    int custom_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
 
     // Custom system
     if (custom_sys_flag == 1)
@@ -2248,6 +2710,12 @@ WIN32DLL_API void ias15(
         x = malloc(objects_count * 3 * sizeof(real));
         v = malloc(objects_count * 3 * sizeof(real));
         m = malloc(objects_count * sizeof(real));
+
+        if (!x || !v || !m)
+        {
+            printf("Error: Failed to allocate memory for customized system\n");
+            goto err_custom_sys_memory;
+        }
 
         for (int i = 0; i < objects_count; i++)
         {
@@ -2262,7 +2730,11 @@ WIN32DLL_API void ias15(
     }
 
     real *a = malloc(objects_count * 3 * sizeof(real));
-    acceleration(objects_count, x, a, m, G);
+    if (!a)
+    {
+        printf("Error: Failed to allocate memory for acceleration vectors\n");
+        goto err_a;
+    }
 
     // Recommended tolerance: 1e-9
     real tolerance = input_tolerance;
@@ -2275,21 +2747,27 @@ WIN32DLL_API void ias15(
 
     // Tolerance of predictor-corrector algorithm
     real tolerance_pc = 1e-16;
-
+    
     // Initialize auxiliary variables
     int dim_nodes = 8;
     int dim_nodes_minus_1 = 7;
     int dim_nodes_minus_2 = 6;
     real *nodes = calloc(dim_nodes, sizeof(real));
-    ias15_radau_spacing(nodes);
     real *aux_c = calloc(7 * 7, sizeof(real));
-    ias15_aux_c(aux_c);
     real *aux_r = calloc(8 * 8, sizeof(real));
-    ias15_aux_r(aux_r);
     real *aux_b0 = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
     real *aux_b = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
     real *aux_g = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
     real *aux_e = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
+
+    if (!nodes || !aux_c || !aux_r || !aux_b0 || !aux_b || !aux_g || !aux_e)
+    {
+        printf("Error: Failed to allocate memory for auxiliary variables\n");
+        goto err_aux_memory;
+    }
+    ias15_radau_spacing(nodes);
+    ias15_aux_c(aux_c);
+    ias15_aux_r(aux_r);
 
     int ias15_refine_flag = 0;
 
@@ -2312,12 +2790,41 @@ WIN32DLL_API void ias15(
     real *temp_x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
     real *temp_v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
 
+    if (
+        !aux_a || 
+        !x_step ||
+        !v_step ||
+        !a_step ||
+        !delta_b7 ||
+        !F ||
+        !delta_aux_b ||
+        !x_err_comp_sum ||
+        !v_err_comp_sum ||
+        !temp_x_err_comp_sum ||
+        !temp_v_err_comp_sum
+    )
+    {
+        printf("Error: Failed to allocate memory for calculation\n");
+        goto err_calc_memory;
+    }
+
     // Allocate memory for solution output
     int64 count = 0;
     double *sol_state = malloc(NPTS * objects_count * 6 * sizeof(double));
     double *sol_time = malloc(NPTS * sizeof(double));
     double *sol_dt = malloc(NPTS * sizeof(double));
     int buffer_size = NPTS;
+
+    if (!sol_state || !sol_time || !sol_dt)
+    {
+        printf("Error: Failed to allocate memory for solution output\n");
+        goto err_sol_output_memory;
+    }
+
+    // For realloc solution output
+    double *temp_sol_state = NULL;
+    double *temp_sol_time = NULL;
+    double *temp_sol_dt = NULL;
 
     // Initial value
     for (int i = 0; i < objects_count; i++)
@@ -2329,7 +2836,7 @@ WIN32DLL_API void ias15(
         }
     }
     sol_time[0] = 0.0;
-    real dt = ias15_initial_dt(15, x, v, a, m, objects_count, G);
+    real dt = ias15_initial_dt(objects_count, 15, x, v, a, m, G);
     sol_dt[0] = dt;
 
     while (1)
@@ -2392,32 +2899,10 @@ WIN32DLL_API void ias15(
             memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
         }
 
-        // Exit if is_exit is true (User sends KeyboardInterrupt in main thread)
+        // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)
         {
-            free(x);
-            free(v);
-            free(a);
-            free(nodes);
-            free(aux_c);
-            free(aux_r);
-            free(aux_b0);
-            free(aux_b);
-            free(aux_g);
-            free(aux_e);
-            free(aux_a);
-            free(x_step);
-            free(v_step);
-            free(a_step);
-            free(delta_b7); 
-            free(F);
-            free(delta_aux_b);
-            free(x_err_comp_sum);
-            free(v_err_comp_sum);
-            free(temp_x_err_comp_sum);
-            free(temp_v_err_comp_sum);
-
-            return;
+            goto err_user_exit;
         }
 
         // End simulation as t >= tf
@@ -2458,12 +2943,54 @@ WIN32DLL_API void ias15(
         // Check buffer size and extend if full
         if ((*store_count + 1) == buffer_size)
         {   
-            buffer_size += NPTS;
-            sol_state = realloc(sol_state, buffer_size * objects_count * 6 * sizeof(real));
-            sol_time = realloc(sol_time, buffer_size * sizeof(real));
-            sol_dt = realloc(sol_dt, buffer_size * sizeof(real));
+            buffer_size *= 2;
+            temp_sol_state = realloc(sol_state, buffer_size * objects_count * 6 * sizeof(real));
+            temp_sol_time = realloc(sol_time, buffer_size * sizeof(real));
+            temp_sol_dt = realloc(sol_dt, buffer_size * sizeof(real));
+
+            if (!temp_sol_state || !temp_sol_time || !temp_sol_dt)
+            {
+                printf("Error: Failed to allocate extra memory to extend array for solution output\n");
+                goto err_sol_output_memory;
+            }
+            
+            sol_state = temp_sol_state;
+            sol_time = temp_sol_time;
+            sol_dt = temp_sol_dt;
         }
     }
+err_user_exit: // User sends KeyboardInterrupt in main thread
+err_sol_output_memory:
+    free(sol_state);
+    free(sol_time);
+    free(sol_dt);
+err_calc_memory:
+    free(aux_a);
+    free(x_step);
+    free(v_step);
+    free(a_step);
+    free(delta_b7);
+    free(F);
+    free(delta_aux_b);
+    free(x_err_comp_sum);
+    free(v_err_comp_sum);
+    free(temp_x_err_comp_sum);
+    free(temp_v_err_comp_sum);
+err_aux_memory:
+    free(nodes);
+    free(aux_c);
+    free(aux_r);
+    free(aux_b0);
+    free(aux_b);
+    free(aux_g);
+    free(aux_e);
+err_a:
+    free(a);
+err_custom_sys_memory:
+    free(x);
+    free(v);
+    free(m);
+    exit(EXIT_FAILURE);
 }
 
 // Advance IAS15 for one step
@@ -2623,7 +3150,22 @@ WIN32DLL_API void ias15_step(
     }
 }
 
-// Calculate position in the predictor-corrector algorithm to calculate aux_b and aux_g
+/**
+ * \brief Calculate position for the predictor-corrector algorithm
+ * 
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors to be modified
+ * \param x0 Array of position vectors from the last time step
+ * \param v0 Array of velocity vectors from the last time step
+ * \param a0 Array of acceleration vectors from the last time step
+ * \param node Current node of the predictor-corrector algorithm
+ * \param aux_b Auxiliary b array
+ * \param dt Time step of the system
+ * \param x_err_comp_sum Array of round off errors of position vectors 
+ *                       for compensated summation
+ * 
+ * \return None
+ */
 WIN32DLL_API void ias15_approx_pos_pc(
     int objects_count,
     real *restrict x,
@@ -2683,7 +3225,21 @@ WIN32DLL_API void ias15_approx_pos_pc(
     }
 }
 
-// Calculate velocity in the predictor-corrector algorithm to calculate aux_b and aux_g
+/**
+ * \brief Calculate velocity for the predictor-corrector algorithm
+ *
+ * \param objects_count Number of objects in the system
+ * \param v Array of velocity vectors to be modified
+ * \param v0 Array of velocity vectors from the last time step
+ * \param a0 Array of acceleration vectors from the last time step
+ * \param node Current node of the predictor-corrector algorithm
+ * \param aux_b Auxiliary b array
+ * \param dt Time step of the system
+ * \param v_err_comp_sum Array of round off errors of velocity vectors 
+ *                       for compensated summation
+ * 
+ * \return None
+ */
 WIN32DLL_API void ias15_approx_vel_pc(
     int objects_count,
     real *restrict v,
@@ -2736,7 +3292,22 @@ WIN32DLL_API void ias15_approx_vel_pc(
     }
 }
 
-// Calculate the position of the next step
+/**
+ * \brief Calculate position for the next time step
+ * 
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors to be modified
+ * \param x0 Array of position vectors from the last time step
+ * \param v0 Array of velocity vectors from the last time step
+ * \param a0 Array of acceleration vectors from the last time step
+ * \param aux_b Auxiliary coefficients b
+ * \param dt Time step of the system
+ * \param temp_x_err_comp_sum Array of round off errors of position vectors 
+ *                            for compensated summation. This array will be
+ *                            modified.
+ * 
+ * \return None
+ */
 WIN32DLL_API void ias15_approx_pos_step(
     int objects_count,
     real *restrict x,
@@ -2771,7 +3342,21 @@ WIN32DLL_API void ias15_approx_pos_step(
     }
 }
 
-// Calculate the velocity of the next step
+/**
+ * \brief Calculate velocity for the next time step
+ * 
+ * \param objects_count Number of objects in the system
+ * \param v Array of velocity vectors to be modified
+ * \param v0 Array of velocity vectors from the last time step
+ * \param a0 Array of acceleration vectors from the last time step
+ * \param aux_b Auxiliary coefficients b
+ * \param dt Time step of the system
+ * \param temp_v_err_comp_sum Array of round off errors of velocity vectors 
+ *                            for compensated summation. This array will be
+ *                            modified.
+ * 
+ * \return None
+ */
 WIN32DLL_API void ias15_approx_vel_step(
     int objects_count,
     real *restrict v,
@@ -2802,7 +3387,16 @@ WIN32DLL_API void ias15_approx_vel_step(
     }
 }
 
-// Calculate the auxiliary coefficients b for IAS15
+/**
+ * \brief Calculate the auxiliary coefficients b for IAS15 integrator
+ * 
+ * \param objects_count Number of objects in the system
+ * \param dim_nodes_minus_1 Dimension of nodes minus one
+ * \param aux_b Array of auxiliary coefficients b to be modified
+ * \param aux_g Array of auxiliary coefficients g
+ * \param aux_c Array of auxiliary coefficients c
+ * \param i Current iteration of nodes of the predictor-corrector algorithm
+ */
 WIN32DLL_API void ias15_compute_aux_b(
     int objects_count,
     int dim_nodes_minus_1,
@@ -2913,6 +3507,17 @@ WIN32DLL_API void ias15_compute_aux_b(
     }
 }
 
+/**
+ * \brief Calculate the auxiliary coefficients g for IAS15 integrator
+ * 
+ * \param objects_count Number of objects in the system
+ * \param dim_nodes Dimension of nodes
+ * \param aux_g Array of auxiliary coefficients g to be modified
+ * \param aux_r Array of auxiliary coefficients r
+ * \param aux_a Array of auxiliary accelerations a
+ * \param i Current iteration of nodes of the predictor-corrector algorithm
+ * \param F Helper array for this function
+ */
 WIN32DLL_API void ias15_compute_aux_g(
     int objects_count,
     int dim_nodes,
@@ -3057,6 +3662,20 @@ WIN32DLL_API void ias15_compute_aux_g(
     }
 }
 
+/**
+ * \brief Refine the auxiliary coefficients b for IAS15 integrator
+ * 
+ * \param objects_count Number of objects in the system
+ * \param dim_nodes_minus_1 Dimension of nodes minus one
+ * \param aux_b Array of auxiliary coefficients b to be modified
+ * \param aux_e Array of auxiliary coefficients e
+ * \param delta_aux_b Helper array for this function
+ * \param dt Current Time Step
+ * \param dt_new Next Time Step
+ * \param ias15_refine_flag Helper flag for this function
+ * 
+ * \return None
+ */
 WIN32DLL_API void ias15_refine_aux_b(
     int objects_count,
     int dim_nodes_minus_1,
@@ -3165,11 +3784,13 @@ WIN32DLL_API void ias15_refine_aux_b(
     }
 }
 
-/*
-*   Initialize the radau spacing nodes for IAS15
-*
-*   Return: pointer to 1D array with length 8 in data type real
-*/
+/**
+ * \brief Initialize the radau spacing nodes for IAS15
+ * 
+ * \param nodes 1D array of size 8 to be modified
+ * 
+ * \return None
+ */
 WIN32DLL_API void ias15_radau_spacing(real *restrict nodes)
 {
     nodes[0] = 0.0L;
@@ -3182,11 +3803,13 @@ WIN32DLL_API void ias15_radau_spacing(real *restrict nodes)
     nodes[7] = 0.977520613561287501891174500429L;
 }
 
-/*
-*   Initialize the auxiliary coefficients aux_c for IAS15
-*
-*   Parameter: pointer to 1D array with length 7 * 7 in data type real
-*/
+/**
+ * \brief Initialize the auxiliary coefficients aux_c for IAS15
+ * 
+ * \param aux_c 1D array of length 49 to be modified
+ * 
+ * \return None
+ */
 WIN32DLL_API void ias15_aux_c(real *restrict aux_c)
 {
     for (int i = 0; i < 7; i++)
@@ -3222,11 +3845,13 @@ WIN32DLL_API void ias15_aux_c(real *restrict aux_c)
     aux_c[6 * 7 + 5] = -2.7558127197720458314421589L;
 }
 
-/*
-*   Initialize auxiliary coefficients aux_r for IAS15
-*
-*   Return: pointer to 1D array with length 8 * 8 in data type real
-*/
+/**
+ * \brief Initialize auxiliary coefficients aux_r for IAS15
+ * 
+ * \param aux_r 1D array of size 64 to be modified
+ * 
+ * \return None
+ */
 WIN32DLL_API void ias15_aux_r(real *aux_r)
 {
     aux_r[1 * 8 + 0] = 17.773808914078000840752659565672904106978971632681L;
@@ -3265,21 +3890,31 @@ WIN32DLL_API void ias15_aux_r(real *aux_r)
     aux_r[7 * 8 + 6] = 10.846026190236844684706431007823415424143683137181L;
 }
 
-/*
-*   Calculate the initial time step for IAS15
-*
-*   return type: real
-*/
+/**
+ * \brief Calculate the initial time step for IAS15 integrator
+ * 
+ * \param objects_count Number of objects in the system
+ * \param power Power of the integrator
+ * \param x Array of position vectors of all objects
+ * \param v Array of velocity vectors of all objects
+ * \param a Array of acceleration vectors of all objects
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
+ * 
+ * \return initial dt for IAS15 integrator
+ */
 real ias15_initial_dt(
+    int objects_count,
     int power,
     real *restrict x,
     real *restrict v,
     real *restrict a,
     const real *m,
-    int objects_count,
     real G
 )
 {
+    acceleration(objects_count, x, a, m, G);
+
     real d_0 = abs_max_vec(x, objects_count * 3);
     real d_1 = abs_max_vec(a, objects_count * 3);
     real d_2;
@@ -3287,6 +3922,15 @@ real ias15_initial_dt(
     real dt_1;
     real *x_1 = malloc(objects_count * 3 * sizeof(real));
     real *a_1 = malloc(objects_count * 3 * sizeof(real));
+
+    if (!x_1 || !a_1)
+    {
+        printf("Error: Failed to allocate memory for ias15_initial_dt()\n");
+        free(x_1);
+        free(a_1);
+        exit(EXIT_FAILURE);
+
+    }
 
     if (d_0 < 1e-5 || d_1 < 1e-5)
     {
@@ -3296,7 +3940,7 @@ real ias15_initial_dt(
     {
         dt_0 = 0.01 * (d_0 / d_1);
     }
-
+    
     for (int i = 0; i < objects_count; i++)
     {
         x_1[i * 3 + 0] = x[i * 3 + 0] + dt_0 * v[i * 3 + 0];
