@@ -47,7 +47,7 @@ void compute_energy(
 );
 
 void acceleration(int objects_count, real *restrict x, real *restrict a, const real *restrict m, real G);
-void euler(
+int euler(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -62,7 +62,7 @@ void euler(
     Solutions *restrict solution,
     int *restrict is_exit
 );
-void euler_cromer(
+int euler_cromer(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -77,7 +77,7 @@ void euler_cromer(
     Solutions *restrict solution,
     int *restrict is_exit
 );
-void rk4(
+int rk4(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -92,7 +92,7 @@ void rk4(
     Solutions *restrict solution,
     int *restrict is_exit
 );
-void leapfrog(
+int leapfrog(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -107,7 +107,7 @@ void leapfrog(
     Solutions *restrict solution,
     int *restrict is_exit
 );
-void rk_embedded(
+int rk_embedded(
     int order,
     const char *restrict system,
     double *restrict t,
@@ -135,7 +135,7 @@ real rk_embedded_initial_dt(
     real abs_tolerance,
     real rel_tolerance
 );
-void rk_embedded_butcher_tableaus(
+int rk_embedded_butcher_tableaus(
     int order,
     int *restrict power,
     int *restrict power_test,
@@ -144,7 +144,7 @@ void rk_embedded_butcher_tableaus(
     real **weights,
     real **weights_test
 );
-void ias15(
+int ias15(
     const char *restrict system,
     double *restrict t,
     double tf, 
@@ -308,6 +308,7 @@ WIN32DLL_API void free_memory_real(real *ptr)
  * 
  * \retval 0, if the system is successfully initialized
  * \retval 1, if the system is not recognized
+ * \retval 2, if failed to allocate memory for x, v and m.
  */     
 WIN32DLL_API int initialize_system(
     const char *restrict system,
@@ -793,11 +794,10 @@ WIN32DLL_API int initialize_system(
     return 1;   // returns 1 since no system is recognized
 
 err_memory:
-    printf("Error: Failed to allocate memory to initialize default system\n");
     free(x);
     free(v);
     free(m);
-    exit(EXIT_FAILURE);
+    return 2;
 }
 
 /**
@@ -979,9 +979,11 @@ WIN32DLL_API void acceleration(int objects_count, real *restrict x, real *restri
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
  * 
- * \return None
+ * \retval 0 If exit successfully
+ * \retval 1 If failed to allocate memory
+ * \retval 2 If KeyboardInterrupt in the main thread
  */
-WIN32DLL_API void euler(
+WIN32DLL_API int euler(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -1003,10 +1005,15 @@ WIN32DLL_API void euler(
     real *m = NULL;
     int objects_count;
     real G;
-    int custom_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
+    int intitial_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
 
     // Custom system
-    if (custom_sys_flag == 1)
+    if (intitial_sys_flag == 2)
+    {
+        printf("Error: Failed to allocate memory to initialize default system\n");
+        goto err_default_sys_memory;
+    }
+    else if (intitial_sys_flag == 1)
     {
         objects_count = custom_sys_objects_count;
         x = malloc(objects_count * 3 * sizeof(real));
@@ -1122,6 +1129,8 @@ WIN32DLL_API void euler(
             goto err_user_exit;
         }
     }
+
+    // Exit after simulation is finished
     free(x);
     free(v);
     free(a);
@@ -1137,7 +1146,7 @@ WIN32DLL_API void euler(
     solution->G = G;
     solution->objects_count = objects_count;
 
-    return;
+    return 0;
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_sol_output_memory:
@@ -1154,7 +1163,15 @@ err_custom_sys_memory:
     free(x);
     free(v);
     free(m);
-    exit(EXIT_FAILURE);
+err_default_sys_memory:
+    if (*is_exit)
+    {
+        return 2;   // User sends KeyboardInterrupt in main thread
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 /**
@@ -1174,9 +1191,11 @@ err_custom_sys_memory:
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
  * 
- * \return None
+ * \retval 0 If exit successfully
+ * \retval 1 If failed to allocate memory
+ * \retval 2 If KeyboardInterrupt in the main thread
  */
-WIN32DLL_API void euler_cromer(
+WIN32DLL_API int euler_cromer(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -1198,10 +1217,15 @@ WIN32DLL_API void euler_cromer(
     real *m = NULL;
     int objects_count;
     real G;
-    int custom_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
+    int intitial_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
 
     // Custom system
-    if (custom_sys_flag == 1)
+    if (intitial_sys_flag == 2)
+    {
+        printf("Error: Failed to allocate memory to initialize default system\n");
+        goto err_default_sys_memory;
+    }
+    else if (intitial_sys_flag == 1)
     {
         objects_count = custom_sys_objects_count;
         x = malloc(objects_count * 3 * sizeof(real));
@@ -1316,6 +1340,8 @@ WIN32DLL_API void euler_cromer(
             goto err_user_exit;
         }
     }
+
+    // Exit after simulation is finished
     free(x);
     free(v);
     free(a);
@@ -1331,7 +1357,7 @@ WIN32DLL_API void euler_cromer(
     solution->G = G;
     solution->objects_count = objects_count;
 
-    return;
+    return 0;
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_sol_output_memory:
@@ -1348,7 +1374,15 @@ err_custom_sys_memory:
     free(x);
     free(v);
     free(m);
-    exit(EXIT_FAILURE);
+err_default_sys_memory: 
+    if (*is_exit)
+    {
+        return 2;   // User sends KeyboardInterrupt in main thread
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 /**
@@ -1368,9 +1402,11 @@ err_custom_sys_memory:
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
  * 
- * \return None
+ * \retval 0 If exit successfully
+ * \retval 1 If failed to allocate memory
+ * \retval 2 If KeyboardInterrupt in the main thread
  */
-WIN32DLL_API void rk4(
+WIN32DLL_API int rk4(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -1392,10 +1428,15 @@ WIN32DLL_API void rk4(
     real *m = NULL;
     int objects_count;
     real G;
-    int custom_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
+    int intitial_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
 
     // Custom system
-    if (custom_sys_flag == 1)
+    if (intitial_sys_flag == 2)
+    {
+        printf("Error: Failed to allocate memory to initialize default system\n");
+        goto err_default_sys_memory;
+    }
+    else if (intitial_sys_flag == 1)
     {
         objects_count = custom_sys_objects_count;
         x = malloc(objects_count * 3 * sizeof(real));
@@ -1554,6 +1595,7 @@ WIN32DLL_API void rk4(
         }
     }
 
+    // Exit after simulation is finished
     free(x);
     free(v);
     free(a);
@@ -1577,7 +1619,7 @@ WIN32DLL_API void rk4(
     solution->G = G;
     solution->objects_count = objects_count;
 
-    return;
+    return 0;
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_sol_output_memory:
@@ -1602,7 +1644,15 @@ err_custom_sys_memory:
     free(x);
     free(v);
     free(m);
-    exit(EXIT_FAILURE);
+err_default_sys_memory:    
+    if (*is_exit)
+    {
+        return 2;   // User sends KeyboardInterrupt in main thread
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 /**
@@ -1622,9 +1672,11 @@ err_custom_sys_memory:
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
  * 
- * \return None
+ * \retval 0 If exit successfully
+ * \retval 1 If failed to allocate memory
+ * \retval 2 If KeyboardInterrupt in the main thread
  */
-WIN32DLL_API void leapfrog(
+WIN32DLL_API int leapfrog(
     const char *restrict system,
     double dt,
     int64 npts,
@@ -1646,10 +1698,15 @@ WIN32DLL_API void leapfrog(
     real *m = NULL;
     int objects_count;
     real G;
-    int custom_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
+    int intitial_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
 
     // Custom system
-    if (custom_sys_flag == 1)
+    if (intitial_sys_flag == 2)
+    {
+        printf("Error: Failed to allocate memory to initialize default system\n");
+        goto err_default_sys_memory;
+    }
+    else if (intitial_sys_flag == 1)
     {
         objects_count = custom_sys_objects_count;
         x = malloc(objects_count * 3 * sizeof(real));
@@ -1775,6 +1832,7 @@ WIN32DLL_API void leapfrog(
         }
     }
 
+    // Exit after simulation is finished
     free(x);
     free(v);
     free(temp_x);
@@ -1791,7 +1849,7 @@ WIN32DLL_API void leapfrog(
     solution->G = G;
     solution->objects_count = objects_count;
 
-    return;
+    return 0;
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_sol_output_memory:
@@ -1809,7 +1867,15 @@ err_custom_sys_memory:
     free(x);
     free(v);
     free(m);
-    exit(EXIT_FAILURE);
+err_default_sys_memory: 
+    if (*is_exit)
+    {
+        return 2;   // User sends KeyboardInterrupt in main thread
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 /**
@@ -1831,9 +1897,11 @@ err_custom_sys_memory:
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
  * 
- * \return None
+ * \retval 0 If exit successfully
+ * \retval 1 If failed to allocate memory
+ * \retval 2 If KeyboardInterrupt in the main thread
  */
-WIN32DLL_API void rk_embedded(
+WIN32DLL_API int rk_embedded(
     int order,
     const char *restrict system,
     double *restrict t,
@@ -1857,10 +1925,15 @@ WIN32DLL_API void rk_embedded(
     real *m = NULL;
     int objects_count;
     real G;
-    int custom_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
+    int intitial_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
 
     // Custom system
-    if (custom_sys_flag == 1)
+    if (intitial_sys_flag == 2)
+    {
+        printf("Error: Failed to allocate memory to initialize default system\n");
+        goto err_default_sys_memory;
+    }
+    else if (intitial_sys_flag == 1)
     {
         objects_count = custom_sys_objects_count;
         x = malloc(objects_count * 3 * sizeof(real));
@@ -1892,11 +1965,9 @@ WIN32DLL_API void rk_embedded(
     int len_weights;
     real *weights = NULL;
     real *weights_test = NULL;
-    rk_embedded_butcher_tableaus(order, &power, &power_test, &coeff, &len_weights, &weights, &weights_test);
-
-    if (!coeff || !weights || !weights_test)
+    int butcher_tableaus_flag = rk_embedded_butcher_tableaus(order, &power, &power_test, &coeff, &len_weights, &weights, &weights_test);
+    if (butcher_tableaus_flag == 1)
     {
-        printf("Error: Failed to initialize values from butcher table for Embedded RK integrator\n");
         goto err_rk_embedded_butcher_tableaus;
     }
 
@@ -1997,6 +2068,10 @@ WIN32DLL_API void rk_embedded(
     }
     sol_time[0] = 0.0;
     real dt = rk_embedded_initial_dt(objects_count, power, x, v, a, m, G, abs_tolerance, rel_tolerance);
+    if (dt == -1.0)
+    {
+        goto err_initial_dt_memory;
+    }
     sol_dt[0] = dt;
 
     // Main Loop
@@ -2186,7 +2261,7 @@ WIN32DLL_API void rk_embedded(
                 solution->G = G;
                 solution->objects_count = objects_count;
 
-                return;
+                return 0;
             }
 
             // Check buffer size and extend if full
@@ -2245,6 +2320,7 @@ WIN32DLL_API void rk_embedded(
     }
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
+err_initial_dt_memory:
 err_sol_output_memory:
     free(sol_state);
     free(sol_time);
@@ -2276,7 +2352,15 @@ err_custom_sys_memory:
     free(x);
     free(v);
     free(m);
-    exit(EXIT_FAILURE);
+err_default_sys_memory:    
+    if (*is_exit)
+    {
+        return 2;   // User sends KeyboardInterrupt in main thread
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 /**
@@ -2295,6 +2379,7 @@ err_custom_sys_memory:
  * \warning: Modified to return dt * 1e-2 since this function gives initial dt thats too large
  * 
  * \return initial dt for Embedded RK integrator
+ * \retval -1.0 if failed to allocate memory for calculation
  */
 WIN32DLL_API real rk_embedded_initial_dt(
     int objects_count,
@@ -2337,7 +2422,7 @@ WIN32DLL_API real rk_embedded_initial_dt(
         free(x_1);
         free(v_1);
         free(a_1);
-        exit(EXIT_FAILURE);
+        return -1.0;
     }
 
     acceleration(objects_count, x, a, m, G);
@@ -2431,9 +2516,10 @@ WIN32DLL_API real rk_embedded_initial_dt(
  * \param weights Pointer to the array of weights for RK integrator
  * \param weights_test Pointer to the array of weights for error calculation
  * 
- * \return None
+ * \retval 0 If successful
+ * \retval 1 If failed to allocate memory for coeff, weights and weights_test
  */
-WIN32DLL_API void rk_embedded_butcher_tableaus(
+WIN32DLL_API int rk_embedded_butcher_tableaus(
     int order,
     int *restrict power,
     int *restrict power_test,
@@ -2655,9 +2741,9 @@ WIN32DLL_API void rk_embedded_butcher_tableaus(
         free(*weights);
         free(*weights_test);
 
-        exit(EXIT_FAILURE);
+        return 1;
     }
-    return;
+    return 0;
 }
 
 /**
@@ -2677,9 +2763,11 @@ WIN32DLL_API void rk_embedded_butcher_tableaus(
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
  * 
- * \return None
+ * \retval 0 If exit successfully
+ * \retval 1 If failed to allocate memory
+ * \retval 2 If KeyboardInterrupt in the main thread
  */
-WIN32DLL_API void ias15(
+WIN32DLL_API int ias15(
     const char *restrict system,
     double *restrict t,
     double tf, 
@@ -2701,10 +2789,15 @@ WIN32DLL_API void ias15(
     real *m = NULL;
     int objects_count;
     real G;
-    int custom_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
+    int intitial_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
 
     // Custom system
-    if (custom_sys_flag == 1)
+    if (intitial_sys_flag == 2)
+    {
+        printf("Error: Failed to allocate memory to initialize default system\n");
+        goto err_default_sys_memory;
+    }
+    else if (intitial_sys_flag == 1)
     {
         objects_count = custom_sys_objects_count;
         x = malloc(objects_count * 3 * sizeof(real));
@@ -2837,6 +2930,10 @@ WIN32DLL_API void ias15(
     }
     sol_time[0] = 0.0;
     real dt = ias15_initial_dt(objects_count, 15, x, v, a, m, G);
+    if (dt == -1.0)
+    {
+        goto err_initial_dt_memory;
+    }
     sol_dt[0] = dt;
 
     while (1)
@@ -2937,7 +3034,7 @@ WIN32DLL_API void ias15(
             solution->G = G;
             solution->objects_count = objects_count;
 
-            return;
+            return 0;
         }
 
         // Check buffer size and extend if full
@@ -2959,7 +3056,9 @@ WIN32DLL_API void ias15(
             sol_dt = temp_sol_dt;
         }
     }
+
 err_user_exit: // User sends KeyboardInterrupt in main thread
+err_initial_dt_memory:
 err_sol_output_memory:
     free(sol_state);
     free(sol_time);
@@ -2990,7 +3089,15 @@ err_custom_sys_memory:
     free(x);
     free(v);
     free(m);
-    exit(EXIT_FAILURE);
+err_default_sys_memory:    
+    if (*is_exit)
+    {
+        return 2;   // User sends KeyboardInterrupt in main thread
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 // Advance IAS15 for one step
@@ -3902,6 +4009,7 @@ WIN32DLL_API void ias15_aux_r(real *aux_r)
  * \param G Gravitational constant
  * 
  * \return initial dt for IAS15 integrator
+ * \retval -1.0 If failed to allocate memory for calculation
  */
 real ias15_initial_dt(
     int objects_count,
@@ -3928,8 +4036,7 @@ real ias15_initial_dt(
         printf("Error: Failed to allocate memory for ias15_initial_dt()\n");
         free(x_1);
         free(a_1);
-        exit(EXIT_FAILURE);
-
+        return -1.0;
     }
 
     if (d_0 < 1e-5 || d_1 < 1e-5)

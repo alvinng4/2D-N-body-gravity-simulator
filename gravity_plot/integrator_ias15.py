@@ -7,8 +7,10 @@ Simulations Applied to Exoplanetary Systems, Chapter 8
 """
 
 import ctypes
-import time
 import threading
+import time
+import sys
+from queue import Queue
 
 import numpy as np
 
@@ -48,7 +50,7 @@ class IAS15:
                 ("objects_count", ctypes.c_int),
             ]
 
-        self.c_lib.ias15.restype = None
+        self.c_lib.ias15.restype = ctypes.c_int
 
         t = ctypes.c_double(0.0)
         store_count = ctypes.c_int(0)
@@ -60,10 +62,17 @@ class IAS15:
         progress_bar_thread.start()
 
         # parameters are double no matter what "real" is defined
+        def ias15_wrapper(c_lib_ias15, return_queue, *args):
+            return_code = c_lib_ias15(*args)
+            return_queue.put(return_code)
+
+        queue = Queue()
         solution = Solutions()
         ias15_thread = threading.Thread(
-            target=self.c_lib.ias15,
+            target=ias15_wrapper,
             args=(
+                self.c_lib.ias15,
+                queue,
                 ctypes.c_char_p(system_name),
                 ctypes.byref(t),
                 ctypes.c_double(tf),
@@ -88,6 +97,20 @@ class IAS15:
             time.sleep(0.1)
 
         ias15_thread.join()
+        return_code = queue.get()
+
+        # Check return code
+        match return_code:
+            # Simulation successful
+            case 0:
+                pass
+            # C library failed to allocate memory
+            case 1:
+                self.is_exit.value = True
+                sys.exit(1)
+            # User sent KeyboardInterrupt
+            case 2:
+                pass  # Should be caught in run_prog and exit
 
         # Close the progress_bar_thread
         t.value = tf

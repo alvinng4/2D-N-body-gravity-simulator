@@ -5,8 +5,10 @@ Euler, Euler-Cromer, Runge-Kutta 4th order, Leapfrog
 
 import ctypes
 import math
-import time
 import threading
+import time
+import sys
+from queue import Queue
 
 import numpy as np
 
@@ -45,10 +47,10 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                 ("objects_count", ctypes.c_int),
             ]
 
-        self.c_lib.euler.restype = None
-        self.c_lib.euler_cromer.restype = None
-        self.c_lib.rk4.restype = None
-        self.c_lib.leapfrog.restype = None
+        self.c_lib.euler.restype = ctypes.c_int
+        self.c_lib.euler_cromer.restype = ctypes.c_int
+        self.c_lib.rk4.restype = ctypes.c_int
+        self.c_lib.leapfrog.restype = ctypes.c_int
 
         npts = int(np.floor((tf / dt))) + 1  # + 1 for t0
         if self.store_every_n != 1:
@@ -65,12 +67,19 @@ class FIXED_STEP_SIZE_INTEGRATOR:
         progress_bar_thread.start()
 
         # parameters are double no matter what "real" is defined
+        def fixed_step_size_integrator_wrapper(c_lib_integrator, return_queue, *args):
+            return_code = c_lib_integrator(*args)
+            return_queue.put(return_code)
+
+        queue = Queue()
         solution = Solutions()
         match integrator:
             case "euler":
                 fixed_step_size_integrator_thread = threading.Thread(
-                    target=self.c_lib.euler,
+                    target=fixed_step_size_integrator_wrapper,
                     args=(
+                        self.c_lib.euler,
+                        queue,
                         ctypes.c_char_p(system_name),
                         ctypes.c_double(dt),
                         ctypes.c_int64(npts),
@@ -88,8 +97,10 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                 )
             case "euler_cromer":
                 fixed_step_size_integrator_thread = threading.Thread(
-                    target=self.c_lib.euler_cromer,
+                    target=fixed_step_size_integrator_wrapper,
                     args=(
+                        self.c_lib.euler_cromer,
+                        queue,
                         ctypes.c_char_p(system_name),
                         ctypes.c_double(dt),
                         ctypes.c_int64(npts),
@@ -107,8 +118,10 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                 )
             case "rk4":
                 fixed_step_size_integrator_thread = threading.Thread(
-                    target=self.c_lib.rk4,
+                    target=fixed_step_size_integrator_wrapper,
                     args=(
+                        self.c_lib.rk4,
+                        queue,
                         ctypes.c_char_p(system_name),
                         ctypes.c_double(dt),
                         ctypes.c_int64(npts),
@@ -126,8 +139,10 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                 )
             case "leapfrog":
                 fixed_step_size_integrator_thread = threading.Thread(
-                    target=self.c_lib.leapfrog,
+                    target=fixed_step_size_integrator_wrapper,
                     args=(
+                        self.c_lib.leapfrog,
+                        queue,
                         ctypes.c_char_p(system_name),
                         ctypes.c_double(dt),
                         ctypes.c_int64(npts),
@@ -153,6 +168,20 @@ class FIXED_STEP_SIZE_INTEGRATOR:
             time.sleep(0.1)
 
         fixed_step_size_integrator_thread.join()
+        return_code = queue.get()
+
+        # Check return code
+        match return_code:
+            # Simulation successful
+            case 0:
+                pass
+            # C library failed to allocate memory
+            case 1:
+                self.is_exit.value = True
+                sys.exit(1)
+            # User sent KeyboardInterrupt
+            case 2:
+                pass  # Should be caught in run_prog and exit
 
         # Close the progress_bar_thread
         if store_count.value < (store_npts - 1):
