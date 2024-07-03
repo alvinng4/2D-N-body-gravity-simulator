@@ -220,6 +220,7 @@ Missing information will be saved as `None`. Below is an example:
 # Tolerance: 1e-09
 # Data size: 64596
 # Store every nth point: 1
+# Run time (s): 1.5798390000127256
 ```
 Then, the actual data will be saved in the default unit (solar masses, AU and days), and follow this format:
 ```
