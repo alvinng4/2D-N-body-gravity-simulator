@@ -30,7 +30,6 @@ This online demo is built with the pygbag package.
     - [Installation](#installation)
     - [Running the program](#running-the-program)
     - [Check if the C libraries are loaded properly (Optional)](#check-if-the-c-libraries-are-loaded-properly-optional)
-* [Program keeps crashing. What should I do?](#program-keeps-crashing-what-should-i-do)
 * [Interactive module](#interactive-module)
     - [Running the program](#running-the-program-1)
     - [C library / Numpy (Optional)](#c-library--numpy-optional)
@@ -49,8 +48,9 @@ This online demo is built with the pygbag package.
     - [Fixed step size methods](#fixed-step-size-methods)
     - [Embedded Runge-Kutta methods](#embdedded-runge-kutta-methods)
     - [IAS15](#IAS15)
-* [Data Sources](#data-sources)
+* [Program keeps crashing. What should I do?](#program-keeps-crashing-what-should-i-do)
 * [Feedback and Bugs](#feedback-and-bugs)
+* [Data Sources](#data-sources)
 * [References](#references)
 * [Acknowledgement](#acknowledgement)
 
@@ -69,11 +69,11 @@ Install the required packages by
 pip install .
 ```
 ### Running the program
-Interactive module: run the following command in terminal
+Interactive module: navigate to the source directory and then run the following command in terminal
 ```
 python gravity_sim
 ```
-Plotting module: run the following command in terminal
+Plotting module: navigate to the source directory and then run the following command in terminal
 ```
 python gravity_plot
 ```
@@ -83,33 +83,18 @@ If the C libraries cannot be loaded after running the program, you should see th
 ```
 System message: Loading c_lib failed. Running with numpy.
 ```
-This does not affect the simulation result, but running with numpy could cause the program to be 500 to 1400 times slower.
+This does not affect the simulation result, but the program may runs 100 times slower.
 To fix this, you may need to recompile the library from the `src` folder.
-
-## Program keeps crashing. What should I do?
-
-First, make sure that you are running with python version >= 3.10 and have installed all the required packages. If yes, try running the program with numpy and see if the problem gets fixed. 
-To run with numpy, execute the following command in terminal:
-```
-python gravity_sim --numpy
-```
-```
-python gravity_plot --numpy
-```
-However, note that the program could run about 500 to 1400 times slower with numpy.
-If the problem persists, please feel free to let me know by opening an issue.
 
 ## Interactive module
 ### Running the program
-Once you have downloaded the source files, navigate to the directory of the source files in terminal and run
+Once you have downloaded the source files, navigate to the source directory in terminal and run
 ```
 python gravity_sim [-n|--numpy] [-r|--resolution <width> <height>]
 ```
 
 ### C library / Numpy (Optional)
-By default, the module utilize C to improve performance.
-Numpy is about 500 to 1000 times slower.
-Nevertheless, the calculation in C and numpy are almost identical and gives similar result.
+By default, the simulation is performed in C to improve performance.
 If you want to use numpy, run the program with
 ```
 python gravity_sim [-n|--numpy]
@@ -159,15 +144,13 @@ For RK4, the largest dt to produce desired result is 2e-8 days.
 
 ### Running the program
 
-Once you have downloaded the source files, navigate to the directory of the source files in terminal and run
+Once you have downloaded the source files, navigate to the source directory in terminal and run
 ```
 python gravity_plot [-n|--numpy]
 ```
 
 ### C library / Numpy (Optional)
-By default, the module utilize the code written in C to improve performance.
-Numpy is about 500 to 1000 times slower and produces slightly more error.
-Nevertheless, the calculation in C and numpy are almost identical and gives similar result.
+By default, the simulation is performed in C to improve performance.
 If you want to use numpy, run the program with
 ```
 python gravity_plot [-n|--numpy]
@@ -284,14 +267,26 @@ Recommended tolerance*: 1e-9
 
 *For reference only
 
+## Program keeps crashing. What should I do?
+
+First, make sure that you are running with python version >= 3.10 and have installed all the required packages. If yes, try running the program with numpy and see if the problem gets fixed. 
+To run with numpy, execute the following command in terminal:
+```
+python gravity_sim --numpy
+```
+```
+python gravity_plot --numpy
+```
+However, note that the program could run about 100 to 1000 times slower with numpy.
+If the problem persists, please feel free to let me know by opening an issue.
+
+## Feedback and Bugs
+If you find any bugs or want to leave some feedback, please feel free to let me know by sending an email to alvinng324@gmail.com or open an issue.
+
 ## Data Sources
 The solar system positions and velocities data at 1/Jan/2024 are collected from the Horizons System [2].
 Gravitational constant, and masses of the solar system objects are calculated using the
 data from R.S. Park *et. al*. [3].
-
-## Feedback and Bugs
-This is my first programming project after learning programming for 7 months, so there could be a lot of bugs.
-If you find any bugs or want to give me your feedback, please feel free to let me know by sending an email to alvinng324@gmail.com or open an issue.
 
 ## References
 1. E. Hairer, C. Lubich, and G. Wanner, "Reducing Rounding Errors" in *Geometric Numerical Integration: Structure-Preserving Algorithms for Ordinary Differential Equations*. Springer, 2004, pp. 272-274.
