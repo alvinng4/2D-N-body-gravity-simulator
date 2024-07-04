@@ -13,7 +13,7 @@ from queue import Queue
 import numpy as np
 
 from common import acceleration
-from progress_bar import progress_bar_c_lib_fixed_integrator
+from progress_bar import progress_bar_c_lib_fixed_step_size
 from progress_bar import Progress_bar_with_data_size
 
 
@@ -61,7 +61,7 @@ class SimpleIntegrator:
         store_count = ctypes.c_int(0)
 
         progress_bar_thread = threading.Thread(
-            target=progress_bar_c_lib_fixed_integrator,
+            target=progress_bar_c_lib_fixed_step_size,
             args=(store_npts, store_count, self.is_exit),
         )
         progress_bar_thread.start()

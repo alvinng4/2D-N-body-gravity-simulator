@@ -2,12 +2,14 @@ import csv
 import ctypes
 import math
 from pathlib import Path
-import timeit
 import sys
+import threading
+import timeit
 
 import numpy as np
 
 from progress_bar import Progress_bar
+from progress_bar import progress_bar_c_lib_fixed_step_size
 from integrator_simple import SimpleIntegrator
 from integrator_rk_embedded import RKEmbedded
 from integrator_ias15 import IAS15
@@ -607,26 +609,36 @@ class Simulator:
         npts = len(self.sol_state)
         self.energy = np.zeros(npts)
 
-        progress_bar = Progress_bar()
-
         start = timeit.default_timer()
         if self.is_c_lib == True:
             count = ctypes.c_int(0)
-            with progress_bar:
-                task = progress_bar.add_task("", total=npts)
-                while count.value < npts:
-                    self.c_lib.compute_energy(
-                        ctypes.c_int(self.objects_count),
-                        ctypes.c_int(npts),
-                        ctypes.byref(count),
-                        self.energy.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                        self.sol_state.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                        self.m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                        ctypes.c_double(self.G),
-                    )
-                    progress_bar.update(task, completed=count.value)
+            progress_bar_thread = threading.Thread(
+                target=progress_bar_c_lib_fixed_step_size,
+                args=(npts, count, self.is_exit),
+            )
+            progress_bar_thread.start()
+            compute_energy_thread = threading.Thread(
+                target=self.c_lib.compute_energy,
+                args=(
+                    ctypes.c_int(self.objects_count),
+                    ctypes.c_int(npts),
+                    ctypes.byref(count),
+                    self.energy.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    self.sol_state.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    self.m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    ctypes.c_double(self.G),
+                    ctypes.byref(self.is_exit),
+                ),
+            )
+            compute_energy_thread.start()
+            compute_energy_thread.join()
+
+            # Close progress bar thread
+            count.value = npts
+            progress_bar_thread.join()
 
         elif self.is_c_lib == False:
+            progress_bar = Progress_bar()
             with progress_bar:
                 for count in progress_bar.track(range(npts), description=""):
                     x = self.sol_state[count]

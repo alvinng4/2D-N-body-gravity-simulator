@@ -16,12 +16,10 @@ WIN32DLL_API void compute_energy(
     real *restrict energy, 
     const real (*restrict sol_state)[objects_count * 6], 
     const real *restrict m, 
-    real G
+    real G,
+    int *restrict is_exit
 )
 {
-    // Round down current progress percentage as int
-    int progress_percentage = (double) *count / npts * 100.0;
-
     real temp_vec[3];
 
     while (1)
@@ -57,10 +55,10 @@ WIN32DLL_API void compute_energy(
             break;
         }
 
-        // Exit to update progress bar
-        if ((*count / npts * 100) > progress_percentage)
-        {   
-            break;
+        // Check if user sends KeyboardInterrupt in main thread
+        if (*is_exit)
+        {
+            return;
         }
     }
 }

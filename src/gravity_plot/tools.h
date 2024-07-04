@@ -32,6 +32,8 @@ void free_memory_real(real *ptr);
  * \param sol_state Array of state vectors of the solution
  * \param m Array of masses of the system
  * \param G Gravitational Constant
+ * \param is_exit Pointer to flag that indicates whether user sent 
+ *                KeyboardInterrupt in the main thread
  * 
  * \return None
  */
@@ -42,7 +44,8 @@ void compute_energy(
     double *restrict energy, 
     const double (*restrict sol_state)[objects_count * 6], 
     const double *restrict m, 
-    real G
+    real G,
+    int *restrict is_exit
 );
 
 #endif

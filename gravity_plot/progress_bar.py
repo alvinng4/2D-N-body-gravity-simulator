@@ -28,7 +28,7 @@ class Progress_bar_with_data_size(rich.progress.Progress):
         )
 
 
-def progress_bar_c_lib_adaptive_integrator(tf, t, store_count, is_exit):
+def progress_bar_c_lib_adaptive_step_size(tf, t, store_count, is_exit):
     """
     Progress bar for adaptive step size integrators
     """
@@ -50,7 +50,7 @@ def progress_bar_c_lib_adaptive_integrator(tf, t, store_count, is_exit):
         progress_bar.update(task, completed=tf, store_count=store_count.value + 1)
 
 
-def progress_bar_c_lib_fixed_integrator(store_npts, store_count, is_exit):
+def progress_bar_c_lib_fixed_step_size(store_npts, store_count, is_exit):
     """
     Progress bar for fixed step size integrator
     s"""

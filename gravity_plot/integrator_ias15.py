@@ -15,7 +15,7 @@ from queue import Queue
 import numpy as np
 
 from common import acceleration
-from progress_bar import progress_bar_c_lib_adaptive_integrator
+from progress_bar import progress_bar_c_lib_adaptive_step_size
 from progress_bar import Progress_bar_with_data_size
 
 
@@ -56,7 +56,7 @@ class IAS15:
         store_count = ctypes.c_int(0)
 
         progress_bar_thread = threading.Thread(
-            target=progress_bar_c_lib_adaptive_integrator,
+            target=progress_bar_c_lib_adaptive_step_size,
             args=(tf, t, store_count, self.is_exit),
         )
         progress_bar_thread.start()

@@ -21,7 +21,8 @@
  * \param custom_sys_G Gravitational constant of customized system
  * \param custom_sys_object_count Number of objects in customized system
  * \param solution Pointer to a Solution struct, in order to store the solution
- * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
+ * \param is_exit Pointer to flag that indicates whether user sent 
+ *                KeyboardInterrupt in the main thread
  * 
  * \retval 0 If exit successfully
  * \retval 1 If failed to allocate memory
@@ -233,7 +234,8 @@ err_default_sys_memory:
  * \param custom_sys_G Gravitational constant of customized system
  * \param custom_sys_object_count Number of objects in customized system
  * \param solution Pointer to a Solution struct, in order to store the solution
- * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
+ * \param is_exit Pointer to flag that indicates whether user sent 
+ *                KeyboardInterrupt in the main thread
  * 
  * \retval 0 If exit successfully
  * \retval 1 If failed to allocate memory
@@ -444,7 +446,8 @@ err_default_sys_memory:
  * \param custom_sys_G Gravitational constant of customized system
  * \param custom_sys_object_count Number of objects in customized system
  * \param solution Pointer to a Solution struct, in order to store the solution
- * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
+ * \param is_exit Pointer to flag that indicates whether user sent 
+ *                KeyboardInterrupt in the main thread
  * 
  * \retval 0 If exit successfully
  * \retval 1 If failed to allocate memory
@@ -714,7 +717,8 @@ err_default_sys_memory:
  * \param custom_sys_G Gravitational constant of customized system
  * \param custom_sys_object_count Number of objects in customized system
  * \param solution Pointer to a Solution struct, in order to store the solution
- * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
+ * \param is_exit Pointer to flag that indicates whether user sent 
+ *                KeyboardInterrupt in the main thread
  * 
  * \retval 0 If exit successfully
  * \retval 1 If failed to allocate memory
