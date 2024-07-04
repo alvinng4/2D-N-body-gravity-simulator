@@ -4,18 +4,7 @@
 
 #include "common.h"
 
-/**
- * \brief Compute acceleration based on Newton's law of gravitational. 
- * \param objects_count Number of objects in the system
- * \param x Array of position vectors of all objects
- * \param a Array of acceleration vectors of all objects.
- *                   Values inside this array will be replaced
- *                   by the computed acceleration.
- * \param m Array of masses for all objects
- * \param G Gravitational constant
- * 
- * \return None
- */
+
 WIN32DLL_API void acceleration(
     int objects_count,
     real *restrict x,
@@ -61,26 +50,7 @@ WIN32DLL_API void acceleration(
         }
     }
 }
-
-
-/**
- * \brief Initialize default systems for gravity simulator.
- *        if the system name is recognized to be one of the 
- *        default system *x, *v and *m, *objects_count and 
- *        *G would be modified. Specifically, *x, *v and *m
- *        would be assigned a new block of memory.
- * 
- * \param system Name of the system to be initialized
- * \param x Pointer to pointer x, where x is the array of position vectors of all objects
- * \param v Pointer to pointer v, where v is the array of velocity vectors of all objects 
- * \param m Pointer to pointer m, where a is the array of acceleration vectors of all objects
- * \param objects_count Number of objects in the system
- * \param G Pointer to gravitational constant
- * 
- * \retval 0, if the system is successfully initialized
- * \retval 1, if the system is not recognized
- * \retval 2, if failed to allocate memory for x, v and m.
- */     
+ 
 WIN32DLL_API int initialize_system(
     const char *restrict system,
     real **x,
@@ -571,12 +541,6 @@ err_memory:
     return 2;
 }
 
-/**
- * \brief Find the max absolute value in a 1D array
- * 
- * \param vec A 1D array
- * \param vec_length Length of the 1D array
- */
 WIN32DLL_API real abs_max_vec(const real *restrict vec, int vec_length)
 {
     real max = fabs(vec[0]);
@@ -588,12 +552,6 @@ WIN32DLL_API real abs_max_vec(const real *restrict vec, int vec_length)
     return max;
 }
 
-/**
- * \brief Find the norm of a 1D array
- * 
- * \param vec A 1D array
- * \param vec_length Length of the 1D array
- */
 WIN32DLL_API real vec_norm(const real *restrict vec, int vec_length)
 {   
     real sum = 0.0;
