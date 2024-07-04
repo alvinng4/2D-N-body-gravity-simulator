@@ -8,8 +8,8 @@ import sys
 import numpy as np
 
 from progress_bar import Progress_bar
-from integrator_fixed_step_size import FIXED_STEP_SIZE_INTEGRATOR
-from integrator_rk_embedded import RK_EMBEDDED
+from integrator_simple import SimpleIntegrator
+from integrator_rk_embedded import RKEmbedded
 from integrator_ias15 import IAS15
 
 
@@ -182,7 +182,7 @@ class Simulator:
         if self.is_c_lib:
             match self.integrator:
                 case "euler" | "euler_cromer" | "rk4" | "leapfrog":
-                    integrator = FIXED_STEP_SIZE_INTEGRATOR(self)
+                    integrator = SimpleIntegrator(self)
 
                     (
                         self.sol_state,
@@ -204,7 +204,7 @@ class Simulator:
                     )
 
                 case "rkf45" | "dopri" | "dverk" | "rkf78":
-                    integrator = RK_EMBEDDED(self)
+                    integrator = RKEmbedded(self)
 
                     (
                         self.sol_state,
@@ -250,7 +250,7 @@ class Simulator:
         else:
             match self.integrator:
                 case "euler" | "euler_cromer" | "rk4" | "leapfrog":
-                    integrator = FIXED_STEP_SIZE_INTEGRATOR(self)
+                    integrator = SimpleIntegrator(self)
 
                     (
                         self.sol_state,
@@ -268,7 +268,7 @@ class Simulator:
                     )
 
                 case "rkf45" | "dopri" | "dverk" | "rkf78":
-                    integrator = RK_EMBEDDED(self)
+                    integrator = RKEmbedded(self)
 
                     (
                         self.sol_state,

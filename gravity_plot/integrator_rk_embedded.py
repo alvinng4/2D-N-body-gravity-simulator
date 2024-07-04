@@ -19,7 +19,7 @@ from progress_bar import progress_bar_c_lib_adaptive_integrator
 from progress_bar import Progress_bar_with_data_size
 
 
-class RK_EMBEDDED:
+class RKEmbedded:
     def __init__(self, simulator):
         self.is_exit = simulator.is_exit
         self.store_every_n = simulator.store_every_n

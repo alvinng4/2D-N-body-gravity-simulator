@@ -23,8 +23,8 @@ def acceleration(objects_count, x, m, G):
     r_ij = x[np.newaxis, :, :] - x[:, np.newaxis, :]
 
     # Compute the distance squared
-    r_squared = np.sum(r_ij ** 2, axis=2)
-    softening = 1e-12   # To prevent r = 0
+    r_squared = np.sum(r_ij**2, axis=2)
+    softening = 1e-12  # To prevent r = 0
     r_squared[r_squared < softening] = softening
 
     # Compute 1/r^3
@@ -34,7 +34,9 @@ def acceleration(objects_count, x, m, G):
     np.fill_diagonal(inv_r_cubed, 0.0)
 
     # Compute the acceleration
-    a = G * np.sum(r_ij * inv_r_cubed[:,:,np.newaxis] * m[np.newaxis, :, np.newaxis], axis=1)
+    a = G * np.sum(
+        r_ij * inv_r_cubed[:, :, np.newaxis] * m[np.newaxis, :, np.newaxis], axis=1
+    )
 
     return a
 

@@ -4,7 +4,10 @@ To compile the C libraries, you can run
 make [CC="your C compiler"]
 ```
 where `CC="your C compiler"` is optional.
-After compilation, move the file ending with `.dll` / `.so` / `.dylib` into the `gravity_plot` or `gravity_sim` folder.
+After compilation, move the file ending with `.dll` / `.so` / `.dylib` into the `gravity_plot` or `gravity_sim` folder. To clean up the directory, run
+```
+make clean
+```
 
 ## Specifications on the given libraries files
 In case you are interested, below are the commands I used to compile the libraries.

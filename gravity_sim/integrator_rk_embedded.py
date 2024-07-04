@@ -13,7 +13,7 @@ import numpy as np
 from common import acceleration
 
 
-class RK_EMBEDDED:
+class RKEmbedded:
     """Embedded RK integrators: RKF45, DOPRI, DVERK, RKF78"""
 
     def simulation(

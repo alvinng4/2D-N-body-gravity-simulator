@@ -1,6 +1,6 @@
 """
-Fixed step size integrator:
-Euler, Euler-Cromer, Runge-Kutta 4th order, Leapfrog
+Simple integrators:
+    Euler, Euler-Cromer, Runge-Kutta 4th order, Leapfrog
 """
 
 import ctypes
@@ -8,9 +8,7 @@ import ctypes
 from common import acceleration
 
 
-class FIXED_STEP_SIZE_INTEGRATOR:
-    """Fixed step size integrators: Euler, Euler Cromer, RK4, Leap Frog"""
-
+class SimpleIntegrator:
     def simulation(self, simulator, integrator, objects_count, m, G, dt, time_speed):
         if simulator.is_c_lib == True:
             match integrator:

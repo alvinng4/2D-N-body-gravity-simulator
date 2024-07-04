@@ -1,6 +1,6 @@
 """
-Fixed step size integrator:
-Euler, Euler-Cromer, Runge-Kutta 4th order, Leapfrog
+Simple integrators:
+    Euler, Euler-Cromer, Runge-Kutta 4th order, Leapfrog
 """
 
 import ctypes
@@ -17,7 +17,7 @@ from progress_bar import progress_bar_c_lib_fixed_integrator
 from progress_bar import Progress_bar_with_data_size
 
 
-class FIXED_STEP_SIZE_INTEGRATOR:
+class SimpleIntegrator:
     def __init__(self, simulator):
         self.is_exit = simulator.is_exit
         self.store_every_n = simulator.store_every_n
@@ -67,7 +67,7 @@ class FIXED_STEP_SIZE_INTEGRATOR:
         progress_bar_thread.start()
 
         # parameters are double no matter what "real" is defined
-        def fixed_step_size_integrator_wrapper(c_lib_integrator, return_queue, *args):
+        def simple_integrator_wrapper(c_lib_integrator, return_queue, *args):
             return_code = c_lib_integrator(*args)
             return_queue.put(return_code)
 
@@ -75,8 +75,8 @@ class FIXED_STEP_SIZE_INTEGRATOR:
         solution = Solutions()
         match integrator:
             case "euler":
-                fixed_step_size_integrator_thread = threading.Thread(
-                    target=fixed_step_size_integrator_wrapper,
+                simple_integrator_thread = threading.Thread(
+                    target=simple_integrator_wrapper,
                     args=(
                         self.c_lib.euler,
                         queue,
@@ -96,8 +96,8 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                     ),
                 )
             case "euler_cromer":
-                fixed_step_size_integrator_thread = threading.Thread(
-                    target=fixed_step_size_integrator_wrapper,
+                simple_integrator_thread = threading.Thread(
+                    target=simple_integrator_wrapper,
                     args=(
                         self.c_lib.euler_cromer,
                         queue,
@@ -117,8 +117,8 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                     ),
                 )
             case "rk4":
-                fixed_step_size_integrator_thread = threading.Thread(
-                    target=fixed_step_size_integrator_wrapper,
+                simple_integrator_thread = threading.Thread(
+                    target=simple_integrator_wrapper,
                     args=(
                         self.c_lib.rk4,
                         queue,
@@ -138,8 +138,8 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                     ),
                 )
             case "leapfrog":
-                fixed_step_size_integrator_thread = threading.Thread(
-                    target=fixed_step_size_integrator_wrapper,
+                simple_integrator_thread = threading.Thread(
+                    target=simple_integrator_wrapper,
                     args=(
                         self.c_lib.leapfrog,
                         queue,
@@ -159,15 +159,15 @@ class FIXED_STEP_SIZE_INTEGRATOR:
                     ),
                 )
 
-        fixed_step_size_integrator_thread.start()
+        simple_integrator_thread.start()
 
         # Keeps the main thread running to catch keyboard interrupt
         # This is added since the main thread is not catching
         # exceptions on Windows
-        while fixed_step_size_integrator_thread.is_alive():
+        while simple_integrator_thread.is_alive():
             time.sleep(0.1)
 
-        fixed_step_size_integrator_thread.join()
+        simple_integrator_thread.join()
         return_code = queue.get()
 
         # Check return code

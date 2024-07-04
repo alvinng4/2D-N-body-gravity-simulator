@@ -4,8 +4,8 @@ import numpy as np
 
 from common import compute_energy
 from grav_obj import Grav_obj
-from integrator_fixed_step_size import FIXED_STEP_SIZE_INTEGRATOR
-from integrator_rk_embedded import RK_EMBEDDED
+from integrator_simple import SimpleIntegrator
+from integrator_rk_embedded import RKEmbedded
 from integrator_ias15 import IAS15
 
 
@@ -23,8 +23,8 @@ class Simulator:
         self.v = np.array([])
         self.a = np.array([])
 
-        self.fixed_step_size_integrator = FIXED_STEP_SIZE_INTEGRATOR()
-        self.rk_embedded_integrator = RK_EMBEDDED()
+        self.simple_integrator = SimpleIntegrator()
+        self.rk_embedded_integrator = RKEmbedded()
         self.ias15_integrator = IAS15()
 
         self.is_initialize = True
@@ -39,7 +39,7 @@ class Simulator:
 
         # Simple euler is enough when there is no interaction
         if self.stats.objects_count == 1:
-            self.fixed_step_size_integrator.simulation(
+            self.simple_integrator.simulation(
                 self,
                 "euler",
                 self.stats.objects_count,
@@ -51,9 +51,9 @@ class Simulator:
             self.stats.simulation_time += self.settings.dt * self.settings.time_speed
         else:
             match self.current_integrator:
-                # Fixed step size integrators
+                # Simple integrators
                 case "euler" | "euler_cromer" | "rk4" | "leapfrog":
-                    self.fixed_step_size_integrator.simulation(
+                    self.simple_integrator.simulation(
                         self,
                         self.current_integrator,
                         self.stats.objects_count,
