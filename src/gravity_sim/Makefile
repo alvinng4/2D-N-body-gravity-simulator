@@ -32,4 +32,8 @@ $(TARGET): $(OBJS)
 
 clean:
 	@echo "Removing everything except source files..."
-	rm -f $(OBJS) $(TARGET)
+    ifeq ($(OS),Windows_NT)
+		del -f $(OBJS) $(TARGET)
+    else
+		rm -f $(OBJS) $(TARGET)
+    endif
