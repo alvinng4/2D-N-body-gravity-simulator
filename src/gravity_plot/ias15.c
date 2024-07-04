@@ -1,0 +1,1528 @@
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "common.h"
+
+/**
+ * \brief IAS15 integrator
+ * 
+ * \param system Name of the system
+ * \param t Pointer to the current simulation time
+ * \param tf Total time to be integrated
+ * \param input_tolerance Tolerance of the integrator
+ * \param store_every_n Store every nth point
+ * \param store_count Pointer to the store count
+ * \param custom_sys_x Array of the position vectors of customized system 
+ * \param custom_sys_v Array of the velocity vectors of customized system 
+ * \param custom_sys_m Array of the masses of customized system 
+ * \param custom_sys_G Gravitational constant of customized system
+ * \param custom_sys_object_count Number of objects in customized system
+ * \param solution Pointer to a Solution struct, in order to store the solution
+ * \param is_exit Pointer to determine whether user sent KeyboardInterrupt in the main thread
+ * 
+ * \retval 0 If exit successfully
+ * \retval 1 If failed to allocate memory
+ * \retval 2 If KeyboardInterrupt in the main thread
+ */
+int ias15(
+    const char *restrict system,
+    double *restrict t,
+    double tf, 
+    double input_tolerance,
+    int store_every_n,
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
+);
+
+/**
+ * \brief Initialize the radau spacing nodes for IAS15
+ * 
+ * \param nodes 1D array of size 8 to be modified
+ * 
+ * \return None
+ */
+void ias15_radau_spacing(real *restrict nodes);
+
+/**
+ * \brief Initialize the auxiliary coefficients aux_c for IAS15
+ * 
+ * \param aux_c 1D array of length 49 to be modified
+ * 
+ * \return None
+ */
+void ias15_aux_c(real *restrict aux_c);
+
+/**
+ * \brief Initialize auxiliary coefficients aux_r for IAS15
+ * 
+ * \param aux_r 1D array of size 64 to be modified
+ * 
+ * \return None
+ */
+void ias15_aux_r(real *aux_r);
+
+/**
+ * \brief Calculate the initial time step for IAS15 integrator
+ * 
+ * \param objects_count Number of objects in the system
+ * \param power Power of the integrator
+ * \param x Array of position vectors of all objects
+ * \param v Array of velocity vectors of all objects
+ * \param a Array of acceleration vectors of all objects
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
+ * 
+ * \return initial dt for IAS15 integrator
+ * \retval -1.0 If failed to allocate memory for calculation
+ */
+real ias15_initial_dt(
+    int objects_count,
+    int power,
+    real *restrict x,
+    real *restrict v,
+    real *restrict a,
+    const real *m,
+    real G
+);
+
+/**
+ * \brief Advance IAS15 for one step.
+ * 
+ * Most of the function parameters are needed in subsequent functions
+ * called by ias15_step. They are passed to avoid repeating memory 
+ * allocation in order to improve performance.
+ * 
+ * \param objects_count Number of objects in the system
+ * \param dim_nodes Dimension of nodes for the predictor-corrector algorithm
+ * \param dim_nodes_minus_1 Dimension of nodes for the predictor-corrector algorithm minus one
+ * \param dim_nodes_minus_2 Dimension of nodes for the predictor-corrector algorithm minus two
+ * \param x0 Array of position vectors from the last time step
+ * \param v0 Array of velocity vectors from the last time step
+ * \param a0 Array of acceleration vectors from the last time step
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
+ * \param t Pointer to the current simulation time
+ * \param dt Current time step of the system
+ * \param tf Total time to be integrated
+ * \param nodes Radau spacing dodes for the predictor-corrector algorithm
+ * \param aux_b0 Array of auxiliary coefficients b0
+ * \param aux_b Array of auxiliary coefficients b
+ * \param aux_c Array of auxiliary coefficients c
+ * \param aux_e Array of auxiliary coefficients e
+ * \param aux_g Array of auxiliary coefficients g
+ * \param aux_r Array of auxiliary coefficients r 
+ * \param tolerance Tolerance of the integrator
+ * \param tolerance_pc Tolerance of the predictor-corrector algorithm
+ * \param exponent  Exponent of step-size control
+ * \param safety_fac Safety factor for step-size control
+ * \param ias15_refine_flag Flag for refining the auxiliary coefficients b
+ * \param aux_a Array of auxiliary accelerations a
+ * \param x Array of position vectors to be modified
+ * \param v Array of velocity vectors to be modified
+ * \param a Array of acceleration vectors to be modified
+ * \param delta_b7 Array of delta b7
+ * \param F Helper array for compute_aux_g
+ * \param delta_aux_b Helper array for refine_aux_b
+ * \param x_err_comp_sum Array of round off errors of position vectors
+ * \param v_err_comp_sum Array of round off errors of velocity vectors
+ * \param temp_x_err_comp_sum Temporary array of round off errors of position vectors
+ * \param temp_v_err_comp_sum Temporary array of round off errors of velocity vectors
+ * 
+ * \return None
+ */
+void ias15_step(
+    int objects_count,
+    int dim_nodes,
+    int dim_nodes_minus_1,
+    int dim_nodes_minus_2,
+    real *restrict x0,
+    real *restrict v0,
+    real *restrict a0,
+    const real *restrict m,
+    real G,
+    real *restrict t,
+    real *restrict dt,
+    real tf,
+    const real *restrict nodes,
+    real *restrict aux_b0,
+    real *restrict aux_b,
+    const real *restrict aux_c,
+    real *restrict aux_e,
+    real *restrict aux_g,
+    const real *restrict aux_r,
+    real tolerance,
+    real tolerance_pc,
+    real exponent,
+    real safety_fac,
+    int *restrict ias15_refine_flag,
+    real *restrict aux_a,
+    real *restrict x,
+    real *restrict v,
+    real *restrict a,
+    real *restrict delta_b7,
+    real *restrict F,
+    real *restrict delta_aux_b,
+    real *restrict x_err_comp_sum, 
+    real *restrict v_err_comp_sum,
+    real *restrict temp_x_err_comp_sum,
+    real *restrict temp_v_err_comp_sum
+);
+
+/**
+ * \brief Calculate position for the predictor-corrector algorithm
+ * 
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors to be modified
+ * \param x0 Array of position vectors from the last time step
+ * \param v0 Array of velocity vectors from the last time step
+ * \param a0 Array of acceleration vectors from the last time step
+ * \param node Current node of the predictor-corrector algorithm
+ * \param aux_b Auxiliary b array
+ * \param dt Current time step of the system
+ * \param x_err_comp_sum Array of round off errors of position vectors 
+ *                       for compensated summation
+ * 
+ * \return None
+ */
+void ias15_approx_pos_pc(
+    int objects_count,
+    real *restrict x,
+    real *restrict x0,
+    real *restrict v0,
+    real *restrict a0,
+    real node,
+    real *restrict aux_b,
+    real dt,
+    real *restrict x_err_comp_sum
+);
+
+/**
+ * \brief Calculate velocity for the predictor-corrector algorithm
+ *
+ * \param objects_count Number of objects in the system
+ * \param v Array of velocity vectors to be modified
+ * \param v0 Array of velocity vectors from the last time step
+ * \param a0 Array of acceleration vectors from the last time step
+ * \param node Current node of the predictor-corrector algorithm
+ * \param aux_b Auxiliary b array
+ * \param dt Current time step of the system
+ * \param v_err_comp_sum Array of round off errors of velocity vectors 
+ *                       for compensated summation
+ * 
+ * \return None
+ */
+void ias15_approx_vel_pc(
+    int objects_count,
+    real *restrict v,
+    real *restrict v0,
+    real *restrict a0,
+    real node,
+    real *restrict aux_b,
+    real dt,
+    real *restrict v_err_comp_sum
+);
+
+/**
+ * \brief Calculate position for the next time step
+ * 
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors to be modified
+ * \param x0 Array of position vectors from the last time step
+ * \param v0 Array of velocity vectors from the last time step
+ * \param a0 Array of acceleration vectors from the last time step
+ * \param aux_b Auxiliary coefficients b
+ * \param dt Current time step of the system
+ * \param temp_x_err_comp_sum Temporary array of round off errors of position vectors 
+ *                            for compensated summation. This array will be
+ *                            modified.
+ * 
+ * \return None
+ */
+void ias15_approx_pos_step(
+    int objects_count,
+    real *restrict x,
+    real *restrict x0,
+    real *restrict v0,
+    real *restrict a0,
+    real *restrict aux_b,
+    real dt,
+    real *restrict temp_x_err_comp_sum
+);
+
+/**
+ * \brief Calculate velocity for the next time step
+ * 
+ * \param objects_count Number of objects in the system
+ * \param v Array of velocity vectors to be modified
+ * \param v0 Array of velocity vectors from the last time step
+ * \param a0 Array of acceleration vectors from the last time step
+ * \param aux_b Auxiliary coefficients b
+ * \param dt Current time step of the system
+ * \param temp_v_err_comp_sum Temporary array of round off errors of velocity vectors 
+ *                            for compensated summation. This array will be
+ *                            modified.
+ * 
+ * \return None
+ */
+void ias15_approx_vel_step(
+    int objects_count,
+    real *restrict v,
+    real *restrict v0,
+    real *restrict a0,
+    real *restrict aux_b,
+    real dt,
+    real *restrict temp_v_err_comp_sum
+);
+
+/**
+ * \brief Calculate the auxiliary coefficients b for IAS15 integrator
+ * 
+ * \param objects_count Number of objects in the system
+ * \param dim_nodes_minus_1 Dimension of nodes minus one
+ * \param aux_b Array of auxiliary coefficients b to be modified
+ * \param aux_g Array of auxiliary coefficients g
+ * \param aux_c Array of auxiliary coefficients c
+ * \param i Current iteration of nodes of the predictor-corrector algorithm
+ */
+void ias15_compute_aux_b(
+    int objects_count,
+    int dim_nodes_minus_1,
+    real *restrict aux_b,
+    const real *restrict aux_g,
+    const real *restrict aux_c,
+    int i
+);
+
+/**
+ * \brief Calculate the auxiliary coefficients g for IAS15 integrator
+ * 
+ * \param objects_count Number of objects in the system
+ * \param dim_nodes Dimension of nodes
+ * \param aux_g Array of auxiliary coefficients g to be modified
+ * \param aux_r Array of auxiliary coefficients r
+ * \param aux_a Array of auxiliary accelerations a
+ * \param i Current iteration of nodes of the predictor-corrector algorithm
+ * \param F Helper array for this function
+ */
+void ias15_compute_aux_g(
+    int objects_count,
+    int dim_nodes,
+    real *restrict aux_g,
+    const real *restrict aux_r,
+    const real *restrict aux_a,
+    int i,
+    real *restrict F
+);
+
+/**
+ * \brief Refine the auxiliary coefficients b for IAS15 integrator
+ * 
+ * \param objects_count Number of objects in the system
+ * \param dim_nodes_minus_1 Dimension of nodes minus one
+ * \param aux_b Array of auxiliary coefficients b to be modified
+ * \param aux_e Array of auxiliary coefficients e
+ * \param delta_aux_b Helper array for this function
+ * \param dt Current time step of the system
+ * \param dt_new Next Time Step of the system
+ * \param ias15_refine_flag Helper flag for this function
+ * 
+ * \return None
+ */
+void ias15_refine_aux_b(
+    int objects_count,
+    int dim_nodes_minus_1,
+    real *restrict aux_b,
+    real *restrict aux_e,
+    real *restrict delta_aux_b,
+    real dt,
+    real dt_new,
+    int ias15_refine_flag
+);
+
+
+WIN32DLL_API int ias15(
+    const char *restrict system,
+    double *restrict t,
+    double tf, 
+    double input_tolerance,
+    int store_every_n,
+    int *restrict store_count,
+    const double *restrict custom_sys_x,
+    const double *restrict custom_sys_v,
+    const double *restrict custom_sys_m,
+    double custom_sys_G,
+    int custom_sys_objects_count,
+    Solutions *restrict solution,
+    int *restrict is_exit
+)
+{   
+    // Initialize default system
+    real *x = NULL;
+    real *v = NULL;
+    real *m = NULL;
+    int objects_count;
+    real G;
+    int intitial_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
+
+    // Custom system
+    if (intitial_sys_flag == 2)
+    {
+        printf("Error: Failed to allocate memory to initialize default system\n");
+        goto err_default_sys_memory;
+    }
+    else if (intitial_sys_flag == 1)
+    {
+        objects_count = custom_sys_objects_count;
+        x = malloc(objects_count * 3 * sizeof(real));
+        v = malloc(objects_count * 3 * sizeof(real));
+        m = malloc(objects_count * sizeof(real));
+
+        if (!x || !v || !m)
+        {
+            printf("Error: Failed to allocate memory for customized system\n");
+            goto err_custom_sys_memory;
+        }
+
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                x[i * 3 + j] = custom_sys_x[i * 3 + j];
+                v[i * 3 + j] = custom_sys_v[i * 3 + j];
+            }
+            m[i] = custom_sys_m[i];
+        }
+        G = custom_sys_G;
+    }
+
+    real *a = malloc(objects_count * 3 * sizeof(real));
+    if (!a)
+    {
+        printf("Error: Failed to allocate memory for acceleration vectors\n");
+        goto err_a;
+    }
+
+    // Recommended tolerance: 1e-9
+    real tolerance = input_tolerance;
+
+    // Safety factors for step-size control
+    real safety_fac = 0.25;
+
+    // For fixed step integration, choose exponent = 0
+    real exponent = 1.0 / 7.0;
+
+    // Tolerance of predictor-corrector algorithm
+    real tolerance_pc = 1e-16;
+    
+    // Initialize auxiliary variables
+    int dim_nodes = 8;
+    int dim_nodes_minus_1 = 7;
+    int dim_nodes_minus_2 = 6;
+    real *nodes = calloc(dim_nodes, sizeof(real));
+    real *aux_c = calloc(7 * 7, sizeof(real));
+    real *aux_r = calloc(8 * 8, sizeof(real));
+    real *aux_b0 = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
+    real *aux_b = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
+    real *aux_g = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
+    real *aux_e = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
+
+    if (!nodes || !aux_c || !aux_r || !aux_b0 || !aux_b || !aux_g || !aux_e)
+    {
+        printf("Error: Failed to allocate memory for auxiliary variables\n");
+        goto err_aux_memory;
+    }
+    ias15_radau_spacing(nodes);
+    ias15_aux_c(aux_c);
+    ias15_aux_r(aux_r);
+
+    int ias15_refine_flag = 0;
+
+    // Arrays for ias15_step
+    real *aux_a = calloc(dim_nodes * objects_count * 3, sizeof(real));
+    real *x_step = calloc(objects_count * 3, sizeof(real));
+    real *v_step = calloc(objects_count * 3, sizeof(real));
+    real *a_step = calloc(objects_count * 3, sizeof(real));
+    real *delta_b7 = calloc(objects_count * 3, sizeof(real));
+
+    // Array for compute aux_g
+    real *F = calloc(8 * objects_count * 3, sizeof(real));
+
+    // Array for refine aux_b
+    real *delta_aux_b = calloc(dim_nodes_minus_1 * objects_count * 3, sizeof(real));
+
+    // Arrays for compensated summation
+    real *x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *temp_x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *temp_v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+
+    if (
+        !aux_a || 
+        !x_step ||
+        !v_step ||
+        !a_step ||
+        !delta_b7 ||
+        !F ||
+        !delta_aux_b ||
+        !x_err_comp_sum ||
+        !v_err_comp_sum ||
+        !temp_x_err_comp_sum ||
+        !temp_v_err_comp_sum
+    )
+    {
+        printf("Error: Failed to allocate memory for calculation\n");
+        goto err_calc_memory;
+    }
+
+    // Allocate memory for solution output
+    int64 count = 0;
+    double *sol_state = malloc(NPTS * objects_count * 6 * sizeof(double));
+    double *sol_time = malloc(NPTS * sizeof(double));
+    double *sol_dt = malloc(NPTS * sizeof(double));
+    int buffer_size = NPTS;
+
+    if (!sol_state || !sol_time || !sol_dt)
+    {
+        printf("Error: Failed to allocate memory for solution output\n");
+        goto err_sol_output_memory;
+    }
+
+    // For realloc solution output
+    double *temp_sol_state = NULL;
+    double *temp_sol_time = NULL;
+    double *temp_sol_dt = NULL;
+
+    // Initial value
+    for (int i = 0; i < objects_count; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            sol_state[i * 3 + j] = x[i * 3 + j];
+            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+        }
+    }
+    sol_time[0] = 0.0;
+    real dt = ias15_initial_dt(objects_count, 15, x, v, a, m, G);
+    if (dt == -1.0)
+    {
+        goto err_initial_dt_memory;
+    }
+    sol_dt[0] = dt;
+
+    while (1)
+    {
+        ias15_step(
+            objects_count,
+            dim_nodes,
+            dim_nodes_minus_1,
+            dim_nodes_minus_2,
+            x,
+            v,
+            a,
+            m,
+            G,
+            t,
+            &dt,
+            tf,
+            nodes,
+            aux_b0,
+            aux_b,
+            aux_c,
+            aux_e,
+            aux_g,
+            aux_r,
+            tolerance,
+            tolerance_pc,
+            exponent,
+            safety_fac,
+            &ias15_refine_flag,
+            aux_a,
+            x_step,
+            v_step,
+            a_step,
+            delta_b7,
+            F,
+            delta_aux_b,
+            x_err_comp_sum, 
+            v_err_comp_sum,
+            temp_x_err_comp_sum,
+            temp_v_err_comp_sum
+        );
+
+        // Update count
+        count += 1;
+
+        // Store step
+        if ((count + 1) % store_every_n == 0)
+        {
+            sol_time[*store_count + 1] = *t;
+            sol_dt[*store_count + 1] = dt;
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+            *store_count += 1;
+        }
+        else if (*t >= tf)
+        {
+            sol_time[*store_count + 1] = *t;
+            sol_dt[*store_count + 1] = dt;
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+        }
+
+        // Check if user sends KeyboardInterrupt in main thread
+        if (*is_exit)
+        {
+            goto err_user_exit;
+        }
+
+        // End simulation as t >= tf
+        else if (*t >= tf)
+        {
+            free(x);
+            free(v);
+            free(a);
+            free(nodes);
+            free(aux_c);
+            free(aux_r);
+            free(aux_b0);
+            free(aux_b);
+            free(aux_g);
+            free(aux_e);
+            free(aux_a);
+            free(x_step);
+            free(v_step);
+            free(a_step);
+            free(delta_b7); 
+            free(F);
+            free(delta_aux_b);
+            free(x_err_comp_sum);
+            free(v_err_comp_sum);
+            free(temp_x_err_comp_sum);
+            free(temp_v_err_comp_sum);
+            
+            solution->sol_state = sol_state;
+            solution->sol_time = sol_time;
+            solution->sol_dt = sol_dt;
+            solution->m = m;
+            solution->G = G;
+            solution->objects_count = objects_count;
+
+            return 0;
+        }
+
+        // Check buffer size and extend if full
+        if ((*store_count + 1) == buffer_size)
+        {   
+            buffer_size *= 2;
+            temp_sol_state = realloc(sol_state, buffer_size * objects_count * 6 * sizeof(real));
+            temp_sol_time = realloc(sol_time, buffer_size * sizeof(real));
+            temp_sol_dt = realloc(sol_dt, buffer_size * sizeof(real));
+
+            if (!temp_sol_state || !temp_sol_time || !temp_sol_dt)
+            {
+                printf("Error: Failed to allocate extra memory to extend array for solution output\n");
+                goto err_sol_output_memory;
+            }
+            
+            sol_state = temp_sol_state;
+            sol_time = temp_sol_time;
+            sol_dt = temp_sol_dt;
+        }
+    }
+
+err_user_exit: // User sends KeyboardInterrupt in main thread
+err_initial_dt_memory:
+err_sol_output_memory:
+    free(sol_state);
+    free(sol_time);
+    free(sol_dt);
+err_calc_memory:
+    free(aux_a);
+    free(x_step);
+    free(v_step);
+    free(a_step);
+    free(delta_b7);
+    free(F);
+    free(delta_aux_b);
+    free(x_err_comp_sum);
+    free(v_err_comp_sum);
+    free(temp_x_err_comp_sum);
+    free(temp_v_err_comp_sum);
+err_aux_memory:
+    free(nodes);
+    free(aux_c);
+    free(aux_r);
+    free(aux_b0);
+    free(aux_b);
+    free(aux_g);
+    free(aux_e);
+err_a:
+    free(a);
+err_custom_sys_memory:
+    free(x);
+    free(v);
+    free(m);
+err_default_sys_memory:    
+    if (*is_exit)
+    {
+        return 2;   // User sends KeyboardInterrupt in main thread
+    }
+    else
+    {
+        return 1;
+    }
+}
+
+WIN32DLL_API void ias15_radau_spacing(real *restrict nodes)
+{
+    nodes[0] = 0.0L;
+    nodes[1] = 0.056262560536922146465652191032L;
+    nodes[2] = 0.180240691736892364987579942809L;
+    nodes[3] = 0.352624717113169637373907770171L;
+    nodes[4] = 0.547153626330555383001448557652L;
+    nodes[5] = 0.734210177215410531523210608306L;
+    nodes[6] = 0.885320946839095768090359762932L;
+    nodes[7] = 0.977520613561287501891174500429L;
+}
+
+WIN32DLL_API void ias15_aux_c(real *restrict aux_c)
+{
+    for (int i = 0; i < 7; i++)
+    {
+        aux_c[i * 7 + i] = 1.0L;
+    }
+
+    aux_c[1 * 7 + 0] = -0.0562625605369221464656522L;
+
+    aux_c[2 * 7 + 0] = 0.01014080283006362998648180399549641417413495311078L;
+    aux_c[2 * 7 + 1] = -0.2365032522738145114532321L;
+
+    aux_c[3 * 7 + 0] = -0.0035758977292516175949344589284567187362040464593728L;
+    aux_c[3 * 7 + 1] = 0.09353769525946206589574845561035371499343547051116L;
+    aux_c[3 * 7 + 2] = -0.5891279693869841488271399L;
+
+    aux_c[4 * 7 + 0] = 0.0019565654099472210769005672379668610648179838140913L;
+    aux_c[4 * 7 + 1] = -0.054755386889068686440808430671055022602028382584495L;
+    aux_c[4 * 7 + 2] = 0.41588120008230686168862193041156933067050816537030L;
+    aux_c[4 * 7 + 3] = -1.1362815957175395318285885L;
+
+    aux_c[5 * 7 + 0] = -0.0014365302363708915424459554194153247134438571962198L;
+    aux_c[5 * 7 + 1] = 0.042158527721268707707297347813203202980228135395858L;
+    aux_c[5 * 7 + 2] = -0.36009959650205681228976647408968845289781580280782L;
+    aux_c[5 * 7 + 3] = 1.2501507118406910258505441186857527694077565516084L;
+    aux_c[5 * 7 + 4] = -1.8704917729329500633517991L;
+
+    aux_c[6 * 7 + 0] = 0.0012717903090268677492943117622964220889484666147501L;
+    aux_c[6 * 7 + 1] = -0.038760357915906770369904626849901899108502158354383L;
+    aux_c[6 * 7 + 2] = 0.36096224345284598322533983078129066420907893718190L;
+    aux_c[6 * 7 + 3] = -1.4668842084004269643701553461378480148761655599754L;
+    aux_c[6 * 7 + 4] = 2.9061362593084293014237914371173946705384212479246L;
+    aux_c[6 * 7 + 5] = -2.7558127197720458314421589L;
+}
+
+WIN32DLL_API void ias15_aux_r(real *aux_r)
+{
+    aux_r[1 * 8 + 0] = 17.773808914078000840752659565672904106978971632681L;
+    aux_r[2 * 8 + 0] = 5.5481367185372165056928216140765061758579336941398L;
+    aux_r[3 * 8 + 0] = 2.8358760786444386782520104428042437400879003147949L;
+    aux_r[4 * 8 + 0] = 1.8276402675175978297946077587371204385651628457154L;
+    aux_r[5 * 8 + 0] = 1.3620078160624694969370006292445650994197371928318L;
+    aux_r[6 * 8 + 0] = 1.1295338753367899027322861542728593509768148769105L;
+    aux_r[7 * 8 + 0] = 1.0229963298234867458386119071939636779024159134103L;
+
+    aux_r[2 * 8 + 1] = 8.0659386483818866885371256689687154412267416180207L;
+    aux_r[3 * 8 + 1] = 3.3742499769626352599420358188267460448330087696743L;
+    aux_r[4 * 8 + 1] = 2.0371118353585847827949159161566554921841792590404L;
+    aux_r[5 * 8 + 1] = 1.4750402175604115479218482480167404024740127431358L;
+    aux_r[6 * 8 + 1] = 1.2061876660584456166252036299646227791474203527801L;
+    aux_r[7 * 8 + 1] = 1.0854721939386423840467243172568913862030118679827L;
+
+    aux_r[3 * 8 + 2] = 5.8010015592640614823286778893918880155743979164251L;
+    aux_r[4 * 8 + 2] = 2.7254422118082262837742722003491334729711450288807L;
+    aux_r[5 * 8 + 2] = 1.8051535801402512604391147435448679586574414080693L;
+    aux_r[6 * 8 + 2] = 1.4182782637347391537713783674858328433713640692518L;
+    aux_r[7 * 8 + 2] = 1.2542646222818777659905422465868249586862369725826L;
+
+    aux_r[4 * 8 + 3] = 5.1406241058109342286363199091504437929335189668304L;
+    aux_r[5 * 8 + 3] = 2.6206449263870350811541816031933074696730227729812L;
+    aux_r[6 * 8 + 3] = 1.8772424961868100972169920283109658335427446084411L;
+    aux_r[7 * 8 + 3] = 1.6002665494908162609916716949161150366323259154408L;
+
+    aux_r[5 * 8 + 4] = 5.3459768998711075141214909632277898045770336660354L;
+    aux_r[6 * 8 + 4] = 2.9571160172904557478071040204245556508352776929762L;
+    aux_r[7 * 8 + 4] = 2.3235983002196942228325345451091668073608955835034L;
+
+    aux_r[6 * 8 + 5] = 6.6176620137024244874471284891193925737033291491748L;
+    aux_r[7 * 8 + 5] = 4.1099757783445590862385761824068782144723082633980L;
+
+    aux_r[7 * 8 + 6] = 10.846026190236844684706431007823415424143683137181L;
+}
+
+real ias15_initial_dt(
+    int objects_count,
+    int power,
+    real *restrict x,
+    real *restrict v,
+    real *restrict a,
+    const real *m,
+    real G
+)
+{
+    acceleration(objects_count, x, a, m, G);
+
+    real d_0 = abs_max_vec(x, objects_count * 3);
+    real d_1 = abs_max_vec(a, objects_count * 3);
+    real d_2;
+    real dt_0;
+    real dt_1;
+    real *x_1 = malloc(objects_count * 3 * sizeof(real));
+    real *a_1 = malloc(objects_count * 3 * sizeof(real));
+
+    if (!x_1 || !a_1)
+    {
+        printf("Error: Failed to allocate memory for ias15_initial_dt()\n");
+        free(x_1);
+        free(a_1);
+        return -1.0;
+    }
+
+    if (d_0 < 1e-5 || d_1 < 1e-5)
+    {
+        dt_0 = 1e-6;
+    }
+    else
+    {
+        dt_0 = 0.01 * (d_0 / d_1);
+    }
+    
+    for (int i = 0; i < objects_count; i++)
+    {
+        x_1[i * 3 + 0] = x[i * 3 + 0] + dt_0 * v[i * 3 + 0];
+        x_1[i * 3 + 1] = x[i * 3 + 1] + dt_0 * v[i * 3 + 1];
+        x_1[i * 3 + 2] = x[i * 3 + 2] + dt_0 * v[i * 3 + 2];
+    }
+    acceleration(objects_count, x_1, a_1, m, G);
+
+    for (int i = 0; i < objects_count; i++)
+    {
+        a_1[i * 3 + 0] = a_1[i * 3 + 0] - a[i * 3 + 0];
+        a_1[i * 3 + 1] = a_1[i * 3 + 1] - a[i * 3 + 1];
+        a_1[i * 3 + 2] = a_1[i * 3 + 2] - a[i * 3 + 2];
+    }
+    d_2 = abs_max_vec(a_1, objects_count * 3) / dt_0;
+
+    if (fmax(d_1, d_2) <= 1e-15)
+    {
+        dt_1 = fmax(1e-6, dt_0 * 1e-3);
+    }
+    else
+    {
+        dt_1 = pow((0.01 / fmax(d_1, d_2)), 1.0 / (1.0 + power));
+    }
+    
+    free(x_1);
+    free(a_1);
+
+    return fmin(100.0 * dt_0, dt_1);
+}
+
+WIN32DLL_API void ias15_step(
+    int objects_count,
+    int dim_nodes,
+    int dim_nodes_minus_1,
+    int dim_nodes_minus_2,
+    real *restrict x0,
+    real *restrict v0,
+    real *restrict a0,
+    const real *restrict m,
+    real G,
+    real *restrict t,
+    real *restrict dt,
+    real tf,
+    const real *restrict nodes,
+    real *restrict aux_b0,
+    real *restrict aux_b,
+    const real *restrict aux_c,
+    real *restrict aux_e,
+    real *restrict aux_g,
+    const real *restrict aux_r,
+    real tolerance,
+    real tolerance_pc,
+    real exponent,
+    real safety_fac,
+    int *restrict ias15_refine_flag,
+    real *restrict aux_a,
+    real *restrict x,
+    real *restrict v,
+    real *restrict a,
+    real *restrict delta_b7,
+    real *restrict F,
+    real *restrict delta_aux_b,
+    real *restrict x_err_comp_sum, 
+    real *restrict v_err_comp_sum,
+    real *restrict temp_x_err_comp_sum,
+    real *restrict temp_v_err_comp_sum
+)
+{
+    real error, error_b7, dt_new;
+    // Main Loop
+    int ias15_integrate_flag = 0; 
+
+    while (1)
+    {   
+        // Loop for predictor-corrector algorithm
+        // 12 = max iterations
+        for (int temp = 0; temp < 12; temp++)
+        {
+            for (int i = 0; i < dim_nodes; i++)
+            {
+                // Estimate position and velocity with current aux_b and nodes
+                ias15_approx_pos_pc(objects_count, x, x0, v0, a0, nodes[i], aux_b, *dt, x_err_comp_sum);
+                ias15_approx_vel_pc(objects_count, v, v0, a0, nodes[i], aux_b, *dt, v_err_comp_sum);
+
+                // Evaluate force function and store result
+                acceleration(objects_count, x, &aux_a[i * objects_count * 3], m, G);
+
+                ias15_compute_aux_g(objects_count, dim_nodes, aux_g, aux_r, aux_a, i, F);
+                ias15_compute_aux_b(objects_count, dim_nodes_minus_1, aux_b, aux_g, aux_c, i);
+            }
+
+            // Estimate convergence
+            for (int i = 0; i < objects_count; i++)
+            {
+                for (int j = 0; j < 3; j++)
+                {
+                    delta_b7[i * 3 + j] = aux_b[dim_nodes_minus_2 * objects_count * 3 + i * 3 + j] - aux_b0[dim_nodes_minus_2 * objects_count * 3 + i * 3 + j];
+                }
+            }
+            memcpy(aux_b0, aux_b, dim_nodes_minus_1 * objects_count * 3 * sizeof(real));
+            if ((abs_max_vec(delta_b7, objects_count * 3) / abs_max_vec(&aux_a[dim_nodes_minus_1 * objects_count * 3], objects_count * 3)) < tolerance_pc)
+            {
+                break;
+            }
+        }
+        
+        // Advance step
+        memcpy(temp_x_err_comp_sum, x_err_comp_sum, objects_count * 3 * sizeof(real));
+        memcpy(temp_v_err_comp_sum, v_err_comp_sum, objects_count * 3 * sizeof(real));
+
+        ias15_approx_pos_step(objects_count, x, x0, v0, a0, aux_b, *dt, temp_x_err_comp_sum);
+        ias15_approx_vel_step(objects_count, v, v0, a0, aux_b, *dt, temp_v_err_comp_sum);
+        acceleration(objects_count, x, a, m, G);
+
+        // Estimate relative error
+        error_b7 = abs_max_vec(&aux_b[dim_nodes_minus_2 * objects_count * 3], objects_count * 3) / abs_max_vec(a, objects_count * 3);
+        error = pow((error_b7 / tolerance), exponent);
+
+        // Step-size for the next step
+        if (error != 0.0)
+        {
+            dt_new = *dt / error;
+        }
+        else
+        {
+            dt_new = *dt;
+        }
+
+        // Accept the step
+        if (error <= 1 || *dt == tf * 1e-12)
+        {
+            // Report accepted step
+            ias15_integrate_flag = 1;
+            *t += *dt;
+
+            ias15_refine_aux_b(objects_count, dim_nodes_minus_1, aux_b, aux_e, delta_aux_b, *dt, dt_new, *ias15_refine_flag);
+            *ias15_refine_flag = 1;
+
+            memcpy(x_err_comp_sum, temp_x_err_comp_sum, objects_count * 3 * sizeof(real));
+            memcpy(v_err_comp_sum, temp_v_err_comp_sum, objects_count * 3 * sizeof(real));
+
+            if (*t >= tf)
+            {
+                memcpy(x0, x, objects_count * 3 * sizeof(real));
+                memcpy(v0, v, objects_count * 3 * sizeof(real));
+                memcpy(a0, a, objects_count * 3 * sizeof(real));     
+                break;  
+            }
+        }
+
+        // Step size for the next iteration
+        if (dt_new > (*dt / safety_fac))
+        {
+            *dt = *dt / safety_fac;
+        }
+        else if (dt_new < *dt * safety_fac)
+        {
+            *dt = *dt * safety_fac;
+        }
+        else
+        {
+            *dt = dt_new;
+        }
+
+        if (dt_new / tf < 1e-12)
+        {
+            *dt = tf * 1e-12;
+        }
+
+        // Correct overshooting
+        if (*t + *dt > tf)
+        {
+            *dt = tf - *t;
+        }
+
+        // Exit 
+        if (ias15_integrate_flag > 0)
+        {   
+            memcpy(x0, x, objects_count * 3 * sizeof(real));
+            memcpy(v0, v, objects_count * 3 * sizeof(real));
+            memcpy(a0, a, objects_count * 3 * sizeof(real));    
+            break;    
+        }
+    }
+}
+
+WIN32DLL_API void ias15_approx_pos_pc(
+    int objects_count,
+    real *restrict x,
+    real *restrict x0,
+    real *restrict v0,
+    real *restrict a0,
+    real node,
+    real *restrict aux_b,
+    real dt,
+    real *restrict x_err_comp_sum
+)
+{   
+    for (int j = 0; j < objects_count; j++)
+    {
+        for (int k = 0; k < 3; k++)
+        {
+            /*
+            *   Warning: Combining both statements would increase floating point error
+            *            e.g. x[j][k] = x0[j][k] + x_err_comp_sum[j][k] + ...   (WRONG)
+            */
+
+            x[j * 3 + k] = x0[j * 3 + k];     
+            x[j * 3 + k] += x_err_comp_sum[j * 3 + k] + dt * node * (
+                v0[j * 3 + k]
+                + dt
+                * node
+                * (
+                    a0[j * 3 + k]
+                    + node 
+                    * (
+                        aux_b[0 * objects_count * 3 + j * 3 + k] / 3.0
+                        + node
+                        * (
+                            aux_b[1 * objects_count * 3 + j * 3 + k] / 6.0
+                            + node
+                            * (
+                                aux_b[2 * objects_count * 3 + j * 3 + k] / 10.0
+                                + node
+                                * (
+                                    aux_b[3 * objects_count * 3 + j * 3 + k] / 15.0
+                                    + node
+                                    * (
+                                        aux_b[4 * objects_count * 3 + j * 3 + k] / 21.0
+                                        + node * (
+                                            aux_b[5 * objects_count * 3 + j * 3 + k] / 28.0 
+                                            + node * aux_b[6 * objects_count * 3 + j * 3 + k] / 36.0
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+                / 2.0
+            );
+        }
+    }
+}
+
+WIN32DLL_API void ias15_approx_vel_pc(
+    int objects_count,
+    real *restrict v,
+    real *restrict v0,
+    real *restrict a0,
+    real node,
+    real *restrict aux_b,
+    real dt,
+    real *restrict v_err_comp_sum
+)
+{
+    for (int j = 0; j < objects_count; j++)
+    {
+        for (int k = 0; k < 3; k++)
+        {
+            /*
+            *   Warning: Combining both statements would increase floating point error
+            *            e.g. v[j][k] = v0[j][k] + v_err_comp_sum[j][k] + ...   (WRONG)
+            */
+
+            v[j * 3 + k] = v0[j * 3 + k];
+            v[j * 3 + k] += v_err_comp_sum[j * 3 + k] + dt * node * (
+                a0[j * 3 + k]
+                + node
+                * (
+                    aux_b[0 * objects_count * 3 + j * 3 + k] / 2.0
+                    + node
+                    * (
+                        aux_b[1 * objects_count * 3 + j * 3 + k] / 3.0
+                        + node
+                        * (
+                            aux_b[2 * objects_count * 3 + j * 3 + k] / 4.0
+                            + node
+                            * (
+                                aux_b[3 * objects_count * 3 + j * 3 + k] / 5.0
+                                + node
+                                * (
+                                    aux_b[4 * objects_count * 3 + j * 3 + k] / 6.0
+                                    + node * (
+                                        aux_b[5 * objects_count * 3 + j * 3 + k] / 7.0 
+                                        + node * aux_b[6 * objects_count * 3 + j * 3 + k] / 8.0
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            );
+        }
+    }
+}
+
+WIN32DLL_API void ias15_approx_pos_step(
+    int objects_count,
+    real *restrict x,
+    real *restrict x0,
+    real *restrict v0,
+    real *restrict a0,
+    real *restrict aux_b,
+    real dt,
+    real *restrict temp_x_err_comp_sum
+)
+{   
+    for (int j = 0; j < objects_count; j++)
+    {
+        for (int k = 0; k < 3; k++)
+        {
+            temp_x_err_comp_sum[j * 3 + k] += dt * (
+                v0[j * 3 + k] + dt * (a0[j * 3 + k]
+                    + aux_b[0 * objects_count * 3 + j * 3 + k] / 3.0
+                    + aux_b[1 * objects_count * 3 + j * 3 + k] / 6.0
+                    + aux_b[2 * objects_count * 3 + j * 3 + k] / 10.0
+                    + aux_b[3 * objects_count * 3 + j * 3 + k] / 15.0
+                    + aux_b[4 * objects_count * 3 + j * 3 + k] / 21.0
+                    + aux_b[5 * objects_count * 3 + j * 3 + k] / 28.0 
+                    + aux_b[6 * objects_count * 3 + j * 3 + k] / 36.0
+                )
+                / 2.0
+            );
+
+            x[j * 3 + k] = x0[j * 3 + k] + temp_x_err_comp_sum[j * 3 + k];
+            temp_x_err_comp_sum[j * 3 + k] += (x0[j * 3 + k] - x[j * 3 + k]);
+        }
+    }
+}
+
+WIN32DLL_API void ias15_approx_vel_step(
+    int objects_count,
+    real *restrict v,
+    real *restrict v0,
+    real *restrict a0,
+    real *restrict aux_b,
+    real dt,
+    real *restrict temp_v_err_comp_sum
+)
+{
+    for (int j = 0; j < objects_count; j++)
+    {
+        for (int k = 0; k < 3; k++)
+        {
+            temp_v_err_comp_sum[j * 3 + k] += dt * (
+                a0[j * 3 + k]
+                + aux_b[0 * objects_count * 3 + j * 3 + k] / 2.0
+                + aux_b[1 * objects_count * 3 + j * 3 + k] / 3.0
+                + aux_b[2 * objects_count * 3 + j * 3 + k] / 4.0
+                + aux_b[3 * objects_count * 3 + j * 3 + k] / 5.0
+                + aux_b[4 * objects_count * 3 + j * 3 + k] / 6.0
+                + aux_b[5 * objects_count * 3 + j * 3 + k] / 7.0 
+                + aux_b[6 * objects_count * 3 + j * 3 + k] / 8.0
+            );
+            v[j * 3 + k] = v0[j * 3 + k] + temp_v_err_comp_sum[j * 3 + k];
+            temp_v_err_comp_sum[j * 3 + k] += (v0[j * 3 + k] - v[j * 3 + k]);
+        }
+    }
+}
+
+WIN32DLL_API void ias15_compute_aux_b(
+    int objects_count,
+    int dim_nodes_minus_1,
+    real *restrict aux_b,
+    const real *restrict aux_g,
+    const real *restrict aux_c,
+    int i
+)
+{
+    for (int j = 0; j < objects_count; j++)
+    {
+        for (int k = 0; k < 3; k++)
+        {
+            if (i >= 1) {
+                aux_b[0 * objects_count * 3 + j * 3 + k] = (
+                    aux_c[0 * dim_nodes_minus_1 + 0] * aux_g[0 * objects_count * 3 + j * 3 + k]
+                    + aux_c[1 * dim_nodes_minus_1 + 0] * aux_g[1 * objects_count * 3 + j * 3 + k]
+                    + aux_c[2 * dim_nodes_minus_1 + 0] * aux_g[2 * objects_count * 3 + j * 3 + k]
+                    + aux_c[3 * dim_nodes_minus_1 + 0] * aux_g[3 * objects_count * 3 + j * 3 + k]
+                    + aux_c[4 * dim_nodes_minus_1 + 0] * aux_g[4 * objects_count * 3 + j * 3 + k]
+                    + aux_c[5 * dim_nodes_minus_1 + 0] * aux_g[5 * objects_count * 3 + j * 3 + k]
+                    + aux_c[6 * dim_nodes_minus_1 + 0] * aux_g[6 * objects_count * 3 + j * 3 + k]
+                );
+            }
+            else
+            {
+                continue;
+            }
+
+            if (i >= 2) {
+                aux_b[1 * objects_count * 3 + j * 3 + k] = (
+                    aux_c[1 * dim_nodes_minus_1 + 1] * aux_g[1 * objects_count * 3 + j * 3 + k]
+                    + aux_c[2 * dim_nodes_minus_1 + 1] * aux_g[2 * objects_count * 3 + j * 3 + k]
+                    + aux_c[3 * dim_nodes_minus_1 + 1] * aux_g[3 * objects_count * 3 + j * 3 + k]
+                    + aux_c[4 * dim_nodes_minus_1 + 1] * aux_g[4 * objects_count * 3 + j * 3 + k]
+                    + aux_c[5 * dim_nodes_minus_1 + 1] * aux_g[5 * objects_count * 3 + j * 3 + k]
+                    + aux_c[6 * dim_nodes_minus_1 + 1] * aux_g[6 * objects_count * 3 + j * 3 + k]
+                );
+            }
+            else
+            {
+                continue;
+            }
+
+            if (i >= 3) {
+                aux_b[2 * objects_count * 3 + j * 3 + k] = (
+                    aux_c[2 * dim_nodes_minus_1 + 2] * aux_g[2 * objects_count * 3 + j * 3 + k]
+                    + aux_c[3 * dim_nodes_minus_1 + 2] * aux_g[3 * objects_count * 3 + j * 3 + k]
+                    + aux_c[4 * dim_nodes_minus_1 + 2] * aux_g[4 * objects_count * 3 + j * 3 + k]
+                    + aux_c[5 * dim_nodes_minus_1 + 2] * aux_g[5 * objects_count * 3 + j * 3 + k]
+                    + aux_c[6 * dim_nodes_minus_1 + 2] * aux_g[6 * objects_count * 3 + j * 3 + k]
+                );
+            }
+            else
+            {
+                continue;
+            }
+
+            if (i >= 4) {
+                aux_b[3 * objects_count * 3 + j * 3 + k] = (
+                    aux_c[3 * dim_nodes_minus_1 + 3] * aux_g[3 * objects_count * 3 + j * 3 + k]
+                    + aux_c[4 * dim_nodes_minus_1 + 3] * aux_g[4 * objects_count * 3 + j * 3 + k]
+                    + aux_c[5 * dim_nodes_minus_1 + 3] * aux_g[5 * objects_count * 3 + j * 3 + k]
+                    + aux_c[6 * dim_nodes_minus_1 + 3] * aux_g[6 * objects_count * 3 + j * 3 + k]
+                );
+            }
+            else
+            {
+                continue;
+            }
+
+            if (i >= 5)
+            {
+                aux_b[4 * objects_count * 3 + j * 3 + k] = (
+                    aux_c[4 * dim_nodes_minus_1 + 4] * aux_g[4 * objects_count * 3 + j * 3 + k]
+                    + aux_c[5 * dim_nodes_minus_1 + 4] * aux_g[5 * objects_count * 3 + j * 3 + k]
+                    + aux_c[6 * dim_nodes_minus_1 + 4] * aux_g[6 * objects_count * 3 + j * 3 + k]
+                );
+            }
+            else
+            {
+                continue;
+            }
+
+            if (i >= 6)
+            {
+                aux_b[5 * objects_count * 3 + j * 3 + k] = (
+                    aux_c[5 * dim_nodes_minus_1 + 5] * aux_g[5 * objects_count * 3 + j * 3 + k]
+                    + aux_c[6 * dim_nodes_minus_1 + 5] * aux_g[6 * objects_count * 3 + j * 3 + k]
+                );
+            }
+            else
+            {
+                continue;
+            }
+
+            if (i >= 7)
+            {
+                aux_b[6 * objects_count * 3 + j * 3 + k] = (
+                    aux_c[6 * dim_nodes_minus_1 + 6] * aux_g[6 * objects_count * 3 + j * 3 + k]
+                );
+            }
+            else
+            {
+                continue;
+            }
+        }
+    }
+}
+
+WIN32DLL_API void ias15_compute_aux_g(
+    int objects_count,
+    int dim_nodes,
+    real *restrict aux_g,
+    const real *restrict aux_r,
+    const real *restrict aux_a,
+    int i,
+    real *restrict F
+)
+{
+    // Retrieve required accelerations
+    // F is allocated in IAS15
+    for (int j = 0; j <= i; j++)
+    {
+        memcpy(&F[j * objects_count * 3], &aux_a[j * objects_count * 3], objects_count * 3 * sizeof(real));
+    }
+    
+    // Update aux_g
+    for (int j = 0; j < objects_count; j++)
+    {
+        for (int k = 0; k < 3; k++)
+        {
+            if (i >= 1)
+            {
+                aux_g[0 * objects_count * 3 + j * 3 + k] = (
+                    (F[1 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[1 * dim_nodes + 0]
+                );
+            }
+            else
+            {
+                continue;
+            }
+                
+            if (i >= 2)
+            {
+                aux_g[1 * objects_count * 3 + j * 3 + k] = (
+                    ((F[2 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[2 * dim_nodes + 0] 
+                    - aux_g[0 * objects_count * 3 + j * 3 + k]) * aux_r[2 * dim_nodes + 1]
+                );
+            }
+            else 
+            {
+                continue;
+            }
+
+            if (i >= 3)
+            {
+                aux_g[2 * objects_count * 3 + j * 3 + k] = (
+                    ((F[3 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[3 * dim_nodes + 0] 
+                    - aux_g[0 * objects_count * 3 + j * 3 + k]) * aux_r[3 * dim_nodes + 1] 
+                    - aux_g[1 * objects_count * 3 + j * 3 + k]
+                ) * aux_r[3 * dim_nodes + 2];
+            }
+            else
+            {
+                continue;
+            }
+                
+            if (i >= 4)
+            {
+                aux_g[3 * objects_count * 3 + j * 3 + k] = (
+                    (((F[4 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[4 * dim_nodes + 0] 
+                    - aux_g[0 * objects_count * 3 + j * 3 + k]) * aux_r[4 * dim_nodes + 1] - aux_g[1 * objects_count * 3 + j * 3 + k])
+                    * aux_r[4 * dim_nodes + 2]
+                    - aux_g[2 * objects_count * 3 + j * 3 + k]
+                ) * aux_r[4 * dim_nodes + 3];
+            }
+            else
+            {
+                continue;
+            }
+
+            if (i >= 5)
+            {
+                aux_g[4 * objects_count * 3 + j * 3 + k] = (
+                    (
+                        (((F[5 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[5 * dim_nodes + 0] 
+                        - aux_g[0 * objects_count * 3 + j * 3 + k]) * aux_r[5 * dim_nodes + 1] 
+                        - aux_g[1 * objects_count * 3 + j * 3 + k])
+                        * aux_r[5 * dim_nodes + 2]
+                        - aux_g[2 * objects_count * 3 + j * 3 + k]
+                    )
+                    * aux_r[5 * dim_nodes + 3]
+                    - aux_g[3 * objects_count * 3 + j * 3 + k]
+                ) * aux_r[5 * dim_nodes + 4];
+            }
+            else
+            {
+                continue;
+            }
+
+            if (i >= 6)
+            {
+                aux_g[5 * objects_count * 3 + j * 3 + k] = (
+                    (
+                        (
+                            (((F[6 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[6 * dim_nodes + 0] 
+                            - aux_g[0 * objects_count * 3 + j * 3 + k]) * aux_r[6 * dim_nodes + 1] 
+                            - aux_g[1 * objects_count * 3 + j * 3 + k])
+                            * aux_r[6 * dim_nodes + 2]
+                            - aux_g[2 * objects_count * 3 + j * 3 + k]
+                        )
+                        * aux_r[6 * dim_nodes + 3]
+                        - aux_g[3 * objects_count * 3 + j * 3 + k]
+                    )
+                    * aux_r[6 * dim_nodes + 4]
+                    - aux_g[4 * objects_count * 3 + j * 3 + k]
+                ) * aux_r[6 * dim_nodes + 5];
+            }
+            else
+            {
+                continue;
+            }
+
+            if (i >= 7)
+            {
+                aux_g[6 * objects_count * 3 + j * 3 + k] = (
+                    (
+                        (
+                            (
+                                (((F[7 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[7 * dim_nodes + 0] - aux_g[0 * objects_count * 3 + j * 3 + k]) 
+                                * aux_r[7 * dim_nodes + 1] 
+                                - aux_g[1 * objects_count * 3 + j * 3 + k])
+                                * aux_r[7 * dim_nodes + 2]
+                                - aux_g[2 * objects_count * 3 + j * 3 + k]
+                            )
+                            * aux_r[7 * dim_nodes + 3]
+                            - aux_g[3 * objects_count * 3 + j * 3 + k]
+                        )
+                        * aux_r[7 * dim_nodes + 4]
+                        - aux_g[4 * objects_count * 3 + j * 3 + k]
+                    )
+                    * aux_r[7 * dim_nodes + 5]
+                    - aux_g[5 * objects_count * 3 + j * 3 + k]
+                ) * aux_r[7 * dim_nodes + 6];                
+            }
+            else
+            {
+                continue;
+            }
+        }
+    }
+}
+
+WIN32DLL_API void ias15_refine_aux_b(
+    int objects_count,
+    int dim_nodes_minus_1,
+    real *restrict aux_b,
+    real *restrict aux_e,
+    real *restrict delta_aux_b,
+    real dt,
+    real dt_new,
+    int ias15_refine_flag
+)
+{
+    if (ias15_refine_flag != 0)
+    {
+        for (int i = 0; i < dim_nodes_minus_1; i++)
+        {
+            for (int j = 0; j < objects_count; j++)
+            {
+                for (int k = 0; k < 3; k++)
+                {
+                    delta_aux_b[i * objects_count * 3 + j * 3 + k] = (
+                        aux_b[i * objects_count * 3 + j * 3 + k] - aux_e[i * objects_count * 3 + j * 3 + k]
+                    );
+                }
+            }
+        }
+    }
+    else
+    {
+        // Empty delta_aux_b
+        for (int i = 0; i < dim_nodes_minus_1 * objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                delta_aux_b[i * 3 + j] = 0.0;
+            }
+        }
+    }
+
+    real q = dt_new / dt;
+    real q2 = q * q, q3 = q2 * q, q4 = q3 * q, q5 = q4 * q, q6 = q5 * q, q7 = q6 * q;
+    
+    for (int j = 0; j < objects_count; j++) 
+    {
+        for (int k = 0; k < 3; k++) 
+        {
+            aux_e[0 * objects_count * 3 + j * 3 + k] = q * (
+                aux_b[6 * objects_count * 3 + j * 3 + k] * 7.0
+                + aux_b[5 * objects_count * 3 + j * 3 + k] * 6.0
+                + aux_b[4 * objects_count * 3 + j * 3 + k] * 5.0
+                + aux_b[3 * objects_count * 3 + j * 3 + k] * 4.0
+                + aux_b[2 * objects_count * 3 + j * 3 + k] * 3.0
+                + aux_b[1 * objects_count * 3 + j * 3 + k] * 2.0
+                + aux_b[0 * objects_count * 3 + j * 3 + k]
+            );
+
+            aux_e[1 * objects_count * 3 + j * 3 + k] = q2 * (
+                aux_b[6 * objects_count * 3 + j * 3 + k] * 21.0
+                + aux_b[5 * objects_count * 3 + j * 3 + k] * 15.0
+                + aux_b[4 * objects_count * 3 + j * 3 + k] * 10.0
+                + aux_b[3 * objects_count * 3 + j * 3 + k] * 6.0
+                + aux_b[2 * objects_count * 3 + j * 3 + k] * 3.0
+                + aux_b[1 * objects_count * 3 + j * 3 + k]
+            );
+
+            aux_e[2 * objects_count * 3 + j * 3 + k] = q3 * (
+                aux_b[6 * objects_count * 3 + j * 3 + k] * 35.0
+                + aux_b[5 * objects_count * 3 + j * 3 + k] * 20.0
+                + aux_b[4 * objects_count * 3 + j * 3 + k] * 10.0
+                + aux_b[3 * objects_count * 3 + j * 3 + k] * 4.0
+                + aux_b[2 * objects_count * 3 + j * 3 + k]
+            );
+
+            aux_e[3 * objects_count * 3 + j * 3 + k] = q4 * (
+                aux_b[6 * objects_count * 3 + j * 3 + k] * 35.0
+                + aux_b[5 * objects_count * 3 + j * 3 + k] * 15.0
+                + aux_b[4 * objects_count * 3 + j * 3 + k] * 5.0
+                + aux_b[3 * objects_count * 3 + j * 3 + k]
+            );
+
+            aux_e[4 * objects_count * 3 + j * 3 + k] = q5 * (
+                aux_b[6 * objects_count * 3 + j * 3 + k] * 21.0
+                + aux_b[5 * objects_count * 3 + j * 3 + k] * 6.0
+                + aux_b[4 * objects_count * 3 + j * 3 + k]
+            );
+
+            aux_e[5 * objects_count * 3 + j * 3 + k] = q6 * (
+                aux_b[6 * objects_count * 3 + j * 3 + k] * 7.0
+                + aux_b[5 * objects_count * 3 + j * 3 + k]
+            );
+
+            aux_e[6 * objects_count * 3 + j * 3 + k] = q7 * aux_b[6 * objects_count * 3 + j * 3 + k];
+        }
+    }
+
+    for (int i = 0; i < dim_nodes_minus_1; i++)
+    {
+        for (int j = 0; j < objects_count; j++)
+        {
+            for (int k = 0; k < 3; k++)
+            {
+                aux_b[i * objects_count * 3 + j * 3 + k] = (
+                    aux_e[i * objects_count * 3 + j * 3 + k] + delta_aux_b[i * objects_count * 3 + j * 3 + k]
+                );
+            }
+        }
+    }
+}
