@@ -13,9 +13,9 @@ WIN32DLL_API void compute_energy(
     int objects_count, 
     int npts,
     int *restrict count, 
-    real *restrict energy, 
-    const real (*restrict sol_state)[objects_count * 6], 
-    const real *restrict m, 
+    double *restrict energy, 
+    const double (*restrict sol_state)[objects_count * 6], 
+    const double *restrict m, 
     real G,
     int *restrict is_exit
 )
