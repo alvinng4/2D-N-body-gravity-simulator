@@ -767,7 +767,7 @@ WIN32DLL_API void ias15_aux_r(real *aux_r)
     aux_r[7 * 8 + 6] = 10.846026190236844684706431007823415424143683137181L;
 }
 
-real ias15_initial_dt(
+WIN32DLL_API real ias15_initial_dt(
     int objects_count,
     int power,
     real *restrict x,
@@ -1177,101 +1177,182 @@ WIN32DLL_API void ias15_compute_aux_b(
 {
     for (int j = 0; j < objects_count; j++)
     {
-        for (int k = 0; k < 3; k++)
+        if (i >= 1) 
         {
-            if (i >= 1) {
-                aux_b[0 * objects_count * 3 + j * 3 + k] = (
-                    aux_c[0 * dim_nodes_minus_1 + 0] * aux_g[0 * objects_count * 3 + j * 3 + k]
-                    + aux_c[1 * dim_nodes_minus_1 + 0] * aux_g[1 * objects_count * 3 + j * 3 + k]
-                    + aux_c[2 * dim_nodes_minus_1 + 0] * aux_g[2 * objects_count * 3 + j * 3 + k]
-                    + aux_c[3 * dim_nodes_minus_1 + 0] * aux_g[3 * objects_count * 3 + j * 3 + k]
-                    + aux_c[4 * dim_nodes_minus_1 + 0] * aux_g[4 * objects_count * 3 + j * 3 + k]
-                    + aux_c[5 * dim_nodes_minus_1 + 0] * aux_g[5 * objects_count * 3 + j * 3 + k]
-                    + aux_c[6 * dim_nodes_minus_1 + 0] * aux_g[6 * objects_count * 3 + j * 3 + k]
-                );
-            }
-            else
-            {
-                continue;
-            }
+            aux_b[0 * objects_count * 3 + j * 3 + 0] = (
+                aux_c[0 * dim_nodes_minus_1 + 0] * aux_g[0 * objects_count * 3 + j * 3 + 0]
+                + aux_c[1 * dim_nodes_minus_1 + 0] * aux_g[1 * objects_count * 3 + j * 3 + 0]
+                + aux_c[2 * dim_nodes_minus_1 + 0] * aux_g[2 * objects_count * 3 + j * 3 + 0]
+                + aux_c[3 * dim_nodes_minus_1 + 0] * aux_g[3 * objects_count * 3 + j * 3 + 0]
+                + aux_c[4 * dim_nodes_minus_1 + 0] * aux_g[4 * objects_count * 3 + j * 3 + 0]
+                + aux_c[5 * dim_nodes_minus_1 + 0] * aux_g[5 * objects_count * 3 + j * 3 + 0]
+                + aux_c[6 * dim_nodes_minus_1 + 0] * aux_g[6 * objects_count * 3 + j * 3 + 0]
+            );
+            aux_b[0 * objects_count * 3 + j * 3 + 1] = (
+                aux_c[0 * dim_nodes_minus_1 + 0] * aux_g[0 * objects_count * 3 + j * 3 + 1]
+                + aux_c[1 * dim_nodes_minus_1 + 0] * aux_g[1 * objects_count * 3 + j * 3 + 1]
+                + aux_c[2 * dim_nodes_minus_1 + 0] * aux_g[2 * objects_count * 3 + j * 3 + 1]
+                + aux_c[3 * dim_nodes_minus_1 + 0] * aux_g[3 * objects_count * 3 + j * 3 + 1]
+                + aux_c[4 * dim_nodes_minus_1 + 0] * aux_g[4 * objects_count * 3 + j * 3 + 1]
+                + aux_c[5 * dim_nodes_minus_1 + 0] * aux_g[5 * objects_count * 3 + j * 3 + 1]
+                + aux_c[6 * dim_nodes_minus_1 + 0] * aux_g[6 * objects_count * 3 + j * 3 + 1]
+            );
+            aux_b[0 * objects_count * 3 + j * 3 + 2] = (
+                aux_c[0 * dim_nodes_minus_1 + 0] * aux_g[0 * objects_count * 3 + j * 3 + 2]
+                + aux_c[1 * dim_nodes_minus_1 + 0] * aux_g[1 * objects_count * 3 + j * 3 + 2]
+                + aux_c[2 * dim_nodes_minus_1 + 0] * aux_g[2 * objects_count * 3 + j * 3 + 2]
+                + aux_c[3 * dim_nodes_minus_1 + 0] * aux_g[3 * objects_count * 3 + j * 3 + 2]
+                + aux_c[4 * dim_nodes_minus_1 + 0] * aux_g[4 * objects_count * 3 + j * 3 + 2]
+                + aux_c[5 * dim_nodes_minus_1 + 0] * aux_g[5 * objects_count * 3 + j * 3 + 2]
+                + aux_c[6 * dim_nodes_minus_1 + 0] * aux_g[6 * objects_count * 3 + j * 3 + 2]
+            );
+        }
+        else
+        {
+            continue;
+        }
 
-            if (i >= 2) {
-                aux_b[1 * objects_count * 3 + j * 3 + k] = (
-                    aux_c[1 * dim_nodes_minus_1 + 1] * aux_g[1 * objects_count * 3 + j * 3 + k]
-                    + aux_c[2 * dim_nodes_minus_1 + 1] * aux_g[2 * objects_count * 3 + j * 3 + k]
-                    + aux_c[3 * dim_nodes_minus_1 + 1] * aux_g[3 * objects_count * 3 + j * 3 + k]
-                    + aux_c[4 * dim_nodes_minus_1 + 1] * aux_g[4 * objects_count * 3 + j * 3 + k]
-                    + aux_c[5 * dim_nodes_minus_1 + 1] * aux_g[5 * objects_count * 3 + j * 3 + k]
-                    + aux_c[6 * dim_nodes_minus_1 + 1] * aux_g[6 * objects_count * 3 + j * 3 + k]
-                );
-            }
-            else
-            {
-                continue;
-            }
+        if (i >= 2) 
+        {
+            aux_b[1 * objects_count * 3 + j * 3 + 0] = (
+                aux_c[1 * dim_nodes_minus_1 + 1] * aux_g[1 * objects_count * 3 + j * 3 + 0]
+                + aux_c[2 * dim_nodes_minus_1 + 1] * aux_g[2 * objects_count * 3 + j * 3 + 0]
+                + aux_c[3 * dim_nodes_minus_1 + 1] * aux_g[3 * objects_count * 3 + j * 3 + 0]
+                + aux_c[4 * dim_nodes_minus_1 + 1] * aux_g[4 * objects_count * 3 + j * 3 + 0]
+                + aux_c[5 * dim_nodes_minus_1 + 1] * aux_g[5 * objects_count * 3 + j * 3 + 0]
+                + aux_c[6 * dim_nodes_minus_1 + 1] * aux_g[6 * objects_count * 3 + j * 3 + 0]
+            );
+            aux_b[1 * objects_count * 3 + j * 3 + 1] = (
+                aux_c[1 * dim_nodes_minus_1 + 1] * aux_g[1 * objects_count * 3 + j * 3 + 1]
+                + aux_c[2 * dim_nodes_minus_1 + 1] * aux_g[2 * objects_count * 3 + j * 3 + 1]
+                + aux_c[3 * dim_nodes_minus_1 + 1] * aux_g[3 * objects_count * 3 + j * 3 + 1]
+                + aux_c[4 * dim_nodes_minus_1 + 1] * aux_g[4 * objects_count * 3 + j * 3 + 1]
+                + aux_c[5 * dim_nodes_minus_1 + 1] * aux_g[5 * objects_count * 3 + j * 3 + 1]
+                + aux_c[6 * dim_nodes_minus_1 + 1] * aux_g[6 * objects_count * 3 + j * 3 + 1]
+            );
+            aux_b[1 * objects_count * 3 + j * 3 + 2] = (
+                aux_c[1 * dim_nodes_minus_1 + 1] * aux_g[1 * objects_count * 3 + j * 3 + 2]
+                + aux_c[2 * dim_nodes_minus_1 + 1] * aux_g[2 * objects_count * 3 + j * 3 + 2]
+                + aux_c[3 * dim_nodes_minus_1 + 1] * aux_g[3 * objects_count * 3 + j * 3 + 2]
+                + aux_c[4 * dim_nodes_minus_1 + 1] * aux_g[4 * objects_count * 3 + j * 3 + 2]
+                + aux_c[5 * dim_nodes_minus_1 + 1] * aux_g[5 * objects_count * 3 + j * 3 + 2]
+                + aux_c[6 * dim_nodes_minus_1 + 1] * aux_g[6 * objects_count * 3 + j * 3 + 2]
+            );
+        }
+        else
+        {
+            continue;
+        }
 
-            if (i >= 3) {
-                aux_b[2 * objects_count * 3 + j * 3 + k] = (
-                    aux_c[2 * dim_nodes_minus_1 + 2] * aux_g[2 * objects_count * 3 + j * 3 + k]
-                    + aux_c[3 * dim_nodes_minus_1 + 2] * aux_g[3 * objects_count * 3 + j * 3 + k]
-                    + aux_c[4 * dim_nodes_minus_1 + 2] * aux_g[4 * objects_count * 3 + j * 3 + k]
-                    + aux_c[5 * dim_nodes_minus_1 + 2] * aux_g[5 * objects_count * 3 + j * 3 + k]
-                    + aux_c[6 * dim_nodes_minus_1 + 2] * aux_g[6 * objects_count * 3 + j * 3 + k]
-                );
-            }
-            else
-            {
-                continue;
-            }
+        if (i >= 3) 
+        {
+            aux_b[2 * objects_count * 3 + j * 3 + 0] = (
+                aux_c[2 * dim_nodes_minus_1 + 2] * aux_g[2 * objects_count * 3 + j * 3 + 0]
+                + aux_c[3 * dim_nodes_minus_1 + 2] * aux_g[3 * objects_count * 3 + j * 3 + 0]
+                + aux_c[4 * dim_nodes_minus_1 + 2] * aux_g[4 * objects_count * 3 + j * 3 + 0]
+                + aux_c[5 * dim_nodes_minus_1 + 2] * aux_g[5 * objects_count * 3 + j * 3 + 0]
+                + aux_c[6 * dim_nodes_minus_1 + 2] * aux_g[6 * objects_count * 3 + j * 3 + 0]
+            );
+            aux_b[2 * objects_count * 3 + j * 3 + 1] = (
+                aux_c[2 * dim_nodes_minus_1 + 2] * aux_g[2 * objects_count * 3 + j * 3 + 1]
+                + aux_c[3 * dim_nodes_minus_1 + 2] * aux_g[3 * objects_count * 3 + j * 3 + 1]
+                + aux_c[4 * dim_nodes_minus_1 + 2] * aux_g[4 * objects_count * 3 + j * 3 + 1]
+                + aux_c[5 * dim_nodes_minus_1 + 2] * aux_g[5 * objects_count * 3 + j * 3 + 1]
+                + aux_c[6 * dim_nodes_minus_1 + 2] * aux_g[6 * objects_count * 3 + j * 3 + 1]
+            );
+            aux_b[2 * objects_count * 3 + j * 3 + 2] = (
+                aux_c[2 * dim_nodes_minus_1 + 2] * aux_g[2 * objects_count * 3 + j * 3 + 2]
+                + aux_c[3 * dim_nodes_minus_1 + 2] * aux_g[3 * objects_count * 3 + j * 3 + 2]
+                + aux_c[4 * dim_nodes_minus_1 + 2] * aux_g[4 * objects_count * 3 + j * 3 + 2]
+                + aux_c[5 * dim_nodes_minus_1 + 2] * aux_g[5 * objects_count * 3 + j * 3 + 2]
+                + aux_c[6 * dim_nodes_minus_1 + 2] * aux_g[6 * objects_count * 3 + j * 3 + 2]
+            );
+        }
+        else
+        {
+            continue;
+        }
 
-            if (i >= 4) {
-                aux_b[3 * objects_count * 3 + j * 3 + k] = (
-                    aux_c[3 * dim_nodes_minus_1 + 3] * aux_g[3 * objects_count * 3 + j * 3 + k]
-                    + aux_c[4 * dim_nodes_minus_1 + 3] * aux_g[4 * objects_count * 3 + j * 3 + k]
-                    + aux_c[5 * dim_nodes_minus_1 + 3] * aux_g[5 * objects_count * 3 + j * 3 + k]
-                    + aux_c[6 * dim_nodes_minus_1 + 3] * aux_g[6 * objects_count * 3 + j * 3 + k]
-                );
-            }
-            else
-            {
-                continue;
-            }
+        if (i >= 4) 
+        {
+            aux_b[3 * objects_count * 3 + j * 3 + 0] = (
+                aux_c[3 * dim_nodes_minus_1 + 3] * aux_g[3 * objects_count * 3 + j * 3 + 0]
+                + aux_c[4 * dim_nodes_minus_1 + 3] * aux_g[4 * objects_count * 3 + j * 3 + 0]
+                + aux_c[5 * dim_nodes_minus_1 + 3] * aux_g[5 * objects_count * 3 + j * 3 + 0]
+                + aux_c[6 * dim_nodes_minus_1 + 3] * aux_g[6 * objects_count * 3 + j * 3 + 0]
+            );
+            aux_b[3 * objects_count * 3 + j * 3 + 1] = (
+                aux_c[3 * dim_nodes_minus_1 + 3] * aux_g[3 * objects_count * 3 + j * 3 + 1]
+                + aux_c[4 * dim_nodes_minus_1 + 3] * aux_g[4 * objects_count * 3 + j * 3 + 1]
+                + aux_c[5 * dim_nodes_minus_1 + 3] * aux_g[5 * objects_count * 3 + j * 3 + 1]
+                + aux_c[6 * dim_nodes_minus_1 + 3] * aux_g[6 * objects_count * 3 + j * 3 + 1]
+            );
+            aux_b[3 * objects_count * 3 + j * 3 + 2] = (
+                aux_c[3 * dim_nodes_minus_1 + 3] * aux_g[3 * objects_count * 3 + j * 3 + 2]
+                + aux_c[4 * dim_nodes_minus_1 + 3] * aux_g[4 * objects_count * 3 + j * 3 + 2]
+                + aux_c[5 * dim_nodes_minus_1 + 3] * aux_g[5 * objects_count * 3 + j * 3 + 2]
+                + aux_c[6 * dim_nodes_minus_1 + 3] * aux_g[6 * objects_count * 3 + j * 3 + 2]
+            );
+        }
+        else
+        {
+            continue;
+        }
 
-            if (i >= 5)
-            {
-                aux_b[4 * objects_count * 3 + j * 3 + k] = (
-                    aux_c[4 * dim_nodes_minus_1 + 4] * aux_g[4 * objects_count * 3 + j * 3 + k]
-                    + aux_c[5 * dim_nodes_minus_1 + 4] * aux_g[5 * objects_count * 3 + j * 3 + k]
-                    + aux_c[6 * dim_nodes_minus_1 + 4] * aux_g[6 * objects_count * 3 + j * 3 + k]
-                );
-            }
-            else
-            {
-                continue;
-            }
+        if (i >= 5)
+        {
+            aux_b[4 * objects_count * 3 + j * 3 + 0] = (
+                aux_c[4 * dim_nodes_minus_1 + 4] * aux_g[4 * objects_count * 3 + j * 3 + 0]
+                + aux_c[5 * dim_nodes_minus_1 + 4] * aux_g[5 * objects_count * 3 + j * 3 + 0]
+                + aux_c[6 * dim_nodes_minus_1 + 4] * aux_g[6 * objects_count * 3 + j * 3 + 0]
+            );
+            aux_b[4 * objects_count * 3 + j * 3 + 1] = (
+                aux_c[4 * dim_nodes_minus_1 + 4] * aux_g[4 * objects_count * 3 + j * 3 + 1]
+                + aux_c[5 * dim_nodes_minus_1 + 4] * aux_g[5 * objects_count * 3 + j * 3 + 1]
+                + aux_c[6 * dim_nodes_minus_1 + 4] * aux_g[6 * objects_count * 3 + j * 3 + 1]
+            );
+            aux_b[4 * objects_count * 3 + j * 3 + 2] = (
+                aux_c[4 * dim_nodes_minus_1 + 4] * aux_g[4 * objects_count * 3 + j * 3 + 2]
+                + aux_c[5 * dim_nodes_minus_1 + 4] * aux_g[5 * objects_count * 3 + j * 3 + 2]
+                + aux_c[6 * dim_nodes_minus_1 + 4] * aux_g[6 * objects_count * 3 + j * 3 + 2]
+            );
+        }
+        else
+        {
+            continue;
+        }
 
-            if (i >= 6)
-            {
-                aux_b[5 * objects_count * 3 + j * 3 + k] = (
-                    aux_c[5 * dim_nodes_minus_1 + 5] * aux_g[5 * objects_count * 3 + j * 3 + k]
-                    + aux_c[6 * dim_nodes_minus_1 + 5] * aux_g[6 * objects_count * 3 + j * 3 + k]
-                );
-            }
-            else
-            {
-                continue;
-            }
+        if (i >= 6)
+        {
+            aux_b[5 * objects_count * 3 + j * 3 + 0] = (
+                aux_c[5 * dim_nodes_minus_1 + 5] * aux_g[5 * objects_count * 3 + j * 3 + 0]
+                + aux_c[6 * dim_nodes_minus_1 + 5] * aux_g[6 * objects_count * 3 + j * 3 + 0]
+            );
+            aux_b[5 * objects_count * 3 + j * 3 + 1] = (
+                aux_c[5 * dim_nodes_minus_1 + 5] * aux_g[5 * objects_count * 3 + j * 3 + 1]
+                + aux_c[6 * dim_nodes_minus_1 + 5] * aux_g[6 * objects_count * 3 + j * 3 + 1]
+            );
+            aux_b[5 * objects_count * 3 + j * 3 + 2] = (
+                aux_c[5 * dim_nodes_minus_1 + 5] * aux_g[5 * objects_count * 3 + j * 3 + 2]
+                + aux_c[6 * dim_nodes_minus_1 + 5] * aux_g[6 * objects_count * 3 + j * 3 + 2]
+            );
+        }
+        else
+        {
+            continue;
+        }
 
-            if (i >= 7)
-            {
-                aux_b[6 * objects_count * 3 + j * 3 + k] = (
-                    aux_c[6 * dim_nodes_minus_1 + 6] * aux_g[6 * objects_count * 3 + j * 3 + k]
-                );
-            }
-            else
-            {
-                continue;
-            }
+        if (i >= 7)
+        {
+            aux_b[6 * objects_count * 3 + j * 3 + 0] = (
+                aux_c[6 * dim_nodes_minus_1 + 6] * aux_g[6 * objects_count * 3 + j * 3 + 0]
+            );
+            aux_b[6 * objects_count * 3 + j * 3 + 1] = (
+                aux_c[6 * dim_nodes_minus_1 + 6] * aux_g[6 * objects_count * 3 + j * 3 + 1]
+            );
+            aux_b[6 * objects_count * 3 + j * 3 + 2] = (
+                aux_c[6 * dim_nodes_minus_1 + 6] * aux_g[6 * objects_count * 3 + j * 3 + 2]
+            );
         }
     }
 }
@@ -1288,134 +1369,264 @@ WIN32DLL_API void ias15_compute_aux_g(
 {
     // Retrieve required accelerations
     // F is allocated in IAS15
-    for (int j = 0; j <= i; j++)
-    {
-        memcpy(&F[j * objects_count * 3], &aux_a[j * objects_count * 3], objects_count * 3 * sizeof(real));
-    }
+    memcpy(F, aux_a, (i + 1) * objects_count * 3 * sizeof(real));
     
     // Update aux_g
     for (int j = 0; j < objects_count; j++)
     {
-        for (int k = 0; k < 3; k++)
+        if (i >= 1)
         {
-            if (i >= 1)
-            {
-                aux_g[0 * objects_count * 3 + j * 3 + k] = (
-                    (F[1 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[1 * dim_nodes + 0]
-                );
-            }
-            else
-            {
-                continue;
-            }
-                
-            if (i >= 2)
-            {
-                aux_g[1 * objects_count * 3 + j * 3 + k] = (
-                    ((F[2 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[2 * dim_nodes + 0] 
-                    - aux_g[0 * objects_count * 3 + j * 3 + k]) * aux_r[2 * dim_nodes + 1]
-                );
-            }
-            else 
-            {
-                continue;
-            }
+            aux_g[0 * objects_count * 3 + j * 3 + 0] = (
+                (F[1 * objects_count * 3 + j * 3 + 0] - F[0 * objects_count * 3 + j * 3 + 0]) * aux_r[1 * dim_nodes + 0]
+            );
 
-            if (i >= 3)
-            {
-                aux_g[2 * objects_count * 3 + j * 3 + k] = (
-                    ((F[3 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[3 * dim_nodes + 0] 
-                    - aux_g[0 * objects_count * 3 + j * 3 + k]) * aux_r[3 * dim_nodes + 1] 
-                    - aux_g[1 * objects_count * 3 + j * 3 + k]
-                ) * aux_r[3 * dim_nodes + 2];
-            }
-            else
-            {
-                continue;
-            }
-                
-            if (i >= 4)
-            {
-                aux_g[3 * objects_count * 3 + j * 3 + k] = (
-                    (((F[4 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[4 * dim_nodes + 0] 
-                    - aux_g[0 * objects_count * 3 + j * 3 + k]) * aux_r[4 * dim_nodes + 1] - aux_g[1 * objects_count * 3 + j * 3 + k])
-                    * aux_r[4 * dim_nodes + 2]
-                    - aux_g[2 * objects_count * 3 + j * 3 + k]
-                ) * aux_r[4 * dim_nodes + 3];
-            }
-            else
-            {
-                continue;
-            }
+            aux_g[0 * objects_count * 3 + j * 3 + 1] = (
+                (F[1 * objects_count * 3 + j * 3 + 1] - F[0 * objects_count * 3 + j * 3 + 1]) * aux_r[1 * dim_nodes + 0]
+            );
+            
+            aux_g[0 * objects_count * 3 + j * 3 + 2] = (
+                (F[1 * objects_count * 3 + j * 3 + 2] - F[0 * objects_count * 3 + j * 3 + 2]) * aux_r[1 * dim_nodes + 0]
+            );
+        }
+        else
+        {
+            continue;
+        }
+            
+        if (i >= 2)
+        {
+            aux_g[1 * objects_count * 3 + j * 3 + 0] = (
+                ((F[2 * objects_count * 3 + j * 3 + 0] - F[0 * objects_count * 3 + j * 3 + 0]) * aux_r[2 * dim_nodes + 0] 
+                - aux_g[0 * objects_count * 3 + j * 3 + 0]) * aux_r[2 * dim_nodes + 1]
+            );
 
-            if (i >= 5)
-            {
-                aux_g[4 * objects_count * 3 + j * 3 + k] = (
+            aux_g[1 * objects_count * 3 + j * 3 + 1] = (
+                ((F[2 * objects_count * 3 + j * 3 + 1] - F[0 * objects_count * 3 + j * 3 + 1]) * aux_r[2 * dim_nodes + 0] 
+                - aux_g[0 * objects_count * 3 + j * 3 + 1]) * aux_r[2 * dim_nodes + 1]
+            );
+
+            aux_g[1 * objects_count * 3 + j * 3 + 2] = (
+                ((F[2 * objects_count * 3 + j * 3 + 2] - F[0 * objects_count * 3 + j * 3 + 2]) * aux_r[2 * dim_nodes + 0] 
+                - aux_g[0 * objects_count * 3 + j * 3 + 2]) * aux_r[2 * dim_nodes + 1]
+            );
+        }
+        else 
+        {
+            continue;
+        }
+
+        if (i >= 3)
+        {
+            aux_g[2 * objects_count * 3 + j * 3 + 0] = (
+                ((F[3 * objects_count * 3 + j * 3 + 0] - F[0 * objects_count * 3 + j * 3 + 0]) * aux_r[3 * dim_nodes + 0] 
+                - aux_g[0 * objects_count * 3 + j * 3 + 0]) * aux_r[3 * dim_nodes + 1] 
+                - aux_g[1 * objects_count * 3 + j * 3 + 0]
+            ) * aux_r[3 * dim_nodes + 2];
+
+            aux_g[2 * objects_count * 3 + j * 3 + 1] = (
+                ((F[3 * objects_count * 3 + j * 3 + 1] - F[0 * objects_count * 3 + j * 3 + 1]) * aux_r[3 * dim_nodes + 0] 
+                - aux_g[0 * objects_count * 3 + j * 3 + 1]) * aux_r[3 * dim_nodes + 1] 
+                - aux_g[1 * objects_count * 3 + j * 3 + 1]
+            ) * aux_r[3 * dim_nodes + 2];
+
+            aux_g[2 * objects_count * 3 + j * 3 + 2] = (
+                ((F[3 * objects_count * 3 + j * 3 + 2] - F[0 * objects_count * 3 + j * 3 + 2]) * aux_r[3 * dim_nodes + 0] 
+                - aux_g[0 * objects_count * 3 + j * 3 + 2]) * aux_r[3 * dim_nodes + 1] 
+                - aux_g[1 * objects_count * 3 + j * 3 + 2]
+            ) * aux_r[3 * dim_nodes + 2];
+        }
+        else
+        {
+            continue;
+        }
+            
+        if (i >= 4)
+        {
+            aux_g[3 * objects_count * 3 + j * 3 + 0] = (
+                (((F[4 * objects_count * 3 + j * 3 + 0] - F[0 * objects_count * 3 + j * 3 + 0]) * aux_r[4 * dim_nodes + 0] 
+                - aux_g[0 * objects_count * 3 + j * 3 + 0]) * aux_r[4 * dim_nodes + 1] - aux_g[1 * objects_count * 3 + j * 3 + 0])
+                * aux_r[4 * dim_nodes + 2]
+                - aux_g[2 * objects_count * 3 + j * 3 + 0]
+            ) * aux_r[4 * dim_nodes + 3];
+
+            aux_g[3 * objects_count * 3 + j * 3 + 1] = (
+                (((F[4 * objects_count * 3 + j * 3 + 1] - F[0 * objects_count * 3 + j * 3 + 1]) * aux_r[4 * dim_nodes + 0] 
+                - aux_g[0 * objects_count * 3 + j * 3 + 1]) * aux_r[4 * dim_nodes + 1] - aux_g[1 * objects_count * 3 + j * 3 + 1])
+                * aux_r[4 * dim_nodes + 2]
+                - aux_g[2 * objects_count * 3 + j * 3 + 1]
+            ) * aux_r[4 * dim_nodes + 3];
+
+            aux_g[3 * objects_count * 3 + j * 3 + 2] = (
+                (((F[4 * objects_count * 3 + j * 3 + 2] - F[0 * objects_count * 3 + j * 3 + 2]) * aux_r[4 * dim_nodes + 0] 
+                - aux_g[0 * objects_count * 3 + j * 3 + 2]) * aux_r[4 * dim_nodes + 1] - aux_g[1 * objects_count * 3 + j * 3 + 2])
+                * aux_r[4 * dim_nodes + 2]
+                - aux_g[2 * objects_count * 3 + j * 3 + 2]
+            ) * aux_r[4 * dim_nodes + 3];
+        }
+        else
+        {
+            continue;
+        }
+
+        if (i >= 5)
+        {
+            aux_g[4 * objects_count * 3 + j * 3 + 0] = (
+                (
+                    (((F[5 * objects_count * 3 + j * 3 + 0] - F[0 * objects_count * 3 + j * 3 + 0]) * aux_r[5 * dim_nodes + 0] 
+                    - aux_g[0 * objects_count * 3 + j * 3 + 0]) * aux_r[5 * dim_nodes + 1] 
+                    - aux_g[1 * objects_count * 3 + j * 3 + 0])
+                    * aux_r[5 * dim_nodes + 2]
+                    - aux_g[2 * objects_count * 3 + j * 3 + 0]
+                )
+                * aux_r[5 * dim_nodes + 3]
+                - aux_g[3 * objects_count * 3 + j * 3 + 0]
+            ) * aux_r[5 * dim_nodes + 4];
+
+            aux_g[4 * objects_count * 3 + j * 3 + 1] = (
+                (
+                    (((F[5 * objects_count * 3 + j * 3 + 1] - F[0 * objects_count * 3 + j * 3 + 1]) * aux_r[5 * dim_nodes + 0] 
+                    - aux_g[0 * objects_count * 3 + j * 3 + 1]) * aux_r[5 * dim_nodes + 1] 
+                    - aux_g[1 * objects_count * 3 + j * 3 + 1])
+                    * aux_r[5 * dim_nodes + 2]
+                    - aux_g[2 * objects_count * 3 + j * 3 + 1]
+                )
+                * aux_r[5 * dim_nodes + 3]
+                - aux_g[3 * objects_count * 3 + j * 3 + 1]
+            ) * aux_r[5 * dim_nodes + 4];
+
+            aux_g[4 * objects_count * 3 + j * 3 + 2] = (
+                (
+                    (((F[5 * objects_count * 3 + j * 3 + 2] - F[0 * objects_count * 3 + j * 3 + 2]) * aux_r[5 * dim_nodes + 0] 
+                    - aux_g[0 * objects_count * 3 + j * 3 + 2]) * aux_r[5 * dim_nodes + 1] 
+                    - aux_g[1 * objects_count * 3 + j * 3 + 2])
+                    * aux_r[5 * dim_nodes + 2]
+                    - aux_g[2 * objects_count * 3 + j * 3 + 2]
+                )
+                * aux_r[5 * dim_nodes + 3]
+                - aux_g[3 * objects_count * 3 + j * 3 + 2]
+            ) * aux_r[5 * dim_nodes + 4];
+        }
+        else
+        {
+            continue;
+        }
+
+        if (i >= 6)
+        {
+            aux_g[5 * objects_count * 3 + j * 3 + 0] = (
+                (
                     (
-                        (((F[5 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[5 * dim_nodes + 0] 
-                        - aux_g[0 * objects_count * 3 + j * 3 + k]) * aux_r[5 * dim_nodes + 1] 
-                        - aux_g[1 * objects_count * 3 + j * 3 + k])
-                        * aux_r[5 * dim_nodes + 2]
-                        - aux_g[2 * objects_count * 3 + j * 3 + k]
+                        (((F[6 * objects_count * 3 + j * 3 + 0] - F[0 * objects_count * 3 + j * 3 + 0]) * aux_r[6 * dim_nodes + 0] 
+                        - aux_g[0 * objects_count * 3 + j * 3 + 0]) * aux_r[6 * dim_nodes + 1] 
+                        - aux_g[1 * objects_count * 3 + j * 3 + 0])
+                        * aux_r[6 * dim_nodes + 2]
+                        - aux_g[2 * objects_count * 3 + j * 3 + 0]
                     )
-                    * aux_r[5 * dim_nodes + 3]
-                    - aux_g[3 * objects_count * 3 + j * 3 + k]
-                ) * aux_r[5 * dim_nodes + 4];
-            }
-            else
-            {
-                continue;
-            }
+                    * aux_r[6 * dim_nodes + 3]
+                    - aux_g[3 * objects_count * 3 + j * 3 + 0]
+                )
+                * aux_r[6 * dim_nodes + 4]
+                - aux_g[4 * objects_count * 3 + j * 3 + 0]
+            ) * aux_r[6 * dim_nodes + 5];
 
-            if (i >= 6)
-            {
-                aux_g[5 * objects_count * 3 + j * 3 + k] = (
+            aux_g[5 * objects_count * 3 + j * 3 + 1] = (
+                (
+                    (
+                        (((F[6 * objects_count * 3 + j * 3 + 1] - F[0 * objects_count * 3 + j * 3 + 1]) * aux_r[6 * dim_nodes + 0] 
+                        - aux_g[0 * objects_count * 3 + j * 3 + 1]) * aux_r[6 * dim_nodes + 1] 
+                        - aux_g[1 * objects_count * 3 + j * 3 + 1])
+                        * aux_r[6 * dim_nodes + 2]
+                        - aux_g[2 * objects_count * 3 + j * 3 + 1]
+                    )
+                    * aux_r[6 * dim_nodes + 3]
+                    - aux_g[3 * objects_count * 3 + j * 3 + 1]
+                )
+                * aux_r[6 * dim_nodes + 4]
+                - aux_g[4 * objects_count * 3 + j * 3 + 1]
+            ) * aux_r[6 * dim_nodes + 5];
+
+            aux_g[5 * objects_count * 3 + j * 3 + 2] = (
+                (
+                    (
+                        (((F[6 * objects_count * 3 + j * 3 + 2] - F[0 * objects_count * 3 + j * 3 + 2]) * aux_r[6 * dim_nodes + 0] 
+                        - aux_g[0 * objects_count * 3 + j * 3 + 2]) * aux_r[6 * dim_nodes + 1] 
+                        - aux_g[1 * objects_count * 3 + j * 3 + 2])
+                        * aux_r[6 * dim_nodes + 2]
+                        - aux_g[2 * objects_count * 3 + j * 3 + 2]
+                    )
+                    * aux_r[6 * dim_nodes + 3]
+                    - aux_g[3 * objects_count * 3 + j * 3 + 2]
+                )
+                * aux_r[6 * dim_nodes + 4]
+                - aux_g[4 * objects_count * 3 + j * 3 + 2]
+            ) * aux_r[6 * dim_nodes + 5];
+        }
+        else
+        {
+            continue;
+        }
+
+        if (i >= 7)
+        {
+            aux_g[6 * objects_count * 3 + j * 3 + 0] = (
+                (
                     (
                         (
-                            (((F[6 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[6 * dim_nodes + 0] 
-                            - aux_g[0 * objects_count * 3 + j * 3 + k]) * aux_r[6 * dim_nodes + 1] 
-                            - aux_g[1 * objects_count * 3 + j * 3 + k])
-                            * aux_r[6 * dim_nodes + 2]
-                            - aux_g[2 * objects_count * 3 + j * 3 + k]
+                            (((F[7 * objects_count * 3 + j * 3 + 0] - F[0 * objects_count * 3 + j * 3 + 0]) * aux_r[7 * dim_nodes + 0] - aux_g[0 * objects_count * 3 + j * 3 + 0]) 
+                            * aux_r[7 * dim_nodes + 1] 
+                            - aux_g[1 * objects_count * 3 + j * 3 + 0])
+                            * aux_r[7 * dim_nodes + 2]
+                            - aux_g[2 * objects_count * 3 + j * 3 + 0]
                         )
-                        * aux_r[6 * dim_nodes + 3]
-                        - aux_g[3 * objects_count * 3 + j * 3 + k]
+                        * aux_r[7 * dim_nodes + 3]
+                        - aux_g[3 * objects_count * 3 + j * 3 + 0]
                     )
-                    * aux_r[6 * dim_nodes + 4]
-                    - aux_g[4 * objects_count * 3 + j * 3 + k]
-                ) * aux_r[6 * dim_nodes + 5];
-            }
-            else
-            {
-                continue;
-            }
+                    * aux_r[7 * dim_nodes + 4]
+                    - aux_g[4 * objects_count * 3 + j * 3 + 0]
+                )
+                * aux_r[7 * dim_nodes + 5]
+                - aux_g[5 * objects_count * 3 + j * 3 + 0]
+            ) * aux_r[7 * dim_nodes + 6];          
 
-            if (i >= 7)
-            {
-                aux_g[6 * objects_count * 3 + j * 3 + k] = (
+            aux_g[6 * objects_count * 3 + j * 3 + 1] = (
+                (
                     (
                         (
-                            (
-                                (((F[7 * objects_count * 3 + j * 3 + k] - F[0 * objects_count * 3 + j * 3 + k]) * aux_r[7 * dim_nodes + 0] - aux_g[0 * objects_count * 3 + j * 3 + k]) 
-                                * aux_r[7 * dim_nodes + 1] 
-                                - aux_g[1 * objects_count * 3 + j * 3 + k])
-                                * aux_r[7 * dim_nodes + 2]
-                                - aux_g[2 * objects_count * 3 + j * 3 + k]
-                            )
-                            * aux_r[7 * dim_nodes + 3]
-                            - aux_g[3 * objects_count * 3 + j * 3 + k]
+                            (((F[7 * objects_count * 3 + j * 3 + 1] - F[0 * objects_count * 3 + j * 3 + 1]) * aux_r[7 * dim_nodes + 0] - aux_g[0 * objects_count * 3 + j * 3 + 1]) 
+                            * aux_r[7 * dim_nodes + 1] 
+                            - aux_g[1 * objects_count * 3 + j * 3 + 1])
+                            * aux_r[7 * dim_nodes + 2]
+                            - aux_g[2 * objects_count * 3 + j * 3 + 1]
                         )
-                        * aux_r[7 * dim_nodes + 4]
-                        - aux_g[4 * objects_count * 3 + j * 3 + k]
+                        * aux_r[7 * dim_nodes + 3]
+                        - aux_g[3 * objects_count * 3 + j * 3 + 1]
                     )
-                    * aux_r[7 * dim_nodes + 5]
-                    - aux_g[5 * objects_count * 3 + j * 3 + k]
-                ) * aux_r[7 * dim_nodes + 6];                
-            }
-            else
-            {
-                continue;
-            }
+                    * aux_r[7 * dim_nodes + 4]
+                    - aux_g[4 * objects_count * 3 + j * 3 + 1]
+                )
+                * aux_r[7 * dim_nodes + 5]
+                - aux_g[5 * objects_count * 3 + j * 3 + 1]
+            ) * aux_r[7 * dim_nodes + 6];       
+
+            aux_g[6 * objects_count * 3 + j * 3 + 2] = (
+                (
+                    (
+                        (
+                            (((F[7 * objects_count * 3 + j * 3 + 2] - F[0 * objects_count * 3 + j * 3 + 2]) * aux_r[7 * dim_nodes + 0] - aux_g[0 * objects_count * 3 + j * 3 + 2]) 
+                            * aux_r[7 * dim_nodes + 1] 
+                            - aux_g[1 * objects_count * 3 + j * 3 + 2])
+                            * aux_r[7 * dim_nodes + 2]
+                            - aux_g[2 * objects_count * 3 + j * 3 + 2]
+                        )
+                        * aux_r[7 * dim_nodes + 3]
+                        - aux_g[3 * objects_count * 3 + j * 3 + 2]
+                    )
+                    * aux_r[7 * dim_nodes + 4]
+                    - aux_g[4 * objects_count * 3 + j * 3 + 2]
+                )
+                * aux_r[7 * dim_nodes + 5]
+                - aux_g[5 * objects_count * 3 + j * 3 + 2]
+            ) * aux_r[7 * dim_nodes + 6];             
         }
     }
 }
