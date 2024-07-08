@@ -127,20 +127,15 @@ class GravitySimulator:
                 self._user_interface_before_simulation()
                 if self.is_simulate:
                     self.computed_energy = False
+                    self.computed_angular_momentum = False
                     self._launch_simulation()
 
                 else:
                     self.computed_energy = True
+                    self.computed_angular_momentum = False
                     self._read_simulation_data()
 
                 self.data_size = len(self.simulator.sol_time)
-                if self.data_size > 50000:
-                    if get_bool(
-                        f"There are {self.data_size} lines of data. Do you want to trim the data?"
-                    ):
-                        self.trim_data()
-                    else:
-                        print()
 
                 if self.tf_unit == "years":
                     self.sol_time_in_tf_unit = (
@@ -182,18 +177,19 @@ class GravitySimulator:
             + "3. Animate 2D trajectory (gif)\n"
             + "4. Animate 3D trajectory (gif)\n"
             + "5. Plot relative energy error\n"
-            + "6. Plot dt\n"
-            + "7. Read data size\n"
-            + "8. Trim data\n"
-            + "9. Save simulation data\n"
-            + "10. Compare relative energy error\n"
-            + "11. Restart program\n"
-            + "12. Exit\n"
+            + "6. Plot relative angular momentum error\n"
+            + "7. Plot dt\n"
+            + "8. Read data size\n"
+            + "9. Trim data\n"
+            + "10. Save simulation data\n"
+            + "11. Compare relative energy error\n"
+            + "12. Restart program\n"
+            + "13. Exit\n"
             + "Enter action (Number): "
         )
 
         while True:
-            action = get_int(msg, larger_than=0, smaller_than=13)
+            action = get_int(msg, larger_than=0, smaller_than=14)
             print()
 
             match action:
@@ -255,26 +251,31 @@ class GravitySimulator:
                         self.computed_energy = True
                     Plotter.plot_rel_energy(self)
                 case 6:
-                    Plotter.plot_dt(self)
+                    if not self.computed_angular_momentum:
+                        self.simulator.compute_angular_momentum()
+                        self.computed_angular_momentum = True
+                    Plotter.plot_rel_angular_momentum(self)
                 case 7:
-                    print(f"There are {self.data_size} lines of data.")
-                    print()
+                    Plotter.plot_dt(self)
                 case 8:
                     print(f"There are {self.data_size} lines of data.")
-                    self.trim_data()
+                    print()
                 case 9:
-                    if not self.computed_energy:
-                        self.simulator.compute_energy()
-                        self.computed_energy = True
-                    self._save_result()
+                    print(f"There are {self.data_size} lines of data.")
+                    self.trim_data()
                 case 10:
                     if not self.computed_energy:
                         self.simulator.compute_energy()
                         self.computed_energy = True
-                    Plotter.plot_compare_rel_energy(self)
+                    self._save_result()
                 case 11:
-                    break
+                    if not self.computed_energy:
+                        self.simulator.compute_energy()
+                        self.computed_energy = True
+                    Plotter.plot_compare_rel_energy(self)
                 case 12:
+                    break
+                case 13:
                     print("Exiting the program...")
                     sys.exit(0)
 
@@ -655,6 +656,14 @@ class GravitySimulator:
         Unit: Solar masses, AU, day
         Format: time, dt, total energy, x1, y1, z1, x2, y2, z2, ... vx1, vy1, vz1, vx2, vy2, vz2, ...
         """
+        if not self.computed_energy:
+            if get_bool(
+                "WARNING: Energy has not been computed. The energy data will be stored as zeros. Proceed?"
+            ):
+                self.simulator.energy = np.zeros(self.data_size)
+            else:
+                print()
+                return None
 
         # Estimate file size
         num_entries = 3  # Time, energy and dt data
@@ -680,13 +689,6 @@ class GravitySimulator:
                 return None
 
         print()
-
-        # Normally the energy will be calculated automatically before _save_result is called.
-        # This is an extra fail safe
-        if not self.computed_energy:
-            if get_bool("WARNING: Energy has not been computed. Compute energy?"):
-                self.simulator.compute_energy()
-                self.computed_energy = True
 
         # Storing the result
         print("Storing simulation results...")
@@ -726,37 +728,23 @@ class GravitySimulator:
             writer.writerow([f"# Data size: {self.data_size}"])
             writer.writerow([f"# Store every nth point: {self.store_every_n}"])
             writer.writerow([f"# Run time (s): {self.simulator.run_time}"])
+            masses_str = " ".join(map(str, self.simulator.m))
+            writer.writerow([f"# masses: {masses_str}"])
 
-        if self.computed_energy:
-            progress_bar = Progress_bar()
-            with progress_bar:
-                with open(file_path, "a", newline="") as file:
-                    writer = csv.writer(file)
-                    for count in progress_bar.track(range(self.data_size)):
-                        row = np.insert(
-                            self.simulator.sol_state[count],
-                            0,
-                            self.simulator.energy[count],
-                        )
-                        row = np.insert(row, 0, self.simulator.sol_dt[count])
-                        row = np.insert(row, 0, self.simulator.sol_time[count])
-                        writer.writerow(row.tolist())
-            print(f"Storing completed. Please check {file_path}")
-        else:
-            if get_bool(
-                "WARNING: Energy has not been computed. The energy data will be stored as zeros. Proceed?"
-            ):
-                progress_bar = Progress_bar()
-                with progress_bar:
-                    with open(file_path, "a", newline="") as file:
-                        writer = csv.writer(file)
-                        for count in progress_bar.track(range(self.data_size)):
-                            row = np.insert(self.simulator.sol_state[count], 0, 0)
-                            row = np.insert(row, 0, self.simulator.sol_dt[count])
-                            row = np.insert(row, 0, self.simulator.sol_time[count])
-                            writer.writerow(row.tolist())
-
-                print(f"Storing completed. Please check {file_path}")
+        progress_bar = Progress_bar()
+        with progress_bar:
+            with open(file_path, "a", newline="") as file:
+                writer = csv.writer(file)
+                for count in progress_bar.track(range(self.data_size)):
+                    row = np.insert(
+                        self.simulator.sol_state[count],
+                        0,
+                        self.simulator.energy[count],
+                    )
+                    row = np.insert(row, 0, self.simulator.sol_dt[count])
+                    row = np.insert(row, 0, self.simulator.sol_time[count])
+                    writer.writerow(row.tolist())
+        print(f"Storing completed. Please check {file_path}")
 
         print("")
 
@@ -871,6 +859,13 @@ class GravitySimulator:
                     except ValueError:
                         pass
 
+                if row[0].startswith("# masses: "):
+                    try:
+                        masses_str = row[0].strip("# masses: ").strip()
+                        self.simulator.m = np.array(masses_str.split(" "), dtype=float)
+                    except ValueError:
+                        pass
+
         try:
             with open(read_file_path, "r") as file:
                 reader = csv.reader(row for row in file if not row.startswith("#"))
@@ -952,12 +947,13 @@ class GravitySimulator:
                 stop = timeit.default_timer()
                 print("Reading completed.\n")
                 print(f"Run time: {(stop - start):.3f} s")
+                print(f"Data size: {self.simulator.data_size}")
                 print("")
 
                 while True:
                     self.tf_unit = input("Enter tf unit for plotting (d/yr): ")
                     if matches := re.search(
-                        r"(day|year|d|y)?", self.tf_unit, re.IGNORECASE
+                        r"(day|year|d|y)", self.tf_unit, re.IGNORECASE
                     ):
                         if matches.group(1) not in ["year", "y"]:
                             self.tf_unit = "days"
@@ -967,6 +963,9 @@ class GravitySimulator:
                         if get_bool(f"Unit for tf is {self.tf_unit}. Proceed?"):
                             print()
                             break
+
+                    print("Invalid input. Please try again.")
+                    print()
 
         except FileNotFoundError:
             sys.exit("Error: file is not found. Exiting the program")

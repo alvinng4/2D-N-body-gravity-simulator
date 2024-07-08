@@ -670,3 +670,134 @@ class Simulator:
         stop = timeit.default_timer()
         print(f"Run time: {(stop - start):.3f} s")
         print("")
+
+    # def compute_linear_momentum(self):
+    #     """
+    #     Compute the total linear momentum using the sol_state array
+    #     """
+    #     # Check if self.m has data
+    #     if len(self.m) == 0:
+    #         print("Error: Mass data is missing. Returning to menu.")
+    #         print()
+    #         return 1
+
+    #     print("Computing linear momentum...")
+    #     npts = len(self.sol_state)
+    #     self.linear_momentum = np.zeros(npts)
+
+    #     start = timeit.default_timer()
+    #     if self.is_c_lib == True:
+    #         count = ctypes.c_int(0)
+    #         progress_bar_thread = threading.Thread(
+    #             target=progress_bar_c_lib_fixed_step_size,
+    #             args=(npts, count, self.is_exit),
+    #         )
+    #         progress_bar_thread.start()
+    #         compute_linear_momentum_thread = threading.Thread(
+    #             target=self.c_lib.compute_linear_momentum,
+    #             args=(
+    #                 ctypes.c_int(self.objects_count),
+    #                 ctypes.c_int(npts),
+    #                 ctypes.byref(count),
+    #                 self.linear_momentum.ctypes.data_as(
+    #                     ctypes.POINTER(ctypes.c_double)
+    #                 ),
+    #                 self.sol_state.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+    #                 self.m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+    #                 ctypes.byref(self.is_exit),
+    #             ),
+    #         )
+    #         compute_linear_momentum_thread.start()
+    #         compute_linear_momentum_thread.join()
+
+    #         # Close progress bar thread
+    #         count.value = npts
+    #         progress_bar_thread.join()
+
+    #     elif self.is_c_lib == False:
+    #         progress_bar = Progress_bar()
+    #         with progress_bar:
+    #             for count in progress_bar.track(range(npts), description=""):
+    #                 temp_vec = np.zeros(3)
+    #                 for i in range(self.objects_count):
+    #                     temp_vec += (
+    #                         self.m[i]
+    #                         * self.sol_state[count][
+    #                             (self.objects_count + i)
+    #                             * 3 : (self.objects_count + 1 + i)
+    #                             * 3
+    #                         ]
+    #                     )
+
+    #                 self.linear_momentum[count] = np.linalg.norm(temp_vec)
+
+    #     stop = timeit.default_timer()
+    #     print(f"Run time: {(stop - start):.3f} s")
+    #     print("")
+
+    #     return 0
+
+    def compute_angular_momentum(self):
+        """
+        Compute the total angular momentum using the sol_state array
+        """
+        # Check if self.m has data
+        if len(self.m) == 0:
+            print("Error: Mass data is missing. Returning to menu.")
+            print()
+            return 1
+
+        print("Computing angular momentum...")
+        npts = len(self.sol_state)
+        self.angular_momentum = np.zeros(npts)
+
+        start = timeit.default_timer()
+        if self.is_c_lib == True:
+            count = ctypes.c_int(0)
+            progress_bar_thread = threading.Thread(
+                target=progress_bar_c_lib_fixed_step_size,
+                args=(npts, count, self.is_exit),
+            )
+            progress_bar_thread.start()
+            compute_angular_momentum_thread = threading.Thread(
+                target=self.c_lib.compute_angular_momentum,
+                args=(
+                    ctypes.c_int(self.objects_count),
+                    ctypes.c_int(npts),
+                    ctypes.byref(count),
+                    self.angular_momentum.ctypes.data_as(
+                        ctypes.POINTER(ctypes.c_double)
+                    ),
+                    self.sol_state.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    self.m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    ctypes.byref(self.is_exit),
+                ),
+            )
+            compute_angular_momentum_thread.start()
+            compute_angular_momentum_thread.join()
+
+            # Close progress bar thread
+            count.value = npts
+            progress_bar_thread.join()
+
+        elif self.is_c_lib == False:
+            progress_bar = Progress_bar()
+            with progress_bar:
+                for count in progress_bar.track(range(npts), description=""):
+                    temp_vec = np.zeros(3)
+                    for i in range(self.objects_count):
+                        temp_vec += self.m[i] * np.cross(
+                            self.sol_state[count][(i * 3) : (i + 1) * 3],
+                            self.sol_state[count][
+                                (self.objects_count + i)
+                                * 3 : (self.objects_count + 1 + i)
+                                * 3
+                            ],
+                        )
+                    self.angular_momentum[count] = np.linalg.norm(temp_vec)
+
+        stop = timeit.default_timer()
+        print(f"Run time: {(stop - start):.3f} s")
+        print("")
+
+        return 0

@@ -816,6 +816,64 @@ class Plotter:
         print()
 
     @staticmethod
+    def plot_rel_linear_momentum(grav_plot):
+        if not grav_plot.computed_linear_momentum:
+            if get_bool(
+                "WARNING: Linear momentum has not been computed. Compute linear momentum?"
+            ):
+                grav_plot.simulator.compute_linear_momentum()
+                grav_plot.computed_linear_momentum = True
+
+        print("Plotting relative linear momentum error...(Please check the window)")
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.semilogy(
+            grav_plot.sol_time_in_tf_unit,
+            np.abs(
+                (
+                    grav_plot.simulator.linear_momentum
+                    - grav_plot.simulator.linear_momentum[0]
+                )
+                / grav_plot.simulator.linear_momentum[0]
+            ),
+        )
+        ax.set_title("Relative linear momentum error against time")
+        ax.set_xlabel(f"Time ({grav_plot.tf_unit})")
+        ax.set_ylabel("$|(p(t)-p_0)/p_0|$")
+
+        plt.show()
+        print()
+
+    @staticmethod
+    def plot_rel_angular_momentum(grav_plot):
+        if not grav_plot.computed_angular_momentum:
+            if get_bool(
+                "WARNING: angular momentum has not been computed. Compute angular momentum?"
+            ):
+                grav_plot.simulator.compute_angular_momentum()
+                grav_plot.computed_angular_momentum = True
+
+        print("Plotting relative angular momentum error...(Please check the window)")
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.semilogy(
+            grav_plot.sol_time_in_tf_unit,
+            np.abs(
+                (
+                    grav_plot.simulator.angular_momentum
+                    - grav_plot.simulator.angular_momentum[0]
+                )
+                / grav_plot.simulator.angular_momentum[0]
+            ),
+        )
+        ax.set_title("Relative angular momentum error against time")
+        ax.set_xlabel(f"Time ({grav_plot.tf_unit})")
+        ax.set_ylabel("$|(L(t)-L_0)/L_0|$")
+
+        plt.show()
+        print()
+
+    @staticmethod
     def plot_dt(grav_plot):
         """
         Plot dt(days)
