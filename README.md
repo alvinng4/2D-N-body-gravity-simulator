@@ -5,7 +5,7 @@ Newtonian N-body gravity simulator accelerated with C library.
 <img src="./examples/rel_energy.png" alt="Image" width="400">
 
 ## Interactive simulator: 
-Checkout the interactive simulator at https://alvinng4.github.io/OrbitSim
+Checkout the interactive simulator at https://www.github.com/alvinng4/OrbitSim
 
 <img src="./examples/OrbitSim.png" alt="Image" width="400">
 
