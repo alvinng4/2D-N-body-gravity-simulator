@@ -7,143 +7,233 @@ Simulations Applied to Exoplanetary Systems, Chapter 6
 """
 
 import ctypes
+import sys
+import threading
+import time
+from queue import Queue
 
 import numpy as np
 
 from common import acceleration
+from progress_bar import progress_bar_c_lib_adaptive_step_size
+from progress_bar import Progress_bar_with_data_size
 
 
 class RKEmbedded:
-    """Embedded RK integrators: RKF45, DOPRI, DVERK, RKF78"""
+    def __init__(self, simulator):
+        self.is_exit = simulator.is_exit
+        self.store_every_n = simulator.store_every_n
 
-    def simulation(
+        if simulator.is_c_lib:
+            self.c_lib = simulator.c_lib
+
+        match simulator.integrator:
+            case "rkf45":
+                self.order = 45
+            case "dopri":
+                self.order = 54
+            case "dverk":
+                self.order = 65
+            case "rkf78":
+                self.order = 78
+            case _:
+                raise ValueError("Invalid integrator!")
+
+    def simulation_c_lib(
         self,
-        simulator,
-        objects_count,
-        m,
-        G,
+        order,
+        system_name,
+        tf,
         abs_tolerance,
         rel_tolerance,
-        expected_time_scale,
-        max_iteration,
-        min_iteration,
+        custom_sys_x,
+        custom_sys_v,
+        custom_sys_m,
+        custom_sys_G,
+        custom_sys_objects_count,
     ):
-        # Initialization
-        if (
-            simulator.is_initialize == True
-            and simulator.is_initialize_integrator == simulator.current_integrator
-        ):
-            match simulator.current_integrator:
-                case "rkf45":
-                    order = 45
-                case "dopri":
-                    order = 54
-                case "dverk":
-                    order = 65
-                case "rkf78":
-                    order = 78
-                case _:
-                    raise ValueError("Invalid integrator!")
+        class Solutions(ctypes.Structure):
+            _fields_ = [
+                ("sol_state", ctypes.POINTER(ctypes.c_double)),
+                ("sol_time", ctypes.POINTER(ctypes.c_double)),
+                ("sol_dt", ctypes.POINTER(ctypes.c_double)),
+                ("m", ctypes.POINTER(ctypes.c_double)),
+                ("G", ctypes.c_double),
+                ("objects_count", ctypes.c_int),
+            ]
 
-            (
-                self.power,
-                self.power_test,
-                self.coeff,
-                self.weights,
-                self.weights_test,
-            ) = self._rk_embedded_butcher_tableaus(order)
+        self.c_lib.rk_embedded.restype = ctypes.c_int
 
-            simulator.a = acceleration(objects_count, simulator.x, m, G)
-            self.rk_dt = self._rk_embedded_initial_time_step(
-                objects_count,
-                self.power,
-                simulator.x,
-                simulator.v,
-                simulator.a,
-                m,
-                G,
-                abs_tolerance,
-                rel_tolerance,
-            )
+        t = ctypes.c_double(0.0)
+        store_count = ctypes.c_int(0)
 
-            simulator.is_initialize = False
+        progress_bar_thread = threading.Thread(
+            target=progress_bar_c_lib_adaptive_step_size,
+            args=(tf, t, store_count, self.is_exit),
+        )
+        progress_bar_thread.start()
 
-        # Simulation
-        temp_simulation_time = ctypes.c_double(simulator.stats.simulation_time)
-        temp_rk_dt = ctypes.c_double(self.rk_dt)
-        if simulator.is_c_lib == True:
-            simulator.c_lib.rk_embedded(
-                ctypes.c_int(objects_count),
-                simulator.x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                simulator.v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                ctypes.c_double(G),
-                ctypes.c_double(expected_time_scale),
-                ctypes.byref(temp_simulation_time),
-                ctypes.byref(temp_rk_dt),
-                ctypes.c_int(self.power),
-                ctypes.c_int(self.power_test),
-                ctypes.c_int(np.shape(self.coeff)[-1]),
-                self.coeff.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                ctypes.c_int(len(self.weights)),
-                self.weights.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                self.weights_test.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                ctypes.c_int(max_iteration),
-                ctypes.c_int(min_iteration),
+        # parameters are double no matter what "real" is defined
+        def rk_embedded_wrapper(c_lib_rk_embedded, return_queue, *args):
+            return_code = c_lib_rk_embedded(*args)
+            return_queue.put(return_code)
+
+        queue = Queue()
+        solution = Solutions()
+        rk_embedded_thread = threading.Thread(
+            target=rk_embedded_wrapper,
+            args=(
+                self.c_lib.rk_embedded,
+                queue,
+                ctypes.c_int(order),
+                system_name,
+                ctypes.byref(t),
+                ctypes.c_double(tf),
                 ctypes.c_double(abs_tolerance),
                 ctypes.c_double(rel_tolerance),
-            )
-            simulator.stats.simulation_time = temp_simulation_time.value
-            self.rk_dt = temp_rk_dt.value
+                ctypes.c_int(self.store_every_n),
+                ctypes.byref(store_count),
+                custom_sys_x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                custom_sys_v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                custom_sys_m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.c_double(custom_sys_G),
+                ctypes.c_int(custom_sys_objects_count),
+                ctypes.byref(solution),
+                ctypes.byref(self.is_exit),
+            ),
+        )
+        rk_embedded_thread.start()
 
-        elif simulator.is_c_lib == False:
-            (
-                simulator.x,
-                simulator.v,
-                simulator.stats.simulation_time,
-                self.rk_dt,
-            ) = self._rk_embedded(
+        # Keeps the main thread running to catch keyboard interrupt
+        # This is added since the main thread is not catching
+        # exceptions on Windows
+        while rk_embedded_thread.is_alive():
+            time.sleep(0.1)
+
+        rk_embedded_thread.join()
+        return_code = queue.get()
+
+        # Check return code
+        match return_code:
+            # Simulation successful
+            case 0:
+                pass
+            # C library failed to allocate memory
+            case 1:
+                self.is_exit.value = True
+                sys.exit(1)
+            # User sent KeyboardInterrupt
+            case 2:
+                pass  # Should be caught in run_prog and exit
+
+        # Close the progress_bar_thread
+        t.value = tf
+        progress_bar_thread.join()
+
+        # Convert C arrays to numpy arrays
+        return_sol_state = np.ctypeslib.as_array(
+            solution.sol_state,
+            shape=(store_count.value + 1, solution.objects_count * 6),
+        ).copy()
+
+        return_sol_time = np.ctypeslib.as_array(
+            solution.sol_time, shape=(store_count.value + 1,)
+        ).copy()
+        return_sol_dt = np.ctypeslib.as_array(
+            solution.sol_dt, shape=(store_count.value + 1,)
+        ).copy()
+        return_m = np.ctypeslib.as_array(
+            solution.m, shape=(solution.objects_count,)
+        ).copy()
+
+        # Free memory
+        self.c_lib.free_memory_real(solution.sol_state)
+        self.c_lib.free_memory_real(solution.sol_time)
+        self.c_lib.free_memory_real(solution.sol_dt)
+        self.c_lib.free_memory_real(solution.m)
+
+        return (
+            return_sol_state,
+            return_sol_time,
+            return_sol_dt,
+            return_m,
+            solution.G,
+            solution.objects_count,
+        )
+
+    def simulation_numpy(
+        self, order, objects_count, x, v, m, G, tf, abs_tolerance, rel_tolerance
+    ):
+        (
+            self.power,
+            self.power_test,
+            self.coeff,
+            self.weights,
+            self.weights_test,
+        ) = self.rk_embedded_butcher_tableaus_numpy(order)
+
+        a = acceleration(objects_count, x, m, G)
+        initial_dt = self.rk_embedded_initial_dt_numpy(
+            objects_count,
+            self.power,
+            x,
+            v,
+            a,
+            m,
+            G,
+            abs_tolerance,
+            rel_tolerance,
+        )
+
+        progress_bar = Progress_bar_with_data_size()
+        with progress_bar:
+            return self.simulation(
+                progress_bar,
                 objects_count,
-                simulator.x,
-                simulator.v,
+                x,
+                v,
                 m,
                 G,
-                expected_time_scale,
-                simulator.stats.simulation_time,
-                self.rk_dt,
+                tf,
+                initial_dt,
                 self.power,
                 self.power_test,
                 self.coeff,
                 self.weights,
                 self.weights_test,
-                max_iteration,
-                min_iteration,
                 abs_tolerance,
                 rel_tolerance,
+                self.store_every_n,
             )
 
     @staticmethod
-    def _rk_embedded(
+    def simulation(
+        progress_bar,
         objects_count: int,
         x,
         v,
         m,
         G,
-        expected_time_scale: float,
-        simulation_time,
-        actual_dt,
+        tf: float,
+        initial_dt,
         power,
         power_test,
         coeff,
         weights,
         weights_test,
-        max_iteration: int,
-        min_iteration: int,
         abs_tolerance: float,
         rel_tolerance: float,
+        store_every_n: int,
     ):
-        # Initializing
-        t = simulation_time
+        """
+        Perform simulation using rk_embedded methods
+
+        :return: sol_state, sol_time, sol_dt
+        :rtype: numpy.array
+        """
+        # Initialization
+        t = 0.0
+        dt = initial_dt
         stages = len(weights)
         min_power = min([power, power_test])
         error_estimation_delta_weights = weights - weights_test
@@ -157,7 +247,30 @@ class RKEmbedded:
         vk = np.zeros((stages, objects_count, 3))
         xk = np.zeros((stages, objects_count, 3))
 
-        for i in range(max_iteration):
+        # Allocate for dense output:
+        npts = 100000
+        sol_state = np.zeros((npts, objects_count * 2 * 3))
+        sol_time = np.zeros(npts)
+        sol_dt = np.zeros(npts)
+
+        # Initial values
+        sol_state[0] = np.concatenate(
+            (np.reshape(x, objects_count * 3), np.reshape(v, objects_count * 3))
+        )
+        sol_time[0] = t
+        sol_dt[0] = 0.0
+
+        # Arrays for compensated summation
+        x_err_comp_sum = np.zeros((objects_count, 3))
+        v_err_comp_sum = np.zeros((objects_count, 3))
+        temp_x_err_comp_sum = np.zeros((objects_count, 3))
+        temp_v_err_comp_sum = np.zeros((objects_count, 3))
+
+        # Launch integration:
+        count = 0
+        store_count = 0
+        task = progress_bar.add_task("", total=tf, store_count=store_count + 1)
+        while True:
             # Calculate xk and vk
             vk[0] = acceleration(objects_count, x, m, G)
             xk[0] = np.copy(v)
@@ -167,8 +280,8 @@ class RKEmbedded:
                 for j in range(stage):
                     temp_v += coeff[stage - 1][j] * vk[j]
                     temp_x += coeff[stage - 1][j] * xk[j]
-                vk[stage] = acceleration(objects_count, x + actual_dt * temp_x, m, G)
-                xk[stage] = v + actual_dt * temp_v
+                vk[stage] = acceleration(objects_count, x + dt * temp_x, m, G)
+                xk[stage] = v + dt * temp_v
 
             # Calculate x_1, v_1 and also delta x, delta v for error estimation
             temp_v = np.zeros((objects_count, 3))
@@ -184,10 +297,20 @@ class RKEmbedded:
                 error_estimation_delta_x += (
                     error_estimation_delta_weights[stage] * xk[stage]
                 )
-            v_1 = v + actual_dt * temp_v
-            x_1 = x + actual_dt * temp_x
-            error_estimation_delta_v *= actual_dt
-            error_estimation_delta_x *= actual_dt
+
+            error_estimation_delta_v *= dt
+            error_estimation_delta_x *= dt
+
+            # Calculate x_1 and v_1
+            temp_v_err_comp_sum = v_err_comp_sum
+            temp_v_err_comp_sum += dt * temp_v
+            v_1 = v + temp_v_err_comp_sum
+            temp_v_err_comp_sum += v - v_1
+
+            temp_x_err_comp_sum = x_err_comp_sum
+            temp_x_err_comp_sum += dt * temp_x
+            x_1 = x + temp_x_err_comp_sum
+            temp_x_err_comp_sum += x - x_1
 
             # Error calculation
             tolerance_scale_v = (
@@ -203,38 +326,73 @@ class RKEmbedded:
             ) + np.sum(np.square(error_estimation_delta_v / tolerance_scale_v))
             error = (sum / (objects_count * 3 * 2)) ** 0.5
 
-            if error <= 1 or actual_dt == expected_time_scale * 1e-12:
-                t += actual_dt
+            if error <= 1 or dt == tf * 1e-12:
+                t += dt
                 x = x_1
                 v = v_1
+                count += 1
 
-            if (
-                error == 0.0
-            ):  # Prevent extreme cases where the error is smaller than machine zero
-                dt_new = actual_dt
-            else:
-                dt_new = actual_dt * safety_fac / error ** (1.0 / (1.0 + min_power))
+                x_err_comp_sum = temp_x_err_comp_sum
+                v_err_comp_sum = temp_v_err_comp_sum
+
+                # Store step:
+                if (count + 1) % store_every_n == 0:
+                    sol_state[store_count + 1] = np.concatenate(
+                        (
+                            np.reshape(x, objects_count * 3),
+                            np.reshape(v, objects_count * 3),
+                        )
+                    )
+                    sol_time[store_count + 1] = t
+                    sol_dt[store_count + 1] = dt
+                    store_count += 1
+
+                if t == tf:
+                    sol_state[store_count] = np.concatenate(
+                        (
+                            np.reshape(x, objects_count * 3),
+                            np.reshape(v, objects_count * 3),
+                        )
+                    )
+                    sol_time[store_count] = t
+                    sol_dt[store_count] = dt
+
+                progress_bar.update(task, completed=t, store_count=store_count + 1)
+
+                # Check buffer size and extend if needed :
+                if (store_count + 1) == len(sol_state):
+                    sol_state = np.concatenate(
+                        (sol_state, np.zeros((npts, objects_count * 2 * 3)))
+                    )
+                    sol_time = np.concatenate((sol_time, np.zeros(npts)))
+                    sol_dt = np.concatenate((sol_dt, np.zeros(npts)))
+
+            dt_new = dt * safety_fac / error ** (1.0 / (1.0 + min_power))
             # Prevent dt to be too small or too large relative to the last time step
-            if dt_new > safety_fac_max * actual_dt:
-                actual_dt = safety_fac_max * actual_dt
-            elif dt_new < safety_fac_min * actual_dt:
-                actual_dt = safety_fac_min * actual_dt
+            if dt_new > safety_fac_max * dt:
+                dt = safety_fac_max * dt
+            elif dt_new < safety_fac_min * dt:
+                dt = safety_fac_min * dt
             else:
-                actual_dt = dt_new
+                dt = dt_new
 
-            if dt_new / expected_time_scale < 1e-12:
-                actual_dt = expected_time_scale * 1e-12
+            if dt_new / tf < 1e-12:
+                dt = tf * 1e-12
 
-            if i >= min_iteration and t > (
-                simulation_time + expected_time_scale * 1e-5
-            ):
-                return x, v, t, actual_dt
+            # Correct overshooting:
+            if t + dt > tf:
+                dt = tf - t
 
-        # Return values once it reaches max iterations
-        return x, v, t, actual_dt
+            if t >= tf:
+                progress_bar.update(task, completed=tf, store_count=store_count + 1)
+                return (
+                    sol_state[0 : store_count + 1],
+                    sol_time[0 : store_count + 1],
+                    sol_dt[0 : store_count + 1],
+                )
 
     @staticmethod
-    def _rk_embedded_initial_time_step(
+    def rk_embedded_initial_dt_numpy(
         objects_count: int,
         power: int,
         x,
@@ -285,7 +443,7 @@ class RKEmbedded:
         return dt * 1e-2
 
     @staticmethod
-    def _rk_embedded_butcher_tableaus(order):
+    def rk_embedded_butcher_tableaus_numpy(order):
         """
         Butcher tableaus for embedded rk
 

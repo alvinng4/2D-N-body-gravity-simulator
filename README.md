@@ -1,54 +1,30 @@
 # Gravity Simulator
 Newtonian N-body gravity simulator accelerated with C library.
 
-* Interactive module: real time interactive N-body simulation
-* Plotting module: customize your own system and generating plots
-
-<img src="./examples/grav_sim.png" alt="Image" width="400">
-
 <img src="./examples/solar_plus_3d.gif" alt="Image" width="400">
+<img src="./examples/rel_energy.png" alt="Image" width="400">
 
-## Online demo for interactive module: 
-Link: https://alvinng4.github.io/Gravity_Simulator_Web/
+## Interactive simulator: 
+Checkout the interactive simulator at https://alvinng4.github.io/OrbitSim
 
-Click *once* after you see the green loading bar showing
-"Ready to start!". You should then see the main
-menu. From there, simply select a system to start. 
-See [controls](#controls) for basic controls.
-
-This online demo is built with the pygbag package. 
-
-> [!Warning]\
-> In Safari, if you accidently selected/clicked the window,
-> the FPS would drops significantly. To fix it, simply click
-> on something else outside the game window.
-
+<img src="./examples/OrbitSim.png" alt="Image" width="400">
 
 ## Documentation
 * [Quick Start](#quick-start)
     - [Python version](#python-version)
     - [Installation](#installation)
     - [Running the program](#running-the-program)
-    - [Check if the C libraries are loaded properly (Optional)](#check-if-the-c-libraries-are-loaded-properly-optional)
-* [Interactive module](#interactive-module)
-    - [Running the program](#running-the-program-1)
-    - [C library / Numpy (Optional)](#c-library--numpy-optional)
-    - [Changing the resolution (Optional)](#changing-the-resolution-optional)
-    - [Available systems](#available-systems)
-    - [Controls](#controls)
-* [Plotting module](#plotting-module)
-    - [Running the program](#running-the-program-2)
+* [Running the program](#running-the-program-2)
     - [C library / Numpy (Optional)](#c-library--numpy-optional-1)
-    - [Available systems](#available-systems-1)
-    - [Customizing system](#customizing-system)
-    - [Output animation in .gif](#output-animation-in-gif)
-    - [Saving the data](#saving-the-data)
+* [Available systems](#available-systems-1)
+* [Customizing system](#customizing-system)
+* [Output animation in .gif](#output-animation-in-gif)
+* [Saving the data](#saving-the-data)
 * [Compensated summation](#compensated-summation)
 * [Available integrators](#available-integrators)
     - [Fixed step size methods](#fixed-step-size-methods)
     - [Embedded Runge-Kutta methods](#embdedded-runge-kutta-methods)
     - [IAS15](#IAS15)
-* [Program keeps crashing. What should I do?](#program-keeps-crashing-what-should-i-do)
 * [Feedback and Bugs](#feedback-and-bugs)
 * [Data Sources](#data-sources)
 * [References](#references)
@@ -68,29 +44,12 @@ Install the required packages by
 ```
 pip install .
 ```
-### Running the program
-Interactive module: navigate to the source directory and then run the following command in terminal
-```
-python gravity_sim
-```
-Plotting module: navigate to the source directory and then run the following command in terminal
-```
-python gravity_plot
-```
 
-### Check if the C libraries are loaded properly (Optional)
-If the C libraries cannot be loaded after running the program, you should see the following message in your terminal window
-```
-System message: Loading c_lib failed. Running with numpy.
-```
-This does not affect the simulation result, but the program may runs 100 times slower.
-To fix this, you may need to recompile the library from the `src` folder.
+## Running the program
 
-## Interactive module
-### Running the program
 Once you have downloaded the source files, navigate to the source directory in terminal and run
 ```
-python gravity_sim [-n|--numpy] [-r|--resolution <width> <height>]
+python gravity_sim [-n|--numpy]
 ```
 
 ### C library / Numpy (Optional)
@@ -100,63 +59,7 @@ If you want to use numpy, run the program with
 python gravity_sim [-n|--numpy]
 ```
 
-### Changing the resolution (Optional)
-The default resolution is set to the user's screen size. However, you can set your own resolution by the following command:
-```
-python3 gravity_sim [-r|--resolution <width> <height>]
-```
-
-### Available systems
-| System | Description |
-|:-------|:------------| 
-| Void | Emptiness |
-| figure-8 | A "figure-8" orbit involving three stars  |
-| pyth-3-body | Three stars arranged in a triangle with length ratios of 3, 4, and 5 |
-| solar_system | Solar System with the Sun and the planets |
-
-> [!TIP]\
-> Pythagorean three body orbit is a highly chaotic orbit with close encounters, which is useful to test the difference
-between fixed and variable step size integrators.
-For RK4, the largest dt to produce desired result is 2e-8 days.
-
-### Controls
-
-| Action | Control |
-|:-------|:------------| 
-| Move camera | `W` `A` `S` `D`/ `↑` `↓` `←` `→`|
-| Menu | `Esc`|
-| Pause | `P` |
-| Toggle full-screen mode | `F` |
-| Hide user interface | `H` |
-| Reset parameters | `R` |
-| Create new star | Hold the right mouse button to create a star + drag the mouse to give it an initial boost. |
-| Adjust parameter values| Left-click the parameter on the parameters panel + scroll to change its value. |
-| Switch integrators | Left-click the integrator on the integrators panel. |
-
-
-> [!WARNING]\
-> Switching integrators or changing dt in the middle of simulation may produce some numerical error.
-
-## Plotting module
-
-<img src="./examples/pyth-3-body_ias15_fix_dt.gif" alt="Image" width="300">
-<img src="./examples/rel_energy.png" alt="Image" width="300">
-
-### Running the program
-
-Once you have downloaded the source files, navigate to the source directory in terminal and run
-```
-python gravity_plot [-n|--numpy]
-```
-
-### C library / Numpy (Optional)
-By default, the simulation is performed in C to improve performance.
-If you want to use numpy, run the program with
-```
-python gravity_plot [-n|--numpy]
-```
-
-### Available systems
+## Available systems
 | System | Description |
 |:-------|:------------| 
 | circular_binary_orbit | A circular orbit formed by two stars |
@@ -174,14 +77,14 @@ python gravity_plot [-n|--numpy]
 between fixed and variable step size integrators.
 For RK4, the largest dt to produce desired result is 2e-8 days.
 
-### Customizing system
+## Customizing system
 If you want to setup your own system, choose the "custom" option.
 Note that the default unit is in solar masses, AU and days.
 
 The system data will be saved once all the required information has been entered.
 If you wish to make any changes, you can access the file at 
 ```
-gravity_simulator/gravity_plot/customized_systems.csv
+gravity_simulator/gravity_sim/customized_systems.csv
 ``` 
 The data follow the format
 ```
@@ -190,10 +93,10 @@ Name, Number of objects, m1, ..., x1, y1, z1, ..., vx1, vy1, vz1, ...
 Note: If you have customized system data with the older version, there are "[" and "]" inside the data, which would not work anymore.
 Please remove them manually.
 
-### Output animation in .gif
+## Output animation in .gif
 
 You may output the trajectory in 2D / 3D as an animation in .gif.
-The output file would be stored in `gravity_plot/result`.
+The output file would be stored in `gravity_sim/result`.
 
 To generate the animation, the program would ask for the following information:
 * FPS: Frames per second
@@ -203,10 +106,10 @@ To generate the animation, the program would ask for the following information:
 * Dynamic axes limit: rescale the axes limit dynamically
 * Maintain fixed dt: attempt to maintain fixed step size with variable time step data
 
-### Saving the data
+## Saving the data
 If you choose to save the data, the numerical data will be stored in the following folder:
 ```
-Gravity-Simulator/gravity_plot/results
+Gravity-Simulator/gravity_sim/results
 ```
 The file will starts with the metadata which will always follows the same format.
 Missing information will be saved as `None`. Below is an example:
@@ -232,7 +135,7 @@ Even if the metadata is corrupted or missing, the program can still read the dat
 
 ## Compensated summation
 
-A method known as compensated summation [1], [4] is implemented in the plotting module.
+A method known as compensated summation [1], [4] is implemented in this project:
 
 When we advance our system by $\text{d}t$, we have 
 
@@ -263,24 +166,11 @@ Embedded RK methods are adaptive methods that decides the step size automaticall
 | Runge–Kutta–Fehlberg 7(8) | 1e-4 to 1e-8 |
 
 ### IAS15
-IAS15 (Implicit integrator with Adaptive time Stepping, 15th order) is a highly optimized and efficient integrator. It is the default method of the plotting module.
+IAS15 (Implicit integrator with Adaptive time Stepping, 15th order) is a highly optimized and efficient integrator. It is the default method for this project.
 
 Recommended tolerance*: 1e-9
 
 *For reference only
-
-## Program keeps crashing. What should I do?
-
-First, make sure that you are running with python version >= 3.10 and have installed all the required packages. If yes, try running the program with numpy and see if the problem gets fixed. 
-To run with numpy, execute the following command in terminal:
-```
-python gravity_sim --numpy
-```
-```
-python gravity_plot --numpy
-```
-However, note that the program could run about 100 to 1000 times slower with numpy.
-If the problem persists, please feel free to let me know by opening an issue.
 
 ## Feedback and Bugs
 If you find any bugs or want to leave some feedback, please feel free to let me know by sending an email to alvinng324@gmail.com or open an issue.

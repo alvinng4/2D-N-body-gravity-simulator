@@ -1,6 +1,6 @@
-# gravity_plot
-gravity_plot/results/
-gravity_plot/customized_systems.csv
+# gravity_sim
+gravity_sim/results/
+gravity_sim/customized_systems.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

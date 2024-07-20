@@ -1,10 +1,9 @@
 ## Compilation
 To compile the C libraries, you can run
 ```
-make [CC="your C compiler"]
+make
 ```
-where `CC="your C compiler"` is optional.
-After compilation, move the file ending with `.dll` / `.so` / `.dylib` into the `gravity_plot` or `gravity_sim` folder. To clean up the directory, run
+After compilation, move the file ending with `.dll` / `.so` / `.dylib` into the main folder. To clean up the directory, run
 ```
 make clean
 ```
