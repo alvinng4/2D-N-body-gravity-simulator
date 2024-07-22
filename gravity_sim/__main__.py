@@ -28,6 +28,7 @@ class GravitySimulator:
 
         # Use c library to perform simulation
         self.is_c_lib = self.args.numpy
+        self.c_lib = None
         if self.is_c_lib:
             try:
                 if platform.system() == "Windows":
@@ -46,11 +47,16 @@ class GravitySimulator:
                 if get_bool("Loading c_lib failed. Run with numpy?"):
                     self.is_c_lib = False
                 else:
-                    sys.exit("Exiting the program...")
+                    print(
+                        "If you want to run with C library, try to compile the "
+                        + "C files provided in the src folders."
+                    )
+                    print("Exiting the program...")
+                    sys.exit(0)
 
         # --------------------Initialize attributes--------------------
-        self.is_exit = ctypes.c_bool(False)
-        self.simulator = Simulator(self)
+        self.is_exit_ctypes_bool = ctypes.c_bool(False)
+        self.simulator = Simulator(self.c_lib, self.is_exit_ctypes_bool)
         self.tolerance = None
         self.dt = None
         self.default_systems = [
@@ -149,7 +155,7 @@ class GravitySimulator:
                 self._user_interface_after_simulation()
 
         except KeyboardInterrupt:
-            self.is_exit.value = True
+            self.is_exit_ctypes_bool.value = True
             sys.exit("\nKeyboard Interrupt detected (Cltr + C). Exiting the program...")
 
     def _user_interface_before_simulation(self):
@@ -298,7 +304,13 @@ class GravitySimulator:
         self.simulator.dt = self.dt
 
         if (not self.is_c_lib) or (self.simulator.system not in self.default_systems):
-            self.simulator.initialize_system_numpy(self)
+            (
+                self.simulator.x,
+                self.simulator.v,
+                self.simulator.m,
+                self.simulator.objects_count,
+                self.simulator.G,
+            ) = self.simulator.initialize_system_numpy(self.simulator.system)
 
         if self.simulator.system not in self.default_systems:
             self.simulator.simulation(is_custom_sys=True)

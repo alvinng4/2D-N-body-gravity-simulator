@@ -20,25 +20,34 @@ from progress_bar import Progress_bar_with_data_size
 
 
 class IAS15:
-    def __init__(self, simulator):
-        self.is_exit = simulator.is_exit
-        self.store_every_n = simulator.store_every_n
-
-        if simulator.is_c_lib:
-            self.c_lib = simulator.c_lib
+    def __init__(self, store_every_n=1, c_lib=None, is_exit_ctypes_bool=None):
+        self.store_every_n = store_every_n
+        self.c_lib = c_lib
+        self.is_c_lib = c_lib is not None
+        if is_exit_ctypes_bool is None:
+            self.is_exit_ctypes_bool = ctypes.c_bool(False)
+        else:
+            self.is_exit_ctypes_bool = is_exit_ctypes_bool
 
     def simulation_c_lib(
         self,
-        system_name,
         tf,
         tolerance,
-        custom_sys_x,
-        custom_sys_v,
-        custom_sys_m,
-        custom_sys_G,
-        custom_sys_objects_count,
+        system_name: str = "",
+        custom_sys_x=None,
+        custom_sys_v=None,
+        custom_sys_m=None,
+        custom_sys_G=0.0,
+        custom_sys_objects_count=0,
     ):
-        # Recommended tolerance: 1e-9
+        """
+        Recommended tolerance: 1e-9
+        """
+        system_name = system_name.encode("utf-8")
+        if not custom_sys_x or not custom_sys_v or not custom_sys_m:
+            custom_sys_x = np.zeros(0)
+            custom_sys_v = np.zeros(0)
+            custom_sys_m = np.zeros(0)
 
         class Solutions(ctypes.Structure):
             _fields_ = [
@@ -57,7 +66,7 @@ class IAS15:
 
         progress_bar_thread = threading.Thread(
             target=progress_bar_c_lib_adaptive_step_size,
-            args=(tf, t, store_count, self.is_exit),
+            args=(tf, t, store_count, self.is_exit_ctypes_bool),
         )
         progress_bar_thread.start()
 
@@ -85,7 +94,7 @@ class IAS15:
                 ctypes.c_double(custom_sys_G),
                 ctypes.c_int(custom_sys_objects_count),
                 ctypes.byref(solution),
-                ctypes.byref(self.is_exit),
+                ctypes.byref(self.is_exit_ctypes_bool),
             ),
         )
         ias15_thread.start()
@@ -106,7 +115,7 @@ class IAS15:
                 pass
             # C library failed to allocate memory
             case 1:
-                self.is_exit.value = True
+                self.is_exit_ctypes_bool.value = True
                 sys.exit(1)
             # User sent KeyboardInterrupt
             case 2:

@@ -160,12 +160,15 @@ class Simulator:
         ],
     }
 
-    def __init__(self, grav_plot):
-        self.is_c_lib = grav_plot.is_c_lib
-        if grav_plot.is_c_lib:
-            self.c_lib = grav_plot.c_lib
+    def __init__(self, c_lib=None, is_exit_ctypes_bool=None):
+        self.c_lib = c_lib
+        self.is_c_lib = c_lib is not None
 
-        self.is_exit = grav_plot.is_exit
+        if is_exit_ctypes_bool is None:
+            self.is_exit_ctypes_bool = ctypes.c_bool(False)
+        else:
+            self.is_exit_ctypes_bool = is_exit_ctypes_bool
+
         self.run_time = None
         self.x = np.zeros(0)
         self.v = np.zeros(0)
@@ -184,7 +187,11 @@ class Simulator:
         if self.is_c_lib:
             match self.integrator:
                 case "euler" | "euler_cromer" | "rk4" | "leapfrog":
-                    integrator = SimpleIntegrator(self)
+                    integrator = SimpleIntegrator(
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
 
                     (
                         self.sol_state,
@@ -194,10 +201,10 @@ class Simulator:
                         self.G,
                         self.objects_count,
                     ) = integrator.simulation_c_lib(
-                        self.system.encode("utf-8"),
                         self.integrator,
                         self.dt,
                         self.tf,
+                        self.system,
                         self.x,  # x, v, m, G, objects_count are for custom system
                         self.v,
                         self.m,
@@ -206,7 +213,12 @@ class Simulator:
                     )
 
                 case "rkf45" | "dopri" | "dverk" | "rkf78":
-                    integrator = RKEmbedded(self)
+                    integrator = RKEmbedded(
+                        self.integrator,
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
 
                     (
                         self.sol_state,
@@ -217,10 +229,10 @@ class Simulator:
                         self.objects_count,
                     ) = integrator.simulation_c_lib(
                         integrator.order,
-                        self.system.encode("utf-8"),
                         self.tf,
                         self.tolerance,
                         self.tolerance,
+                        self.system,
                         self.x,  # x, v, m, G, objects_count are for custom system
                         self.v,
                         self.m,
@@ -229,8 +241,9 @@ class Simulator:
                     )
 
                 case "ias15":
-                    integrator = IAS15(self)
-
+                    integrator = IAS15(
+                        self.store_every_n, self.c_lib, self.is_exit_ctypes_bool
+                    )
                     (
                         self.sol_state,
                         self.sol_time,
@@ -239,9 +252,9 @@ class Simulator:
                         self.G,
                         self.objects_count,
                     ) = integrator.simulation_c_lib(
-                        self.system.encode("utf-8"),
                         self.tf,
                         self.tolerance,
+                        self.system,
                         self.x,  # x, v, m, G, objects_count are for custom system
                         self.v,
                         self.m,
@@ -252,7 +265,11 @@ class Simulator:
         else:
             match self.integrator:
                 case "euler" | "euler_cromer" | "rk4" | "leapfrog":
-                    integrator = SimpleIntegrator(self)
+                    integrator = SimpleIntegrator(
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
 
                     (
                         self.sol_state,
@@ -270,7 +287,12 @@ class Simulator:
                     )
 
                 case "rkf45" | "dopri" | "dverk" | "rkf78":
-                    integrator = RKEmbedded(self)
+                    integrator = RKEmbedded(
+                        self.integrator,
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
 
                     (
                         self.sol_state,
@@ -289,7 +311,11 @@ class Simulator:
                     )
 
                 case "ias15":
-                    integrator = IAS15(self)
+                    integrator = IAS15(
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
 
                     (
                         self.sol_state,
@@ -310,296 +336,332 @@ class Simulator:
         print(f"Run time: {self.run_time:.3f} s")
         print("")
 
-    def initialize_system_numpy(self, grav_plot):
-        self.G = self.CONSTANT_G
+    @staticmethod
+    def initialize_system_numpy(system, G=CONSTANT_G):
+        """
+        Initialize the system for numpy
 
-        # Read information of the customized system
-        if self.system not in grav_plot.default_systems:
-            file_path = Path(__file__).parent / "customized_systems.csv"
-            try:
-                with open(file_path, "r") as file:
-                    reader = csv.reader(file)
-                    for row in reader:
-                        if self.system == row[0]:
-                            self.objects_count = int(row[1])
-                            self.m = np.zeros(self.objects_count)
-                            for i in range(self.objects_count):
-                                self.m[i] = row[2 + i]
+        Parameters
+        ----------
+        system : str
+            Name of the system
+        G : float, optional
+            Gravitational constant, by default CONSTANT_G
 
-                            self.x = np.zeros((self.objects_count, 3))
-                            self.v = np.zeros((self.objects_count, 3))
-                            for i in range(self.objects_count):
-                                for j in range(3):
-                                    self.x[i][j] = row[
-                                        2 + self.objects_count + i * 3 + j
-                                    ]
-                                    self.v[i][j] = row[
-                                        2
-                                        + self.objects_count
-                                        + self.objects_count * 3
-                                        + i * 3
-                                        + j
-                                    ]
+        Returns
+        -------
+        x : np.array
+            Initial positions
+        v : np.array
+            Initial velocities
+        m : np.array
+            Masses
+        objects_count : int
+            Number of objects
+        G : float
+            Gravitational constant
 
-            except FileNotFoundError:
-                sys.exit(
-                    "Error: customized_systems.csv not found in gravity_plot. Terminating program."
+        Raises
+        ------
+        FileNotFoundError
+            If system is not recognized and customized_systems.csv is not found
+        ValueError
+            If system is not recognized in both pre-defined system and
+            customized_systems.csv
+        """
+
+        x = None
+        v = None
+        m = None
+        objects_count = 0
+
+        match system:
+            # Pre-defined systems
+            case "circular_binary_orbit":
+                R1 = np.array([1.0, 0.0, 0.0])
+                R2 = np.array([-1.0, 0.0, 0.0])
+                V1 = np.array([0.0, 0.5, 0.0])
+                V2 = np.array([0.0, -0.5, 0.0])
+                x = np.array([R1, R2])
+                v = np.array([V1, V2])
+                m = np.array([1.0 / G, 1.0 / G])
+                objects_count = 2
+
+            case "eccentric_binary_orbit":
+                R1 = np.array([1.0, 0.0, 0.0])
+                R2 = np.array([-1.25, 0.0, 0.0])
+                V1 = np.array([0.0, 0.5, 0.0])
+                V2 = np.array([0.0, -0.625, 0.0])
+                x = np.array([R1, R2])
+                v = np.array([V1, V2])
+                m = np.array([1.0 / G, 0.8 / G])
+                objects_count = 2
+
+            case "3d_helix":
+                R1 = np.array([0.0, 0.0, -1.0])
+                R2 = np.array([-math.sqrt(3.0) / 2.0, 0.0, 0.5])
+                R3 = np.array([math.sqrt(3.0) / 2.0, 0.0, 0.5])
+                v0 = math.sqrt(1.0 / math.sqrt(3))
+                V1 = np.array([-v0, 0.5, 0.0])
+                V2 = np.array([0.5 * v0, 0.5, (math.sqrt(3.0) / 2.0) * v0])
+                V3 = np.array([0.5 * v0, 0.5, -(math.sqrt(3.0) / 2.0) * v0])
+                x = np.array([R1, R2, R3])
+                v = np.array([V1, V2, V3])
+                m = np.array([1.0 / G, 1.0 / G, 1.0 / G])
+                objects_count = 3
+
+            case "sun_earth_moon":
+                m = np.array(
+                    [
+                        Simulator.SOLAR_SYSTEM_MASSES["Sun"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Earth"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Moon"],
+                    ]
+                )
+                R_CM = (
+                    1
+                    / np.sum(m)
+                    * (
+                        m[0] * np.array(Simulator.SOLAR_SYSTEM_POS["Sun"])
+                        + m[1] * np.array(Simulator.SOLAR_SYSTEM_POS["Earth"])
+                        + m[2] * np.array(Simulator.SOLAR_SYSTEM_POS["Moon"])
+                    )
+                )
+                V_CM = (
+                    1
+                    / np.sum(m)
+                    * (
+                        m[0] * np.array(Simulator.SOLAR_SYSTEM_VEL["Sun"])
+                        + m[1] * np.array(Simulator.SOLAR_SYSTEM_VEL["Earth"])
+                        + m[2] * np.array(Simulator.SOLAR_SYSTEM_VEL["Moon"])
+                    )
+                )
+                R1 = np.array(Simulator.SOLAR_SYSTEM_POS["Sun"] - R_CM)
+                R2 = np.array(Simulator.SOLAR_SYSTEM_POS["Earth"] - R_CM)
+                R3 = np.array(Simulator.SOLAR_SYSTEM_POS["Moon"] - R_CM)
+                V1 = np.array(Simulator.SOLAR_SYSTEM_VEL["Sun"] - V_CM)
+                V2 = np.array(Simulator.SOLAR_SYSTEM_VEL["Earth"] - V_CM)
+                V3 = np.array(Simulator.SOLAR_SYSTEM_VEL["Moon"] - V_CM)
+                x = np.array([R1, R2, R3])
+                v = np.array([V1, V2, V3])
+                objects_count = 3
+
+            case "figure-8":
+                R1 = np.array([0.970043, -0.24308753, 0.0])
+                R2 = np.array([-0.970043, 0.24308753, 0.0])
+                R3 = np.array([0.0, 0.0, 0.0])
+                V1 = np.array([0.466203685, 0.43236573, 0.0])
+                V2 = np.array([0.466203685, 0.43236573, 0.0])
+                V3 = np.array([-0.93240737, -0.86473146, 0.0])
+                x = np.array([R1, R2, R3])
+                v = np.array([V1, V2, V3])
+                m = np.array([1.0 / G, 1.0 / G, 1.0 / G])
+                objects_count = 3
+
+            case "pyth-3-body":
+                R1 = np.array([1.0, 3.0, 0.0])
+                R2 = np.array([-2.0, -1.0, 0.0])
+                R3 = np.array([1.0, -1.0, 0.0])
+                V1 = np.array([0.0, 0.0, 0.0])
+                V2 = np.array([0.0, 0.0, 0.0])
+                V3 = np.array([0.0, 0.0, 0.0])
+                x = np.array([R1, R2, R3])
+                v = np.array([V1, V2, V3])
+                m = np.array([3.0 / G, 4.0 / G, 5.0 / G])
+                objects_count = 3
+
+            case "solar_system":
+                m = np.array(
+                    [
+                        Simulator.SOLAR_SYSTEM_MASSES["Sun"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Mercury"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Venus"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Earth"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Mars"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Jupiter"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Saturn"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Uranus"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Neptune"],
+                    ]
+                )
+                R_CM = (
+                    1
+                    / np.sum(m)
+                    * (
+                        m[0] * np.array(Simulator.SOLAR_SYSTEM_POS["Sun"])
+                        + m[1] * np.array(Simulator.SOLAR_SYSTEM_POS["Mercury"])
+                        + m[2] * np.array(Simulator.SOLAR_SYSTEM_POS["Venus"])
+                        + m[3] * np.array(Simulator.SOLAR_SYSTEM_POS["Earth"])
+                        + m[4] * np.array(Simulator.SOLAR_SYSTEM_POS["Mars"])
+                        + m[5] * np.array(Simulator.SOLAR_SYSTEM_POS["Jupiter"])
+                        + m[6] * np.array(Simulator.SOLAR_SYSTEM_POS["Saturn"])
+                        + m[7] * np.array(Simulator.SOLAR_SYSTEM_POS["Uranus"])
+                        + m[8] * np.array(Simulator.SOLAR_SYSTEM_POS["Neptune"])
+                    )
+                )
+                V_CM = (
+                    1
+                    / np.sum(m)
+                    * (
+                        m[0] * np.array(Simulator.SOLAR_SYSTEM_VEL["Sun"])
+                        + m[1] * np.array(Simulator.SOLAR_SYSTEM_VEL["Mercury"])
+                        + m[2] * np.array(Simulator.SOLAR_SYSTEM_VEL["Venus"])
+                        + m[3] * np.array(Simulator.SOLAR_SYSTEM_VEL["Earth"])
+                        + m[4] * np.array(Simulator.SOLAR_SYSTEM_VEL["Mars"])
+                        + m[5] * np.array(Simulator.SOLAR_SYSTEM_VEL["Jupiter"])
+                        + m[6] * np.array(Simulator.SOLAR_SYSTEM_VEL["Saturn"])
+                        + m[7] * np.array(Simulator.SOLAR_SYSTEM_VEL["Uranus"])
+                        + m[8] * np.array(Simulator.SOLAR_SYSTEM_VEL["Neptune"])
+                    )
                 )
 
-        else:
-            # Pre-defined systems
-            match self.system:
-                case "circular_binary_orbit":
-                    R1 = np.array([1.0, 0.0, 0.0])
-                    R2 = np.array([-1.0, 0.0, 0.0])
-                    V1 = np.array([0.0, 0.5, 0.0])
-                    V2 = np.array([0.0, -0.5, 0.0])
-                    self.x = np.array([R1, R2])
-                    self.v = np.array([V1, V2])
-                    self.m = np.array([1.0 / self.G, 1.0 / self.G])
-                    self.objects_count = 2
+                R1 = np.array(Simulator.SOLAR_SYSTEM_POS["Sun"] - R_CM)
+                R2 = np.array(Simulator.SOLAR_SYSTEM_POS["Mercury"] - R_CM)
+                R3 = np.array(Simulator.SOLAR_SYSTEM_POS["Venus"] - R_CM)
+                R4 = np.array(Simulator.SOLAR_SYSTEM_POS["Earth"] - R_CM)
+                R5 = np.array(Simulator.SOLAR_SYSTEM_POS["Mars"] - R_CM)
+                R6 = np.array(Simulator.SOLAR_SYSTEM_POS["Jupiter"] - R_CM)
+                R7 = np.array(Simulator.SOLAR_SYSTEM_POS["Saturn"] - R_CM)
+                R8 = np.array(Simulator.SOLAR_SYSTEM_POS["Uranus"] - R_CM)
+                R9 = np.array(Simulator.SOLAR_SYSTEM_POS["Neptune"] - R_CM)
 
-                case "eccentric_binary_orbit":
-                    R1 = np.array([1.0, 0.0, 0.0])
-                    R2 = np.array([-1.25, 0.0, 0.0])
-                    V1 = np.array([0.0, 0.5, 0.0])
-                    V2 = np.array([0.0, -0.625, 0.0])
-                    self.x = np.array([R1, R2])
-                    self.v = np.array([V1, V2])
-                    self.m = np.array([1.0 / self.G, 0.8 / self.G])
-                    self.objects_count = 2
+                V1 = np.array(Simulator.SOLAR_SYSTEM_VEL["Sun"] - V_CM)
+                V2 = np.array(Simulator.SOLAR_SYSTEM_VEL["Mercury"] - V_CM)
+                V3 = np.array(Simulator.SOLAR_SYSTEM_VEL["Venus"] - V_CM)
+                V4 = np.array(Simulator.SOLAR_SYSTEM_VEL["Earth"] - V_CM)
+                V5 = np.array(Simulator.SOLAR_SYSTEM_VEL["Mars"] - V_CM)
+                V6 = np.array(Simulator.SOLAR_SYSTEM_VEL["Jupiter"] - V_CM)
+                V7 = np.array(Simulator.SOLAR_SYSTEM_VEL["Saturn"] - V_CM)
+                V8 = np.array(Simulator.SOLAR_SYSTEM_VEL["Uranus"] - V_CM)
+                V9 = np.array(Simulator.SOLAR_SYSTEM_VEL["Neptune"] - V_CM)
 
-                case "3d_helix":
-                    R1 = np.array([0.0, 0.0, -1.0])
-                    R2 = np.array([-math.sqrt(3.0) / 2.0, 0.0, 0.5])
-                    R3 = np.array([math.sqrt(3.0) / 2.0, 0.0, 0.5])
-                    v0 = math.sqrt(1.0 / math.sqrt(3))
-                    V1 = np.array([-v0, 0.5, 0.0])
-                    V2 = np.array([0.5 * v0, 0.5, (math.sqrt(3.0) / 2.0) * v0])
-                    V3 = np.array([0.5 * v0, 0.5, -(math.sqrt(3.0) / 2.0) * v0])
-                    self.x = np.array([R1, R2, R3])
-                    self.v = np.array([V1, V2, V3])
-                    self.m = np.array([1.0 / self.G, 1.0 / self.G, 1.0 / self.G])
-                    self.objects_count = 3
+                x = np.array([R1, R2, R3, R4, R5, R6, R7, R8, R9])
+                v = np.array([V1, V2, V3, V4, V5, V6, V7, V8, V9])
+                objects_count = 9
 
-                case "sun_earth_moon":
-                    self.m = np.array(
-                        [
-                            self.SOLAR_SYSTEM_MASSES["Sun"],
-                            self.SOLAR_SYSTEM_MASSES["Earth"],
-                            self.SOLAR_SYSTEM_MASSES["Moon"],
-                        ]
+            case "solar_system_plus":
+                m = np.array(
+                    [
+                        Simulator.SOLAR_SYSTEM_MASSES["Sun"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Mercury"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Venus"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Earth"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Mars"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Jupiter"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Saturn"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Uranus"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Neptune"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Pluto"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Ceres"],
+                        Simulator.SOLAR_SYSTEM_MASSES["Vesta"],
+                    ]
+                )
+
+                R_CM = (
+                    1
+                    / np.sum(m)
+                    * (
+                        m[0] * np.array(Simulator.SOLAR_SYSTEM_POS["Sun"])
+                        + m[1] * np.array(Simulator.SOLAR_SYSTEM_POS["Mercury"])
+                        + m[2] * np.array(Simulator.SOLAR_SYSTEM_POS["Venus"])
+                        + m[3] * np.array(Simulator.SOLAR_SYSTEM_POS["Earth"])
+                        + m[4] * np.array(Simulator.SOLAR_SYSTEM_POS["Mars"])
+                        + m[5] * np.array(Simulator.SOLAR_SYSTEM_POS["Jupiter"])
+                        + m[6] * np.array(Simulator.SOLAR_SYSTEM_POS["Saturn"])
+                        + m[7] * np.array(Simulator.SOLAR_SYSTEM_POS["Uranus"])
+                        + m[8] * np.array(Simulator.SOLAR_SYSTEM_POS["Neptune"])
+                        + m[9] * np.array(Simulator.SOLAR_SYSTEM_POS["Pluto"])
+                        + m[10] * np.array(Simulator.SOLAR_SYSTEM_POS["Ceres"])
+                        + m[11] * np.array(Simulator.SOLAR_SYSTEM_POS["Vesta"])
                     )
-                    R_CM = (
-                        1
-                        / np.sum(self.m)
-                        * (
-                            self.m[0] * np.array(self.SOLAR_SYSTEM_POS["Sun"])
-                            + self.m[1] * np.array(self.SOLAR_SYSTEM_POS["Earth"])
-                            + self.m[2] * np.array(self.SOLAR_SYSTEM_POS["Moon"])
-                        )
+                )
+
+                V_CM = (
+                    1
+                    / np.sum(m)
+                    * (
+                        m[0] * np.array(Simulator.SOLAR_SYSTEM_VEL["Sun"])
+                        + m[1] * np.array(Simulator.SOLAR_SYSTEM_VEL["Mercury"])
+                        + m[2] * np.array(Simulator.SOLAR_SYSTEM_VEL["Venus"])
+                        + m[3] * np.array(Simulator.SOLAR_SYSTEM_VEL["Earth"])
+                        + m[4] * np.array(Simulator.SOLAR_SYSTEM_VEL["Mars"])
+                        + m[5] * np.array(Simulator.SOLAR_SYSTEM_VEL["Jupiter"])
+                        + m[6] * np.array(Simulator.SOLAR_SYSTEM_VEL["Saturn"])
+                        + m[7] * np.array(Simulator.SOLAR_SYSTEM_VEL["Uranus"])
+                        + m[8] * np.array(Simulator.SOLAR_SYSTEM_VEL["Neptune"])
+                        + m[9] * np.array(Simulator.SOLAR_SYSTEM_VEL["Pluto"])
+                        + m[10] * np.array(Simulator.SOLAR_SYSTEM_VEL["Ceres"])
+                        + m[11] * np.array(Simulator.SOLAR_SYSTEM_VEL["Vesta"])
                     )
-                    V_CM = (
-                        1
-                        / np.sum(self.m)
-                        * (
-                            self.m[0] * np.array(self.SOLAR_SYSTEM_VEL["Sun"])
-                            + self.m[1] * np.array(self.SOLAR_SYSTEM_VEL["Earth"])
-                            + self.m[2] * np.array(self.SOLAR_SYSTEM_VEL["Moon"])
-                        )
+                )
+
+                R1 = np.array(Simulator.SOLAR_SYSTEM_POS["Sun"] - R_CM)
+                R2 = np.array(Simulator.SOLAR_SYSTEM_POS["Mercury"] - R_CM)
+                R3 = np.array(Simulator.SOLAR_SYSTEM_POS["Venus"] - R_CM)
+                R4 = np.array(Simulator.SOLAR_SYSTEM_POS["Earth"] - R_CM)
+                R5 = np.array(Simulator.SOLAR_SYSTEM_POS["Mars"] - R_CM)
+                R6 = np.array(Simulator.SOLAR_SYSTEM_POS["Jupiter"] - R_CM)
+                R7 = np.array(Simulator.SOLAR_SYSTEM_POS["Saturn"] - R_CM)
+                R8 = np.array(Simulator.SOLAR_SYSTEM_POS["Uranus"] - R_CM)
+                R9 = np.array(Simulator.SOLAR_SYSTEM_POS["Neptune"] - R_CM)
+                R10 = np.array(Simulator.SOLAR_SYSTEM_POS["Pluto"] - R_CM)
+                R11 = np.array(Simulator.SOLAR_SYSTEM_POS["Ceres"] - R_CM)
+                R12 = np.array(Simulator.SOLAR_SYSTEM_POS["Vesta"] - R_CM)
+
+                V1 = np.array(Simulator.SOLAR_SYSTEM_VEL["Sun"] - V_CM)
+                V2 = np.array(Simulator.SOLAR_SYSTEM_VEL["Mercury"] - V_CM)
+                V3 = np.array(Simulator.SOLAR_SYSTEM_VEL["Venus"] - V_CM)
+                V4 = np.array(Simulator.SOLAR_SYSTEM_VEL["Earth"] - V_CM)
+                V5 = np.array(Simulator.SOLAR_SYSTEM_VEL["Mars"] - V_CM)
+                V6 = np.array(Simulator.SOLAR_SYSTEM_VEL["Jupiter"] - V_CM)
+                V7 = np.array(Simulator.SOLAR_SYSTEM_VEL["Saturn"] - V_CM)
+                V8 = np.array(Simulator.SOLAR_SYSTEM_VEL["Uranus"] - V_CM)
+                V9 = np.array(Simulator.SOLAR_SYSTEM_VEL["Neptune"] - V_CM)
+                V10 = np.array(Simulator.SOLAR_SYSTEM_VEL["Pluto"] - V_CM)
+                V11 = np.array(Simulator.SOLAR_SYSTEM_VEL["Ceres"] - V_CM)
+                V12 = np.array(Simulator.SOLAR_SYSTEM_VEL["Vesta"] - V_CM)
+
+                x = np.array([R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12])
+                v = np.array([V1, V2, V3, V4, V5, V6, V7, V8, V9, V10, V11, V12])
+                objects_count = 12
+
+            # Customized system
+            case _:
+                file_path = Path(__file__).parent / "customized_systems.csv"
+                try:
+                    with open(file_path, "r") as file:
+                        reader = csv.reader(file)
+                        for row in reader:
+                            if system == row[0]:
+                                objects_count = int(row[1])
+                                m = np.zeros(objects_count)
+                                for i in range(objects_count):
+                                    m[i] = row[2 + i]
+
+                                x = np.zeros((objects_count, 3))
+                                v = np.zeros((objects_count, 3))
+                                for i in range(objects_count):
+                                    for j in range(3):
+                                        x[i][j] = row[2 + objects_count + i * 3 + j]
+                                        v[i][j] = row[
+                                            2
+                                            + objects_count
+                                            + objects_count * 3
+                                            + i * 3
+                                            + j
+                                        ]
+
+                except FileNotFoundError:
+                    print(
+                        "Error: customized_systems.csv not found in the "
+                        + f"{Path(__file__).parent} folder. Terminating program."
                     )
-                    R1 = np.array(self.SOLAR_SYSTEM_POS["Sun"] - R_CM)
-                    R2 = np.array(self.SOLAR_SYSTEM_POS["Earth"] - R_CM)
-                    R3 = np.array(self.SOLAR_SYSTEM_POS["Moon"] - R_CM)
-                    V1 = np.array(self.SOLAR_SYSTEM_VEL["Sun"] - V_CM)
-                    V2 = np.array(self.SOLAR_SYSTEM_VEL["Earth"] - V_CM)
-                    V3 = np.array(self.SOLAR_SYSTEM_VEL["Moon"] - V_CM)
-                    self.x = np.array([R1, R2, R3])
-                    self.v = np.array([V1, V2, V3])
-                    self.objects_count = 3
+                    sys.exit(1)
 
-                case "figure-8":
-                    R1 = np.array([0.970043, -0.24308753, 0.0])
-                    R2 = np.array([-0.970043, 0.24308753, 0.0])
-                    R3 = np.array([0.0, 0.0, 0.0])
-                    V1 = np.array([0.466203685, 0.43236573, 0.0])
-                    V2 = np.array([0.466203685, 0.43236573, 0.0])
-                    V3 = np.array([-0.93240737, -0.86473146, 0.0])
-                    self.x = np.array([R1, R2, R3])
-                    self.v = np.array([V1, V2, V3])
-                    self.m = np.array([1.0 / self.G, 1.0 / self.G, 1.0 / self.G])
-                    self.objects_count = 3
+        if x is None or v is None or m is None or objects_count == 0:
+            raise ValueError("Error: system not recognized.")
 
-                case "pyth-3-body":
-                    R1 = np.array([1.0, 3.0, 0.0])
-                    R2 = np.array([-2.0, -1.0, 0.0])
-                    R3 = np.array([1.0, -1.0, 0.0])
-                    V1 = np.array([0.0, 0.0, 0.0])
-                    V2 = np.array([0.0, 0.0, 0.0])
-                    V3 = np.array([0.0, 0.0, 0.0])
-                    self.x = np.array([R1, R2, R3])
-                    self.v = np.array([V1, V2, V3])
-                    self.m = np.array([3.0 / self.G, 4.0 / self.G, 5.0 / self.G])
-                    self.objects_count = 3
-
-                case "solar_system":
-                    self.m = np.array(
-                        [
-                            self.SOLAR_SYSTEM_MASSES["Sun"],
-                            self.SOLAR_SYSTEM_MASSES["Mercury"],
-                            self.SOLAR_SYSTEM_MASSES["Venus"],
-                            self.SOLAR_SYSTEM_MASSES["Earth"],
-                            self.SOLAR_SYSTEM_MASSES["Mars"],
-                            self.SOLAR_SYSTEM_MASSES["Jupiter"],
-                            self.SOLAR_SYSTEM_MASSES["Saturn"],
-                            self.SOLAR_SYSTEM_MASSES["Uranus"],
-                            self.SOLAR_SYSTEM_MASSES["Neptune"],
-                        ]
-                    )
-                    R_CM = (
-                        1
-                        / np.sum(self.m)
-                        * (
-                            self.m[0] * np.array(self.SOLAR_SYSTEM_POS["Sun"])
-                            + self.m[1] * np.array(self.SOLAR_SYSTEM_POS["Mercury"])
-                            + self.m[2] * np.array(self.SOLAR_SYSTEM_POS["Venus"])
-                            + self.m[3] * np.array(self.SOLAR_SYSTEM_POS["Earth"])
-                            + self.m[4] * np.array(self.SOLAR_SYSTEM_POS["Mars"])
-                            + self.m[5] * np.array(self.SOLAR_SYSTEM_POS["Jupiter"])
-                            + self.m[6] * np.array(self.SOLAR_SYSTEM_POS["Saturn"])
-                            + self.m[7] * np.array(self.SOLAR_SYSTEM_POS["Uranus"])
-                            + self.m[8] * np.array(self.SOLAR_SYSTEM_POS["Neptune"])
-                        )
-                    )
-                    V_CM = (
-                        1
-                        / np.sum(self.m)
-                        * (
-                            self.m[0] * np.array(self.SOLAR_SYSTEM_VEL["Sun"])
-                            + self.m[1] * np.array(self.SOLAR_SYSTEM_VEL["Mercury"])
-                            + self.m[2] * np.array(self.SOLAR_SYSTEM_VEL["Venus"])
-                            + self.m[3] * np.array(self.SOLAR_SYSTEM_VEL["Earth"])
-                            + self.m[4] * np.array(self.SOLAR_SYSTEM_VEL["Mars"])
-                            + self.m[5] * np.array(self.SOLAR_SYSTEM_VEL["Jupiter"])
-                            + self.m[6] * np.array(self.SOLAR_SYSTEM_VEL["Saturn"])
-                            + self.m[7] * np.array(self.SOLAR_SYSTEM_VEL["Uranus"])
-                            + self.m[8] * np.array(self.SOLAR_SYSTEM_VEL["Neptune"])
-                        )
-                    )
-
-                    R1 = np.array(self.SOLAR_SYSTEM_POS["Sun"] - R_CM)
-                    R2 = np.array(self.SOLAR_SYSTEM_POS["Mercury"] - R_CM)
-                    R3 = np.array(self.SOLAR_SYSTEM_POS["Venus"] - R_CM)
-                    R4 = np.array(self.SOLAR_SYSTEM_POS["Earth"] - R_CM)
-                    R5 = np.array(self.SOLAR_SYSTEM_POS["Mars"] - R_CM)
-                    R6 = np.array(self.SOLAR_SYSTEM_POS["Jupiter"] - R_CM)
-                    R7 = np.array(self.SOLAR_SYSTEM_POS["Saturn"] - R_CM)
-                    R8 = np.array(self.SOLAR_SYSTEM_POS["Uranus"] - R_CM)
-                    R9 = np.array(self.SOLAR_SYSTEM_POS["Neptune"] - R_CM)
-
-                    V1 = np.array(self.SOLAR_SYSTEM_VEL["Sun"] - V_CM)
-                    V2 = np.array(self.SOLAR_SYSTEM_VEL["Mercury"] - V_CM)
-                    V3 = np.array(self.SOLAR_SYSTEM_VEL["Venus"] - V_CM)
-                    V4 = np.array(self.SOLAR_SYSTEM_VEL["Earth"] - V_CM)
-                    V5 = np.array(self.SOLAR_SYSTEM_VEL["Mars"] - V_CM)
-                    V6 = np.array(self.SOLAR_SYSTEM_VEL["Jupiter"] - V_CM)
-                    V7 = np.array(self.SOLAR_SYSTEM_VEL["Saturn"] - V_CM)
-                    V8 = np.array(self.SOLAR_SYSTEM_VEL["Uranus"] - V_CM)
-                    V9 = np.array(self.SOLAR_SYSTEM_VEL["Neptune"] - V_CM)
-
-                    self.x = np.array([R1, R2, R3, R4, R5, R6, R7, R8, R9])
-                    self.v = np.array([V1, V2, V3, V4, V5, V6, V7, V8, V9])
-                    self.objects_count = 9
-
-                case "solar_system_plus":
-                    self.m = np.array(
-                        [
-                            self.SOLAR_SYSTEM_MASSES["Sun"],
-                            self.SOLAR_SYSTEM_MASSES["Mercury"],
-                            self.SOLAR_SYSTEM_MASSES["Venus"],
-                            self.SOLAR_SYSTEM_MASSES["Earth"],
-                            self.SOLAR_SYSTEM_MASSES["Mars"],
-                            self.SOLAR_SYSTEM_MASSES["Jupiter"],
-                            self.SOLAR_SYSTEM_MASSES["Saturn"],
-                            self.SOLAR_SYSTEM_MASSES["Uranus"],
-                            self.SOLAR_SYSTEM_MASSES["Neptune"],
-                            self.SOLAR_SYSTEM_MASSES["Pluto"],
-                            self.SOLAR_SYSTEM_MASSES["Ceres"],
-                            self.SOLAR_SYSTEM_MASSES["Vesta"],
-                        ]
-                    )
-
-                    R_CM = (
-                        1
-                        / np.sum(self.m)
-                        * (
-                            self.m[0] * np.array(self.SOLAR_SYSTEM_POS["Sun"])
-                            + self.m[1] * np.array(self.SOLAR_SYSTEM_POS["Mercury"])
-                            + self.m[2] * np.array(self.SOLAR_SYSTEM_POS["Venus"])
-                            + self.m[3] * np.array(self.SOLAR_SYSTEM_POS["Earth"])
-                            + self.m[4] * np.array(self.SOLAR_SYSTEM_POS["Mars"])
-                            + self.m[5] * np.array(self.SOLAR_SYSTEM_POS["Jupiter"])
-                            + self.m[6] * np.array(self.SOLAR_SYSTEM_POS["Saturn"])
-                            + self.m[7] * np.array(self.SOLAR_SYSTEM_POS["Uranus"])
-                            + self.m[8] * np.array(self.SOLAR_SYSTEM_POS["Neptune"])
-                            + self.m[9] * np.array(self.SOLAR_SYSTEM_POS["Pluto"])
-                            + self.m[10] * np.array(self.SOLAR_SYSTEM_POS["Ceres"])
-                            + self.m[11] * np.array(self.SOLAR_SYSTEM_POS["Vesta"])
-                        )
-                    )
-
-                    V_CM = (
-                        1
-                        / np.sum(self.m)
-                        * (
-                            self.m[0] * np.array(self.SOLAR_SYSTEM_VEL["Sun"])
-                            + self.m[1] * np.array(self.SOLAR_SYSTEM_VEL["Mercury"])
-                            + self.m[2] * np.array(self.SOLAR_SYSTEM_VEL["Venus"])
-                            + self.m[3] * np.array(self.SOLAR_SYSTEM_VEL["Earth"])
-                            + self.m[4] * np.array(self.SOLAR_SYSTEM_VEL["Mars"])
-                            + self.m[5] * np.array(self.SOLAR_SYSTEM_VEL["Jupiter"])
-                            + self.m[6] * np.array(self.SOLAR_SYSTEM_VEL["Saturn"])
-                            + self.m[7] * np.array(self.SOLAR_SYSTEM_VEL["Uranus"])
-                            + self.m[8] * np.array(self.SOLAR_SYSTEM_VEL["Neptune"])
-                            + self.m[9] * np.array(self.SOLAR_SYSTEM_VEL["Pluto"])
-                            + self.m[10] * np.array(self.SOLAR_SYSTEM_VEL["Ceres"])
-                            + self.m[11] * np.array(self.SOLAR_SYSTEM_VEL["Vesta"])
-                        )
-                    )
-
-                    R1 = np.array(self.SOLAR_SYSTEM_POS["Sun"] - R_CM)
-                    R2 = np.array(self.SOLAR_SYSTEM_POS["Mercury"] - R_CM)
-                    R3 = np.array(self.SOLAR_SYSTEM_POS["Venus"] - R_CM)
-                    R4 = np.array(self.SOLAR_SYSTEM_POS["Earth"] - R_CM)
-                    R5 = np.array(self.SOLAR_SYSTEM_POS["Mars"] - R_CM)
-                    R6 = np.array(self.SOLAR_SYSTEM_POS["Jupiter"] - R_CM)
-                    R7 = np.array(self.SOLAR_SYSTEM_POS["Saturn"] - R_CM)
-                    R8 = np.array(self.SOLAR_SYSTEM_POS["Uranus"] - R_CM)
-                    R9 = np.array(self.SOLAR_SYSTEM_POS["Neptune"] - R_CM)
-                    R10 = np.array(self.SOLAR_SYSTEM_POS["Pluto"] - R_CM)
-                    R11 = np.array(self.SOLAR_SYSTEM_POS["Ceres"] - R_CM)
-                    R12 = np.array(self.SOLAR_SYSTEM_POS["Vesta"] - R_CM)
-
-                    V1 = np.array(self.SOLAR_SYSTEM_VEL["Sun"] - V_CM)
-                    V2 = np.array(self.SOLAR_SYSTEM_VEL["Mercury"] - V_CM)
-                    V3 = np.array(self.SOLAR_SYSTEM_VEL["Venus"] - V_CM)
-                    V4 = np.array(self.SOLAR_SYSTEM_VEL["Earth"] - V_CM)
-                    V5 = np.array(self.SOLAR_SYSTEM_VEL["Mars"] - V_CM)
-                    V6 = np.array(self.SOLAR_SYSTEM_VEL["Jupiter"] - V_CM)
-                    V7 = np.array(self.SOLAR_SYSTEM_VEL["Saturn"] - V_CM)
-                    V8 = np.array(self.SOLAR_SYSTEM_VEL["Uranus"] - V_CM)
-                    V9 = np.array(self.SOLAR_SYSTEM_VEL["Neptune"] - V_CM)
-                    V10 = np.array(self.SOLAR_SYSTEM_VEL["Pluto"] - V_CM)
-                    V11 = np.array(self.SOLAR_SYSTEM_VEL["Ceres"] - V_CM)
-                    V12 = np.array(self.SOLAR_SYSTEM_VEL["Vesta"] - V_CM)
-
-                    self.x = np.array(
-                        [R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12]
-                    )
-                    self.v = np.array(
-                        [V1, V2, V3, V4, V5, V6, V7, V8, V9, V10, V11, V12]
-                    )
-                    self.objects_count = 12
+        return x, v, m, objects_count, G
 
     def compute_energy(self):
         """
@@ -614,7 +676,7 @@ class Simulator:
             count = ctypes.c_int(0)
             progress_bar_thread = threading.Thread(
                 target=progress_bar_c_lib_fixed_step_size,
-                args=(npts, count, self.is_exit),
+                args=(npts, count, self.is_exit_ctypes_bool),
             )
             progress_bar_thread.start()
             compute_energy_thread = threading.Thread(
@@ -627,7 +689,7 @@ class Simulator:
                     self.sol_state.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                     self.m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                     ctypes.c_double(self.G),
-                    ctypes.byref(self.is_exit),
+                    ctypes.byref(self.is_exit_ctypes_bool),
                 ),
             )
             compute_energy_thread.start()
@@ -690,7 +752,7 @@ class Simulator:
     #         count = ctypes.c_int(0)
     #         progress_bar_thread = threading.Thread(
     #             target=progress_bar_c_lib_fixed_step_size,
-    #             args=(npts, count, self.is_exit),
+    #             args=(npts, count, self.is_exit_ctypes_bool),
     #         )
     #         progress_bar_thread.start()
     #         compute_linear_momentum_thread = threading.Thread(
@@ -704,7 +766,7 @@ class Simulator:
     #                 ),
     #                 self.sol_state.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     #                 self.m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-    #                 ctypes.byref(self.is_exit),
+    #                 ctypes.byref(self.is_exit_ctypes_bool),
     #             ),
     #         )
     #         compute_linear_momentum_thread.start()
@@ -756,7 +818,7 @@ class Simulator:
             count = ctypes.c_int(0)
             progress_bar_thread = threading.Thread(
                 target=progress_bar_c_lib_fixed_step_size,
-                args=(npts, count, self.is_exit),
+                args=(npts, count, self.is_exit_ctypes_bool),
             )
             progress_bar_thread.start()
             compute_angular_momentum_thread = threading.Thread(
@@ -770,7 +832,7 @@ class Simulator:
                     ),
                     self.sol_state.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                     self.m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                    ctypes.byref(self.is_exit),
+                    ctypes.byref(self.is_exit_ctypes_bool),
                 ),
             )
             compute_angular_momentum_thread.start()

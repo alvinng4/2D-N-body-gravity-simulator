@@ -854,9 +854,7 @@ class Plotter:
                 grav_plot.computed_angular_momentum = True
 
         if grav_plot.simulator.angular_momentum[0] == 0.0:
-            if not get_bool(
-                "WARNING: Initial angular momentum is zero. Proceed?"
-            ):
+            if not get_bool("WARNING: Initial angular momentum is zero. Proceed?"):
                 return None
 
         print("Plotting relative angular momentum error...(Please check the window)")
