@@ -8,17 +8,16 @@
 /**
  * \brief IAS15 integrator
  * 
- * \param system Name of the system
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors of all objects
+ * \param v Array of velocity vectors of all objects
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
  * \param t Pointer to the current simulation time
  * \param tf Total time to be integrated
  * \param input_tolerance Tolerance of the integrator
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
- * \param custom_sys_x Array of the position vectors of customized system 
- * \param custom_sys_v Array of the velocity vectors of customized system 
- * \param custom_sys_m Array of the masses of customized system 
- * \param custom_sys_G Gravitational constant of customized system
- * \param custom_sys_object_count Number of objects in customized system
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
@@ -28,17 +27,16 @@
  * \retval 2 If KeyboardInterrupt in the main thread
  */
 int ias15(
-    const char *restrict system,
+    int objects_count,
+    real *restrict x,
+    real *restrict v,
+    real *restrict m,
+    real G,
     double *restrict t,
     double tf, 
     double input_tolerance,
     int store_every_n,
     int *restrict store_count,
-    const double *restrict custom_sys_x,
-    const double *restrict custom_sys_v,
-    const double *restrict custom_sys_m,
-    double custom_sys_G,
-    int custom_sys_objects_count,
     Solutions *restrict solution,
     int *restrict is_exit
 );
@@ -350,60 +348,20 @@ void ias15_refine_aux_b(
 
 
 WIN32DLL_API int ias15(
-    const char *restrict system,
+    int objects_count,
+    real *restrict x,
+    real *restrict v,
+    real *restrict m,
+    real G,
     double *restrict t,
     double tf, 
     double input_tolerance,
     int store_every_n,
     int *restrict store_count,
-    const double *restrict custom_sys_x,
-    const double *restrict custom_sys_v,
-    const double *restrict custom_sys_m,
-    double custom_sys_G,
-    int custom_sys_objects_count,
     Solutions *restrict solution,
     int *restrict is_exit
 )
 {   
-    // Initialize default system
-    real *x = NULL;
-    real *v = NULL;
-    real *m = NULL;
-    int objects_count;
-    real G;
-    int intitial_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
-
-    // Custom system
-    if (intitial_sys_flag == 2)
-    {
-        printf("Error: Failed to allocate memory to initialize default system\n");
-        goto err_default_sys_memory;
-    }
-    else if (intitial_sys_flag == 1)
-    {
-        objects_count = custom_sys_objects_count;
-        x = malloc(objects_count * 3 * sizeof(real));
-        v = malloc(objects_count * 3 * sizeof(real));
-        m = malloc(objects_count * sizeof(real));
-
-        if (!x || !v || !m)
-        {
-            printf("Error: Failed to allocate memory for customized system\n");
-            goto err_custom_sys_memory;
-        }
-
-        for (int i = 0; i < objects_count; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                x[i * 3 + j] = custom_sys_x[i * 3 + j];
-                v[i * 3 + j] = custom_sys_v[i * 3 + j];
-            }
-            m[i] = custom_sys_m[i];
-        }
-        G = custom_sys_G;
-    }
-
     real *a = malloc(objects_count * 3 * sizeof(real));
     if (!a)
     {
@@ -587,8 +545,6 @@ WIN32DLL_API int ias15(
         // End simulation as t >= tf
         else if (*t >= tf)
         {
-            free(x);
-            free(v);
             free(a);
             free(nodes);
             free(aux_c);
@@ -612,9 +568,6 @@ WIN32DLL_API int ias15(
             solution->sol_state = sol_state;
             solution->sol_time = sol_time;
             solution->sol_dt = sol_dt;
-            solution->m = m;
-            solution->G = G;
-            solution->objects_count = objects_count;
 
             return 0;
         }
@@ -667,11 +620,6 @@ err_aux_memory:
     free(aux_e);
 err_a:
     free(a);
-err_custom_sys_memory:
-    free(x);
-    free(v);
-    free(m);
-err_default_sys_memory:    
     if (*is_exit)
     {
         return 2;   // User sends KeyboardInterrupt in main thread

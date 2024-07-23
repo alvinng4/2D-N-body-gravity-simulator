@@ -18,6 +18,7 @@ import numpy as np
 from common import get_bool
 from common import get_int
 from common import get_float
+from gravitational_system import GravitationalSystem
 from simulator import Simulator
 import plotting
 from progress_bar import Progress_bar
@@ -63,28 +64,6 @@ class GravitySimulatorCLI:
         self.simulator = Simulator(self.c_lib, self.is_exit_ctypes_bool)
         self.tolerance = None
         self.dt = None
-        self.default_systems = [
-            "circular_binary_orbit",
-            "eccentric_binary_orbit",
-            "3d_helix",
-            "sun_earth_moon",
-            "figure-8",
-            "pyth-3-body",
-            "solar_system",
-            "solar_system_plus",
-            "custom",
-        ]
-        self.available_integrators = [
-            "euler",
-            "euler_cromer",
-            "rk4",
-            "leapfrog",
-            "rkf45",
-            "dopri",
-            "dverk",
-            "rkf78",
-            "ias15",
-        ]
         self.available_integrators_to_printable_names = {
             "euler": "Euler",
             "euler_cromer": "Euler_Cromer",
@@ -249,32 +228,21 @@ class GravitySimulatorCLI:
                 print("")
                 break
 
-        self.simulator.store_every_n = self.store_every_n
-        self.simulator.system = self.system
-        self.simulator.integrator = self.integrator
-        self.simulator.tf = self.tf
-        self.simulator.unit = self.tf_unit
-        self.simulator.tolerance = self.tolerance
-        self.simulator.dt = self.dt
+        self.gravitational_system = GravitationalSystem(self.system)
 
-        if (not self.is_c_lib) or (self.simulator.system not in self.default_systems):
-            (
-                self.simulator.x,
-                self.simulator.v,
-                self.simulator.m,
-                self.simulator.objects_count,
-                self.simulator.G,
-            ) = self.simulator.initialize_system_numpy(self.simulator.system)
-
-        if self.simulator.system not in self.default_systems:
-            self.simulator.simulation(is_custom_sys=True)
-        else:
-            self.simulator.simulation(is_custom_sys=False)
+        self.simulator.launch_simulation(
+            self.gravitational_system,
+            self.integrator,
+            self.tf,
+            dt=self.dt,
+            tolerance=self.tolerance,
+            store_every_n=self.store_every_n,
+        )
 
     def _get_user_simulation_input(self):
         # --------------------Check and Input systems--------------------
         while True:
-            self.available_systems = self.default_systems.copy()
+            self.available_systems = GravitationalSystem.DEFAULT_SYSTEMS.copy()
             file_path = Path(__file__).parent / "customized_systems.csv"
             with open(file_path, "a"):  # Create file if not exist
                 pass
@@ -378,7 +346,7 @@ class GravitySimulatorCLI:
                 )
 
         # --------------------Recommended settings for systems--------------------
-        elif self.system in self.default_systems:
+        elif self.system in GravitationalSystem.DEFAULT_SYSTEMS:
             print("")
             if get_bool("Do you want to use the recommended settings for this system?"):
                 print("")
@@ -400,15 +368,15 @@ class GravitySimulatorCLI:
         # --------------------Input integrators--------------------
         while True:
             print("Available integrators: ")
-            for i, integrator in enumerate(self.available_integrators):
+            for i, integrator in enumerate(Simulator.AVAILABLE_INTEGRATORS):
                 print(
                     f"{i + 1}. {self.available_integrators_to_printable_names[integrator]}"
                 )
             self.integrator = input("Enter integrator (Number or name): ")
             # Temporary string
             temp_str = ""
-            for i in range(len(self.available_integrators)):
-                temp_str += "|" + self.available_integrators[i]
+            for i in range(len(Simulator.AVAILABLE_INTEGRATORS)):
+                temp_str += "|" + Simulator.AVAILABLE_INTEGRATORS[i]
             if matches := re.search(
                 rf"^\s*([1-9]{temp_str})\s*$",
                 self.integrator,
@@ -418,14 +386,14 @@ class GravitySimulatorCLI:
                     try:
                         int(matches.group(1))
                     except ValueError:
-                        if matches.group(1).lower() in self.available_integrators:
+                        if matches.group(1).lower() in Simulator.AVAILABLE_INTEGRATORS:
                             self.integrator = matches.group(1).lower()
                             break
                     else:
                         if (int(matches.group(1)) - 1) in range(
-                            len(self.available_integrators)
+                            len(Simulator.AVAILABLE_INTEGRATORS)
                         ):
-                            self.integrator = self.available_integrators[
+                            self.integrator = Simulator.AVAILABLE_INTEGRATORS[
                                 int(matches.group(1)) - 1
                             ]
                             break
@@ -679,7 +647,7 @@ class GravitySimulatorCLI:
                     f"# Data saved on (YYYY-MM-DD): {str(datetime.datetime.now().strftime('%Y-%m-%d'))}"
                 ]
             )
-            writer.writerow([f"# System Name: {self.simulator.system}"])
+            writer.writerow([f"# System Name: {self.gravitational_system}"])
 
             try:
                 integrator_name = self.available_integrators_to_printable_names[
@@ -717,7 +685,7 @@ class GravitySimulatorCLI:
         print("")
 
     def _read_simulation_data(self):
-        self.simulator.system = None
+        self.gravitational_system = None
         self.simulator.integrator = None
         self.simulator.dt = None
         self.simulator.tolerance = None
@@ -752,7 +720,7 @@ class GravitySimulatorCLI:
 
             for row in reader:
                 if row[0].startswith("# System Name: "):
-                    self.simulator.system = row[0].replace("# System Name: ", "")
+                    self.gravitational_system = row[0].replace("# System Name: ", "")
 
                 if row[0].startswith("# Integrator: "):
                     integrator = row[0].replace("# Integrator: ", "")
@@ -945,9 +913,9 @@ class GravitySimulatorCLI:
         labels = None
         legend = False
 
-        if self.simulator.system in self.solar_like_systems:
+        if self.gravitational_system in self.solar_like_systems:
             # Get specific colors if the system is solar-like
-            match self.simulator.system:
+            match self.gravitational_system:
                 case "sun_earth_moon":
                     objs_name = ["Sun", "Earth", "Moon"]
                 case "solar_system":
@@ -1000,9 +968,9 @@ class GravitySimulatorCLI:
         labels = None
         legend = False
 
-        if self.simulator.system in self.solar_like_systems:
+        if self.gravitational_system in self.solar_like_systems:
             # Get specific colors if the system is solar-like
-            match self.simulator.system:
+            match self.gravitational_system:
                 case "sun_earth_moon":
                     objs_name = ["Sun", "Earth", "Moon"]
                 case "solar_system":
@@ -1181,9 +1149,9 @@ class GravitySimulatorCLI:
             labels = None
             legend = False
 
-            if self.simulator.system in self.solar_like_systems:
+            if self.gravitational_system in self.solar_like_systems:
                 # Get specific colors if the system is solar-like
-                match self.simulator.system:
+                match self.gravitational_system:
                     case "sun_earth_moon":
                         objs_name = ["Sun", "Earth", "Moon"]
                     case "solar_system":
@@ -1257,9 +1225,9 @@ class GravitySimulatorCLI:
             labels = None
             legend = False
 
-            if self.simulator.system in self.solar_like_systems:
+            if self.gravitational_system in self.solar_like_systems:
                 # Get specific colors if the system is solar-like
-                match self.simulator.system:
+                match self.gravitational_system:
                     case "sun_earth_moon":
                         objs_name = ["Sun", "Earth", "Moon"]
                     case "solar_system":

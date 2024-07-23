@@ -31,32 +31,23 @@ class IAS15:
 
     def simulation_c_lib(
         self,
+        objects_count,
+        x,
+        v,
+        m,
+        G,
         tf,
         tolerance,
-        system_name: str = "",
-        custom_sys_x=None,
-        custom_sys_v=None,
-        custom_sys_m=None,
-        custom_sys_G=0.0,
-        custom_sys_objects_count=0,
     ):
         """
         Recommended tolerance: 1e-9
         """
-        system_name = system_name.encode("utf-8")
-        if not custom_sys_x or not custom_sys_v or not custom_sys_m:
-            custom_sys_x = np.zeros(0)
-            custom_sys_v = np.zeros(0)
-            custom_sys_m = np.zeros(0)
 
         class Solutions(ctypes.Structure):
             _fields_ = [
                 ("sol_state", ctypes.POINTER(ctypes.c_double)),
                 ("sol_time", ctypes.POINTER(ctypes.c_double)),
                 ("sol_dt", ctypes.POINTER(ctypes.c_double)),
-                ("m", ctypes.POINTER(ctypes.c_double)),
-                ("G", ctypes.c_double),
-                ("objects_count", ctypes.c_int),
             ]
 
         self.c_lib.ias15.restype = ctypes.c_int
@@ -77,22 +68,22 @@ class IAS15:
 
         queue = Queue()
         solution = Solutions()
+
         ias15_thread = threading.Thread(
             target=ias15_wrapper,
             args=(
                 self.c_lib.ias15,
                 queue,
-                ctypes.c_char_p(system_name),
+                ctypes.c_int(objects_count),
+                x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.c_double(G),
                 ctypes.byref(t),
                 ctypes.c_double(tf),
                 ctypes.c_double(tolerance),
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
-                custom_sys_x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                custom_sys_v.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                custom_sys_m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                ctypes.c_double(custom_sys_G),
-                ctypes.c_int(custom_sys_objects_count),
                 ctypes.byref(solution),
                 ctypes.byref(self.is_exit_ctypes_bool),
             ),
@@ -128,7 +119,7 @@ class IAS15:
         # Convert C arrays to numpy arrays
         return_sol_state = np.ctypeslib.as_array(
             solution.sol_state,
-            shape=(store_count.value + 1, solution.objects_count * 6),
+            shape=(store_count.value + 1, objects_count * 6),
         ).copy()
 
         return_sol_time = np.ctypeslib.as_array(
@@ -137,23 +128,16 @@ class IAS15:
         return_sol_dt = np.ctypeslib.as_array(
             solution.sol_dt, shape=(store_count.value + 1,)
         ).copy()
-        return_m = np.ctypeslib.as_array(
-            solution.m, shape=(solution.objects_count,)
-        ).copy()
 
         # Free memory
         self.c_lib.free_memory_real(solution.sol_state)
         self.c_lib.free_memory_real(solution.sol_time)
         self.c_lib.free_memory_real(solution.sol_dt)
-        self.c_lib.free_memory_real(solution.m)
 
         return (
             return_sol_state,
             return_sol_time,
             return_sol_dt,
-            return_m,
-            solution.G,
-            solution.objects_count,
         )
 
     def simulation_numpy(self, objects_count, x, v, m, G, tf, tolerance):

@@ -9,17 +9,16 @@
 /**
  * \brief Euler integrator
  * 
- * \param system Name of the system
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors of all objects
+ * \param v Array of velocity vectors of all objects
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
  * \param dt Time step of the system
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
- * \param custom_sys_x Array of the position vectors of customized system 
- * \param custom_sys_v Array of the velocity vectors of customized system 
- * \param custom_sys_m Array of the masses of customized system 
- * \param custom_sys_G Gravitational constant of customized system
- * \param custom_sys_object_count Number of objects in customized system
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
@@ -29,60 +28,20 @@
  * \retval 2 If KeyboardInterrupt in the main thread
  */
 WIN32DLL_API int euler(
-    const char *restrict system,
+    int objects_count,
+    real *restrict x,
+    real *restrict v,
+    real *restrict m,
+    real G,
     double dt,
     int64 npts,
     int store_npts,
     int store_every_n,
     int *restrict store_count,
-    const double *restrict custom_sys_x,
-    const double *restrict custom_sys_v,
-    const double *restrict custom_sys_m,
-    double custom_sys_G,
-    int custom_sys_objects_count,
     Solutions *restrict solution,
     int *restrict is_exit
 )
 {   
-    // Initialize default system
-    real *x = NULL;
-    real *v = NULL;
-    real *m = NULL;
-    int objects_count;
-    real G;
-    int intitial_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
-
-    // Custom system
-    if (intitial_sys_flag == 2)
-    {
-        printf("Error: Failed to allocate memory to initialize default system\n");
-        goto err_default_sys_memory;
-    }
-    else if (intitial_sys_flag == 1)
-    {
-        objects_count = custom_sys_objects_count;
-        x = malloc(objects_count * 3 * sizeof(real));
-        v = malloc(objects_count * 3 * sizeof(real));
-        m = malloc(objects_count * sizeof(real));
-
-        if (!x || !v || !m)
-        {
-            printf("Error: Failed to allocate memory for customized system\n");
-            goto err_custom_sys_memory;
-        }
-
-        for (int i = 0; i < objects_count; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                x[i * 3 + j] = custom_sys_x[i * 3 + j];
-                v[i * 3 + j] = custom_sys_v[i * 3 + j];
-            }
-            m[i] = custom_sys_m[i];
-        }
-        G = custom_sys_G;
-    }
-    
     // Allocate memory for calculation
     real *temp_x = malloc(objects_count * 3 * sizeof(real));
     real *temp_v = malloc(objects_count * 3 * sizeof(real));
@@ -176,8 +135,6 @@ WIN32DLL_API int euler(
     }
 
     // Exit after simulation is finished
-    free(x);
-    free(v);
     free(a);
     free(temp_x);
     free(temp_v);
@@ -187,9 +144,6 @@ WIN32DLL_API int euler(
     solution->sol_state = sol_state;
     solution->sol_time = sol_time;
     solution->sol_dt = sol_dt;
-    solution->m = m;
-    solution->G = G;
-    solution->objects_count = objects_count;
 
     return 0;
 
@@ -204,11 +158,6 @@ err_calc_memory:
     free(a);
     free(x_err_comp_sum);
     free(v_err_comp_sum);
-err_custom_sys_memory:
-    free(x);
-    free(v);
-    free(m);
-err_default_sys_memory:
     if (*is_exit)
     {
         return 2;   // User sends KeyboardInterrupt in main thread
@@ -222,17 +171,16 @@ err_default_sys_memory:
 /**
  * \brief Euler-cromer integrator
  * 
- * \param system Name of the system
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors of all objects
+ * \param v Array of velocity vectors of all objects
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
  * \param dt Time step of the system
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
- * \param custom_sys_x Array of the position vectors of customized system 
- * \param custom_sys_v Array of the velocity vectors of customized system 
- * \param custom_sys_m Array of the masses of customized system 
- * \param custom_sys_G Gravitational constant of customized system
- * \param custom_sys_object_count Number of objects in customized system
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
@@ -242,60 +190,20 @@ err_default_sys_memory:
  * \retval 2 If KeyboardInterrupt in the main thread
  */
 WIN32DLL_API int euler_cromer(
-    const char *restrict system,
+    int objects_count,
+    real *restrict x,
+    real *restrict v,
+    real *restrict m,
+    real G,
     double dt,
     int64 npts,
     int store_npts,
     int store_every_n,
     int *restrict store_count,
-    const double *restrict custom_sys_x,
-    const double *restrict custom_sys_v,
-    const double *restrict custom_sys_m,
-    double custom_sys_G,
-    int custom_sys_objects_count,
     Solutions *restrict solution,
     int *restrict is_exit
 )
 {   
-    // Initialize default system
-    real *x = NULL;
-    real *v = NULL;
-    real *m = NULL;
-    int objects_count;
-    real G;
-    int intitial_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
-
-    // Custom system
-    if (intitial_sys_flag == 2)
-    {
-        printf("Error: Failed to allocate memory to initialize default system\n");
-        goto err_default_sys_memory;
-    }
-    else if (intitial_sys_flag == 1)
-    {
-        objects_count = custom_sys_objects_count;
-        x = malloc(objects_count * 3 * sizeof(real));
-        v = malloc(objects_count * 3 * sizeof(real));
-        m = malloc(objects_count * sizeof(real));
-
-        if (!x || !v || !m)
-        {
-            printf("Error: Failed to allocate memory for customized system\n");
-            goto err_custom_sys_memory;
-        }
-
-        for (int i = 0; i < objects_count; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                x[i * 3 + j] = custom_sys_x[i * 3 + j];
-                v[i * 3 + j] = custom_sys_v[i * 3 + j];
-            }
-            m[i] = custom_sys_m[i];
-        }
-        G = custom_sys_G;
-    }
-
     // Allocate memory for calculation
     real *temp_x = malloc(objects_count * 3 * sizeof(real));
     real *temp_v = malloc(objects_count * 3 * sizeof(real));
@@ -388,8 +296,6 @@ WIN32DLL_API int euler_cromer(
     }
 
     // Exit after simulation is finished
-    free(x);
-    free(v);
     free(a);
     free(temp_x);
     free(temp_v);
@@ -399,9 +305,6 @@ WIN32DLL_API int euler_cromer(
     solution->sol_state = sol_state;
     solution->sol_time = sol_time;
     solution->sol_dt = sol_dt;
-    solution->m = m;
-    solution->G = G;
-    solution->objects_count = objects_count;
 
     return 0;
 
@@ -416,11 +319,6 @@ err_calc_memory:
     free(a);
     free(x_err_comp_sum);
     free(v_err_comp_sum);
-err_custom_sys_memory:
-    free(x);
-    free(v);
-    free(m);
-err_default_sys_memory: 
     if (*is_exit)
     {
         return 2;   // User sends KeyboardInterrupt in main thread
@@ -434,17 +332,16 @@ err_default_sys_memory:
 /**
  * \brief RK4 integrator
  * 
- * \param system Name of the system
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors of all objects
+ * \param v Array of velocity vectors of all objects
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
  * \param dt Time step of the system
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
- * \param custom_sys_x Array of the position vectors of customized system 
- * \param custom_sys_v Array of the velocity vectors of customized system 
- * \param custom_sys_m Array of the masses of customized system 
- * \param custom_sys_G Gravitational constant of customized system
- * \param custom_sys_object_count Number of objects in customized system
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
@@ -454,60 +351,20 @@ err_default_sys_memory:
  * \retval 2 If KeyboardInterrupt in the main thread
  */
 WIN32DLL_API int rk4(
-    const char *restrict system,
+    int objects_count,
+    real *restrict x,
+    real *restrict v,
+    real *restrict m,
+    real G,
     double dt,
     int64 npts,
     int store_npts,
     int store_every_n,
     int *restrict store_count,
-    const double *restrict custom_sys_x,
-    const double *restrict custom_sys_v,
-    const double *restrict custom_sys_m,
-    double custom_sys_G,
-    int custom_sys_objects_count,
     Solutions *restrict solution,
     int *restrict is_exit
 )
 {
-    // Initialize default system
-    real *x = NULL;
-    real *v = NULL;
-    real *m = NULL;
-    int objects_count;
-    real G;
-    int intitial_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
-
-    // Custom system
-    if (intitial_sys_flag == 2)
-    {
-        printf("Error: Failed to allocate memory to initialize default system\n");
-        goto err_default_sys_memory;
-    }
-    else if (intitial_sys_flag == 1)
-    {
-        objects_count = custom_sys_objects_count;
-        x = malloc(objects_count * 3 * sizeof(real));
-        v = malloc(objects_count * 3 * sizeof(real));
-        m = malloc(objects_count * sizeof(real));
-
-        if (!x || !v || !m)
-        {
-            printf("Error: Failed to allocate memory for customized system\n");
-            goto err_custom_sys_memory;
-        }
-
-        for (int i = 0; i < objects_count; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                x[i * 3 + j] = custom_sys_x[i * 3 + j];
-                v[i * 3 + j] = custom_sys_v[i * 3 + j];
-            }
-            m[i] = custom_sys_m[i];
-        }
-        G = custom_sys_G;
-    }
-
     // Allocate memory for calculation
     real *temp_x = malloc(objects_count * 3 * sizeof(real));
     real *temp_v = malloc(objects_count * 3 * sizeof(real));
@@ -643,8 +500,6 @@ WIN32DLL_API int rk4(
     }
 
     // Exit after simulation is finished
-    free(x);
-    free(v);
     free(a);
     free(temp_x);
     free(temp_v);
@@ -662,9 +517,6 @@ WIN32DLL_API int rk4(
     solution->sol_state = sol_state;
     solution->sol_time = sol_time;
     solution->sol_dt = sol_dt;
-    solution->m = m;
-    solution->G = G;
-    solution->objects_count = objects_count;
 
     return 0;
 
@@ -686,12 +538,7 @@ err_calc_memory:
     free(xk3);
     free(xk4);
     free(x_err_comp_sum);
-    free(v_err_comp_sum);
-err_custom_sys_memory:
-    free(x);
-    free(v);
-    free(m);
-err_default_sys_memory:    
+    free(v_err_comp_sum);   
     if (*is_exit)
     {
         return 2;   // User sends KeyboardInterrupt in main thread
@@ -705,17 +552,16 @@ err_default_sys_memory:
 /**
  * \brief LeapFrog integrator
  * 
- * \param system Name of the system
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors of all objects
+ * \param v Array of velocity vectors of all objects
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
  * \param dt Time step of the system
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
- * \param custom_sys_x Array of the position vectors of customized system 
- * \param custom_sys_v Array of the velocity vectors of customized system 
- * \param custom_sys_m Array of the masses of customized system 
- * \param custom_sys_G Gravitational constant of customized system
- * \param custom_sys_object_count Number of objects in customized system
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
@@ -725,60 +571,20 @@ err_default_sys_memory:
  * \retval 2 If KeyboardInterrupt in the main thread
  */
 WIN32DLL_API int leapfrog(
-    const char *restrict system,
+    int objects_count,
+    real *restrict x,
+    real *restrict v,
+    real *restrict m,
+    real G,
     double dt,
     int64 npts,
     int store_npts,
     int store_every_n,
     int *restrict store_count,
-    const double *restrict custom_sys_x,
-    const double *restrict custom_sys_v,
-    const double *restrict custom_sys_m,
-    double custom_sys_G,
-    int custom_sys_objects_count,
     Solutions *restrict solution,
     int *restrict is_exit
 )
 {   
-    // Initialize default system
-    real *x = NULL;
-    real *v = NULL;
-    real *m = NULL;
-    int objects_count;
-    real G;
-    int intitial_sys_flag = initialize_system(system, &x, &v, &m, &objects_count, &G);
-
-    // Custom system
-    if (intitial_sys_flag == 2)
-    {
-        printf("Error: Failed to allocate memory to initialize default system\n");
-        goto err_default_sys_memory;
-    }
-    else if (intitial_sys_flag == 1)
-    {
-        objects_count = custom_sys_objects_count;
-        x = malloc(objects_count * 3 * sizeof(real));
-        v = malloc(objects_count * 3 * sizeof(real));
-        m = malloc(objects_count * sizeof(real));
-
-        if (!x || !v || !m)
-        {
-            printf("Error: Failed to allocate memory for customized system\n");
-            goto err_custom_sys_memory;
-        }
-
-        for (int i = 0; i < objects_count; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                x[i * 3 + j] = custom_sys_x[i * 3 + j];
-                v[i * 3 + j] = custom_sys_v[i * 3 + j];
-            }
-            m[i] = custom_sys_m[i];
-        }
-        G = custom_sys_G;
-    }
-
     // Allocate memory for calculation
     real *temp_x = malloc(objects_count * 3 * sizeof(real));
     real *temp_v = malloc(objects_count * 3 * sizeof(real));
@@ -881,8 +687,6 @@ WIN32DLL_API int leapfrog(
     }
 
     // Exit after simulation is finished
-    free(x);
-    free(v);
     free(temp_x);
     free(temp_v);
     free(a_0);
@@ -893,9 +697,6 @@ WIN32DLL_API int leapfrog(
     solution->sol_state = sol_state;
     solution->sol_time = sol_time;
     solution->sol_dt = sol_dt;
-    solution->m = m;
-    solution->G = G;
-    solution->objects_count = objects_count;
 
     return 0;
 
@@ -911,11 +712,6 @@ err_calc_memory:
     free(a_1);
     free(x_err_comp_sum);
     free(v_err_comp_sum);
-err_custom_sys_memory:
-    free(x);
-    free(v);
-    free(m);
-err_default_sys_memory: 
     if (*is_exit)
     {
         return 2;   // User sends KeyboardInterrupt in main thread

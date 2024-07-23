@@ -26,9 +26,6 @@ typedef struct Solutions
     double* sol_state;
     double* sol_time;
     double* sol_dt;
-    double* m;
-    double G;
-    int objects_count;
 } Solutions;
 
 
