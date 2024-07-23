@@ -210,9 +210,9 @@ class GravitationalSystem:
             self.v = np.array(v)
             self.m = np.array(m)
         else:
-            self.x = np.hstack((self.x, x))
-            self.v = np.hstack((self.v, v))
-            self.m = np.hstack((self.m, m))
+            self.x = np.vstack((self.x, x))
+            self.v = np.vstack((self.v, v))
+            self.m = np.append(self.m, m)
 
         self.objects_count = self.m.size
 
@@ -604,9 +604,9 @@ class GravitationalSystem:
             self.v = v
             self.m = m
         else:
-            self.x = np.hstack((self.x, x))
-            self.v = np.hstack((self.v, v))
-            self.m = np.hstack((self.m, m))
+            self.x = np.vstack((self.x, x))
+            self.v = np.vstack((self.v, v))
+            self.m = np.append(self.m, m)
 
         self.objects_count = self.m.size
         self.G = G

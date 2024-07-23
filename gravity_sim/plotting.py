@@ -153,8 +153,9 @@ def animate_2d_traj_gif(
     if file_path is None:
         file_path = Path(__file__).parent / "results"
         file_path.mkdir(parents=True, exist_ok=True)
+        file_path /= file_name
         if not file_name.endswith(".gif"):
-            file_path /= file_name + ".gif"
+            file_path /= ".gif"
 
     if not is_dynamic_axes:
         if is_custom_axes:
@@ -322,8 +323,9 @@ def animate_3d_traj_gif(
     if file_path is None:
         file_path = Path(__file__).parent / "results"
         file_path.mkdir(parents=True, exist_ok=True)
+        file_path /= file_name
         if not file_name.endswith(".gif"):
-            file_path /= file_name + ".gif"
+            file_path /= ".gif"
 
     if not is_dynamic_axes:
         if is_custom_axes:
