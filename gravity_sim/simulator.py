@@ -56,9 +56,13 @@ class Simulator:
 
         self.integrator = integrator
         self.tf = tf
+        self.store_every_n = store_every_n
+
+        if (dt is None) and (tolerance is None):
+            raise ValueError("Either dt or tolerance must be provided.")
+
         self.dt = dt
         self.tolerance = tolerance
-        self.store_every_n = store_every_n
 
         print("Simulating the system...")
         start = timeit.default_timer()

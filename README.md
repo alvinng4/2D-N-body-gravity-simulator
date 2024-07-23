@@ -88,10 +88,8 @@ gravity_simulator/gravity_sim/customized_systems.csv
 ``` 
 The data follow the format
 ```
-Name, Number of objects, m1, ..., x1, y1, z1, ..., vx1, vy1, vz1, ...
+Name, Gravitational constant, Number of objects, m1, ..., x1, y1, z1, ..., vx1, vy1, vz1, ...
 ```
-Note: If you have customized system data with the older version, there are "[" and "]" inside the data, which would not work anymore.
-Please remove them manually.
 
 ## Output animation in .gif
 

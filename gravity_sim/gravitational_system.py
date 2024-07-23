@@ -5,9 +5,11 @@ Class to represent a system of celestial bodies
 import csv
 import math
 from pathlib import Path
+import plotting
 import warnings
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class GravitationalSystem:
@@ -171,10 +173,10 @@ class GravitationalSystem:
         "custom",
     ]
 
-    def __init__(self, system: str = None, G: float = CONSTANT_G) -> None:
+    def __init__(self, system: str = None) -> None:
         self.system = system
         if system is not None:
-            self.initialize_system(system, G)
+            self.initialize_system(system)
 
     def __eq__(self, other: str) -> bool:
         return self.system == other
@@ -182,7 +184,7 @@ class GravitationalSystem:
     def __str__(self) -> str:
         return self.system
 
-    def initialize_system(self, system: str, G: float = CONSTANT_G) -> None:
+    def initialize_system(self, system: str) -> None:
         """
         Initialize the system
 
@@ -205,11 +207,13 @@ class GravitationalSystem:
         x = None
         v = None
         m = None
-        objects_count = 0
+        objects_count = None
+        G = None
 
         match system:
             # Pre-defined systems
             case "circular_binary_orbit":
+                G = self.CONSTANT_G
                 R1 = np.array([1.0, 0.0, 0.0])
                 R2 = np.array([-1.0, 0.0, 0.0])
                 V1 = np.array([0.0, 0.5, 0.0])
@@ -220,6 +224,7 @@ class GravitationalSystem:
                 objects_count = 2
 
             case "eccentric_binary_orbit":
+                G = self.CONSTANT_G
                 R1 = np.array([1.0, 0.0, 0.0])
                 R2 = np.array([-1.25, 0.0, 0.0])
                 V1 = np.array([0.0, 0.5, 0.0])
@@ -230,6 +235,7 @@ class GravitationalSystem:
                 objects_count = 2
 
             case "3d_helix":
+                G = self.CONSTANT_G
                 R1 = np.array([0.0, 0.0, -1.0])
                 R2 = np.array([-math.sqrt(3.0) / 2.0, 0.0, 0.5])
                 R3 = np.array([math.sqrt(3.0) / 2.0, 0.0, 0.5])
@@ -243,6 +249,7 @@ class GravitationalSystem:
                 objects_count = 3
 
             case "sun_earth_moon":
+                G = self.CONSTANT_G
                 m = np.array(
                     [
                         GravitationalSystem.SOLAR_SYSTEM_MASSES["Sun"],
@@ -279,6 +286,7 @@ class GravitationalSystem:
                 objects_count = 3
 
             case "figure-8":
+                G = self.CONSTANT_G
                 R1 = np.array([0.970043, -0.24308753, 0.0])
                 R2 = np.array([-0.970043, 0.24308753, 0.0])
                 R3 = np.array([0.0, 0.0, 0.0])
@@ -291,6 +299,7 @@ class GravitationalSystem:
                 objects_count = 3
 
             case "pyth-3-body":
+                G = self.CONSTANT_G
                 R1 = np.array([1.0, 3.0, 0.0])
                 R2 = np.array([-2.0, -1.0, 0.0])
                 R3 = np.array([1.0, -1.0, 0.0])
@@ -303,6 +312,7 @@ class GravitationalSystem:
                 objects_count = 3
 
             case "solar_system":
+                G = self.CONSTANT_G
                 m = np.array(
                     [
                         GravitationalSystem.SOLAR_SYSTEM_MASSES["Sun"],
@@ -382,6 +392,7 @@ class GravitationalSystem:
                 objects_count = 9
 
             case "solar_system_plus":
+                G = self.CONSTANT_G
                 m = np.array(
                     [
                         GravitationalSystem.SOLAR_SYSTEM_MASSES["Sun"],
@@ -489,18 +500,19 @@ class GravitationalSystem:
                         reader = csv.reader(file)
                         for row in reader:
                             if system == row[0]:
-                                objects_count = int(row[1])
+                                G = float(row[1])
+                                objects_count = int(row[2])
                                 m = np.zeros(objects_count)
                                 for i in range(objects_count):
-                                    m[i] = row[2 + i]
+                                    m[i] = row[3 + i]
 
                                 x = np.zeros((objects_count, 3))
                                 v = np.zeros((objects_count, 3))
                                 for i in range(objects_count):
                                     for j in range(3):
-                                        x[i][j] = row[2 + objects_count + i * 3 + j]
+                                        x[i][j] = row[3 + objects_count + i * 3 + j]
                                         v[i][j] = row[
-                                            2
+                                            3
                                             + objects_count
                                             + objects_count * 3
                                             + i * 3
@@ -521,3 +533,63 @@ class GravitationalSystem:
             self.m = m
             self.objects_count = objects_count
             self.G = G
+
+    def plot_2d_system(
+        self,
+        colors=None,
+        labels=None,
+        legend=False,
+        xlabel="$x$ (AU)",
+        ylabel="$y$ (AU)",
+        marker="o",
+        markersize=6,
+    ) -> None:
+        initial_state = np.concatenate(
+            [
+                self.x.flatten(),
+                self.v.flatten(),
+            ]
+        )[np.newaxis, :]
+
+        plotting.plot_2d_trajectory(
+            self.objects_count,
+            initial_state,
+            colors,
+            labels,
+            legend,
+            xlabel,
+            ylabel,
+            marker,
+            markersize,
+        )
+
+    def plot_3d_system(
+        self,
+        colors=None,
+        labels=None,
+        legend=False,
+        xlabel="$x$ (AU)",
+        ylabel="$y$ (AU)",
+        zlabel="$z$ (AU)",
+        marker="o",
+        markersize=6,
+    ) -> None:
+        initial_state = np.concatenate(
+            [
+                self.x.flatten(),
+                self.v.flatten(),
+            ]
+        )[np.newaxis, :]
+
+        plotting.plot_3d_trajectory(
+            self.objects_count,
+            initial_state,
+            colors,
+            labels,
+            legend,
+            xlabel,
+            ylabel,
+            zlabel,
+            marker,
+            markersize,
+        )

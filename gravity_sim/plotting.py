@@ -123,6 +123,7 @@ def animate_2d_traj_gif(
     is_custom_axes,
     axes_lim,
     is_maintain_fixed_dt,
+    traj_len=-1,
     colors=None,
     labels=None,
     legend=False,
@@ -152,7 +153,8 @@ def animate_2d_traj_gif(
     if file_path is None:
         file_path = Path(__file__).parent / "results"
         file_path.mkdir(parents=True, exist_ok=True)
-        file_path /= file_name + ".gif"
+        if not file_name.endswith(".gif"):
+            file_path /= file_name + ".gif"
 
     if not is_dynamic_axes:
         if is_custom_axes:
@@ -165,22 +167,27 @@ def animate_2d_traj_gif(
             ylim_min = xlim_min
             ylim_max = xlim_max
 
+    data_size = len(sol_state)
     writer = PillowWriter(fps=fps)
     progress_bar = Progress_bar()
-
     if not is_maintain_fixed_dt:
         with writer.saving(fig, file_path, dpi):
             with progress_bar:
                 # Plot once every nth point
-                for i in progress_bar.track(range(len(sol_state))):
-                    if i % plot_every_nth_point != 0 and i != (len(sol_state) - 1):
+                for i in progress_bar.track(range(data_size)):
+                    if i % plot_every_nth_point != 0 and i != (data_size - 1):
                         continue
 
                     # Plot the trajectory from the beginning to current position
+                    if traj_len == -1:
+                        start_index = 0
+                    else:
+                        start_index = np.clip(i + 1 - traj_len, 0, None)
+
                     for j in range(objects_count):
                         traj = ax.plot(
-                            sol_state[: (i + 1), j * 3],
-                            sol_state[: (i + 1), j * 3 + 1],
+                            sol_state[start_index : (i + 1), j * 3],
+                            sol_state[start_index : (i + 1), j * 3 + 1],
                             color=colors[j],
                         )
                         # Plot the current position as a filled circle
@@ -216,7 +223,7 @@ def animate_2d_traj_gif(
         # Attempt to maintain fixed dt for the animation
         with writer.saving(fig, file_path, dpi):
             with progress_bar:
-                frame_size = math.floor(len(sol_state) / plot_every_nth_point) + 1
+                frame_size = math.floor(data_size / plot_every_nth_point) + 1
                 plot_time = np.linspace(
                     sol_time[0],
                     sol_time[-1],
@@ -227,11 +234,18 @@ def animate_2d_traj_gif(
                     # Search the index with the closest value of time
                     index = np.searchsorted(sol_time, plot_time[i])
 
+                    if traj_len == -1:
+                        start_index = 0
+                    else:
+                        start_index = np.searchsorted(
+                            sol_time, plot_time[np.clip(i - traj_len, 0, None)]
+                        )
+
                     # Plot the trajectory from the beginning to current position
                     for j in range(objects_count):
                         traj = ax.plot(
-                            sol_state[: (index + 1), j * 3],
-                            sol_state[: (index + 1), j * 3 + 1],
+                            sol_state[(start_index + 1) : (index + 1), j * 3],
+                            sol_state[(start_index + 1) : (index + 1), j * 3 + 1],
                             color=colors[j],
                         )
                         # Plot the current position as a filled circle
@@ -277,6 +291,7 @@ def animate_3d_traj_gif(
     is_custom_axes,
     axes_lim,
     is_maintain_fixed_dt,
+    traj_len=-1,
     colors=None,
     labels=None,
     legend=False,
@@ -307,7 +322,8 @@ def animate_3d_traj_gif(
     if file_path is None:
         file_path = Path(__file__).parent / "results"
         file_path.mkdir(parents=True, exist_ok=True)
-        file_path /= file_name + ".gif"
+        if not file_name.endswith(".gif"):
+            file_path /= file_name + ".gif"
 
     if not is_dynamic_axes:
         if is_custom_axes:
@@ -324,22 +340,28 @@ def animate_3d_traj_gif(
             zlim_min = xlim_min
             zlim_max = xlim_max
 
+    data_size = len(sol_state)
     writer = PillowWriter(fps=fps)
     progress_bar = Progress_bar()
     if not is_maintain_fixed_dt:
         with writer.saving(fig, file_path, dpi):
             with progress_bar:
                 # Plot once every nth point
-                for i in progress_bar.track(range(len(sol_state))):
-                    if i % plot_every_nth_point != 0 and i != (len(sol_state) - 1):
+                for i in progress_bar.track(range(data_size)):
+                    if i % plot_every_nth_point != 0 and i != (data_size - 1):
                         continue
+
+                    if traj_len == -1:
+                        start_index = 0
+                    else:
+                        start_index = np.clip(i + 1 - traj_len, 0, None)
 
                     # Plot the trajectory from the beginning to current position
                     for j in range(objects_count):
                         traj = ax.plot(
-                            sol_state[: (i + 1), j * 3],
-                            sol_state[: (i + 1), j * 3 + 1],
-                            sol_state[: (i + 1), j * 3 + 2],
+                            sol_state[start_index : (i + 1), j * 3],
+                            sol_state[start_index : (i + 1), j * 3 + 1],
+                            sol_state[start_index : (i + 1), j * 3 + 2],
                             color=colors[j],
                         )
                         # Plot the current position as a filled circle
@@ -387,7 +409,7 @@ def animate_3d_traj_gif(
 
     else:
         # Attempt to maintain fixed dt for the animation
-        frame_size = math.floor(len(sol_state) / plot_every_nth_point) + 1
+        frame_size = math.floor(data_size / plot_every_nth_point) + 1
         plot_time = np.linspace(
             sol_time[0],
             sol_time[-1],
@@ -400,12 +422,19 @@ def animate_3d_traj_gif(
                     # Search the index with the closest value of time
                     index = np.searchsorted(sol_time, plot_time[i])
 
+                    if traj_len == -1:
+                        start_index = 0
+                    else:
+                        start_index = np.searchsorted(
+                            sol_time, plot_time[np.clip(i - traj_len, 0, None)]
+                        )
+
                     # Plot the trajectory from the beginning to current position
                     for j in range(objects_count):
                         traj = ax.plot(
-                            sol_state[: (index + 1), j * 3],
-                            sol_state[: (index + 1), j * 3 + 1],
-                            sol_state[: (index + 1), j * 3 + 2],
+                            sol_state[start_index : (index + 1), j * 3],
+                            sol_state[start_index : (index + 1), j * 3 + 1],
+                            sol_state[start_index : (index + 1), j * 3 + 2],
                             color=colors[j],
                         )
                         # Plot the current position as a filled circle
