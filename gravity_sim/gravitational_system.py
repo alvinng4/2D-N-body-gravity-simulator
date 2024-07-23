@@ -6,10 +6,10 @@ import csv
 import math
 from pathlib import Path
 import plotting
+import typing
 import warnings
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 class GravitationalSystem:
@@ -173,20 +173,90 @@ class GravitationalSystem:
         "custom",
     ]
 
-    def __init__(self, system: str = None) -> None:
-        self.system = system
-        if system is not None:
-            self.initialize_system(system)
+    def __init__(self) -> None:
+        self.name = None
+        self.x = None
+        self.v = None
+        self.m = None
+        self.objects_count = 0
+        self.G = self.CONSTANT_G
 
     def __eq__(self, other: str) -> bool:
-        return self.system == other
+        return self.name == other
 
     def __str__(self) -> str:
-        return self.system
+        return self.name
 
-    def initialize_system(self, system: str) -> None:
+    def add(
+        self,
+        x: typing.Union[list, np.ndarray],
+        v: typing.Union[list, np.ndarray],
+        m: float,
+    ) -> None:
         """
-        Initialize the system
+        Add a celestial body to the system
+
+        Parameters
+        ----------
+        x : list or np.ndarray
+            Position vector
+        v : list or np.ndarray
+            Velocity vector
+        m : float
+            Mass
+        """
+        if self.x is None:
+            self.x = np.array(x)
+            self.v = np.array(v)
+            self.m = np.array(m)
+        else:
+            self.x = np.hstack((self.x, x))
+            self.v = np.hstack((self.v, v))
+            self.m = np.hstack((self.m, m))
+
+        self.objects_count = self.m.size
+
+    def remove(self, index: int) -> None:
+        """
+        Remove a celestial body from the system
+
+        Parameters
+        ----------
+        index : int
+            Index of the celestial body to be removed
+        """
+        if self.m is None or self.m.size == 0:
+            raise ValueError("Error: system has no celestial bodies.")
+
+        if index >= self.m.size or index < 0:
+            raise ValueError("Error: index out of range.")
+
+        self.x = np.delete(self.x, index, axis=0)
+        self.v = np.delete(self.v, index, axis=0)
+        self.m = np.delete(self.m, index)
+        self.objects_count = self.m.size
+
+    def save(
+        self,
+        file_path: str = None,
+    ) -> None:
+        if file_path is None:
+            file_path = Path(__file__).parent / "customized_systems.csv"
+
+        with open(file_path, "a", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(
+                [self.name, self.G, self.objects_count]
+                + self.m.tolist()
+                + self.x.flatten().tolist()
+                + self.v.flatten().tolist()
+            )
+
+        print(f"System {self.name} saved to {file_path}")
+
+    def load(self, system: str) -> None:
+        """
+        Load a pre-defined system
 
         Parameters
         ----------
@@ -209,9 +279,10 @@ class GravitationalSystem:
         m = None
         objects_count = None
         G = None
+        self.name = system
 
         match system:
-            # Pre-defined systems
+            # Default systems
             case "circular_binary_orbit":
                 G = self.CONSTANT_G
                 R1 = np.array([1.0, 0.0, 0.0])
@@ -527,12 +598,18 @@ class GravitationalSystem:
 
         if x is None and v is None and m is None and objects_count == 0:
             raise ValueError("Error: system not recognized.")
-        else:
+
+        if self.x is None:
             self.x = x
             self.v = v
             self.m = m
-            self.objects_count = objects_count
-            self.G = G
+        else:
+            self.x = np.hstack((self.x, x))
+            self.v = np.hstack((self.v, v))
+            self.m = np.hstack((self.m, m))
+
+        self.objects_count = self.m.size
+        self.G = G
 
     def plot_2d_system(
         self,

@@ -2,16 +2,15 @@
 API for N-body gravity simulator
 """
 
-import argparse
 import ctypes
 import csv
 import datetime
 import math
 from pathlib import Path
 import platform
-import re
 import sys
 import timeit
+import typing
 import warnings
 
 import numpy as np
@@ -71,7 +70,17 @@ class GravitySimulator:
         -------
         GravitationalSystem object
         """
-        return GravitationalSystem(system)
+        return GravitationalSystem()
+
+    def days_to_years(
+        self, days: typing.Union[float, np.ndarray]
+    ) -> typing.Union[float, np.ndarray]:
+        return days / self.DAYS_PER_YEAR
+
+    def years_to_days(
+        self, years: typing.Union[float, np.ndarray]
+    ) -> typing.Union[float, np.ndarray]:
+        return years * self.DAYS_PER_YEAR
 
     def plot_2d_trajectory(
         self,

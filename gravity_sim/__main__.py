@@ -228,7 +228,8 @@ class GravitySimulatorCLI:
                 print("")
                 break
 
-        self.gravitational_system = GravitationalSystem(self.system)
+        self.gravitational_system = GravitationalSystem()
+        self.gravitational_system.load(self.system)
 
         self.simulator.launch_simulation(
             self.gravitational_system,
@@ -285,6 +286,7 @@ class GravitySimulatorCLI:
         # --------------------Customize system--------------------
         if self.system == "custom":
             print("\nCustomizing system...")
+            custom_sys = GravitationalSystem()
             while True:
                 system_name = input("Enter the name of the system: ")
                 if matches := re.search(
@@ -295,17 +297,30 @@ class GravitySimulatorCLI:
                         print(
                             "Invalid input. Please do not use comma (,) inside the name."
                         )
-                    elif matches.group(1) in self.available_systems:
-                        print("System name already exist! Please try another one.")
                     else:
                         system_name = matches.group(1)
                         break
 
             self.system = system_name
+            custom_sys.name = system_name
+
             objects_count = get_int("Number of objects: ", larger_than=0)
             print()
 
             print("Note: The default unit is M_sun, AU and day, G=0.00029591220828411.")
+            while True:
+                try:
+                    custom_G = input(
+                        "Enter G (Simply press enter to use default value): "
+                    )
+                    if custom_G == "":
+                        break
+                    else:
+                        custom_sys.G = float(custom_G)
+                except ValueError:
+                    print("Invalid input. Please try again.")
+                    print()
+
             masses = []
             for i in range(objects_count):
                 masses.append(get_float(f"Please enter the mass for object {i + 1}: "))
@@ -338,12 +353,13 @@ class GravitySimulatorCLI:
                         f"Please enter v{variable} for object {i + 1}: "
                     )
 
-            file_path = Path(__file__).parent / "customized_systems.csv"
-            with open(file_path, "a", newline="") as file:
-                writer = csv.writer(file)
-                writer.writerow(
-                    [system_name, objects_count] + masses + x.tolist() + v.tolist()
+            for i in range(objects_count):
+                custom_sys.add(
+                    x[i * 3 : i * 3 + 3],
+                    v[i * 3 : i * 3 + 3],
+                    masses[i],
                 )
+            custom_sys.save()
 
         # --------------------Recommended settings for systems--------------------
         elif self.system in GravitationalSystem.DEFAULT_SYSTEMS:
