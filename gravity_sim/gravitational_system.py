@@ -238,8 +238,12 @@ class GravitationalSystem:
 
     def save(
         self,
+        system_name: str = None,
         file_path: str = None,
     ) -> None:
+        if system_name is not None:
+            self.name = system_name
+            
         if file_path is None:
             file_path = Path(__file__).parent / "customized_systems.csv"
 

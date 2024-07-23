@@ -119,10 +119,9 @@ def animate_2d_traj_gif(
     fps,
     plot_every_nth_point,
     dpi,
-    is_dynamic_axes,
-    is_custom_axes,
-    axes_lim,
-    is_maintain_fixed_dt,
+    is_dynamic_axes=False,
+    axes_lim=None,
+    is_maintain_fixed_dt=True,
     traj_len=-1,
     colors=None,
     labels=None,
@@ -158,7 +157,7 @@ def animate_2d_traj_gif(
         file_path /= file_name
 
     if not is_dynamic_axes:
-        if is_custom_axes:
+        if axes_lim is not None:
             xlim_min = axes_lim[0]
             xlim_max = axes_lim[1]
             ylim_min = axes_lim[2]
@@ -288,10 +287,9 @@ def animate_3d_traj_gif(
     fps: int,
     plot_every_nth_point,
     dpi,
-    is_dynamic_axes,
-    is_custom_axes,
-    axes_lim,
-    is_maintain_fixed_dt,
+    is_dynamic_axes=False,
+    axes_lim=None,
+    is_maintain_fixed_dt=True,
     traj_len=-1,
     colors=None,
     labels=None,
@@ -328,7 +326,7 @@ def animate_3d_traj_gif(
         file_path /= file_name
 
     if not is_dynamic_axes:
-        if is_custom_axes:
+        if axes_lim is not None:
             xlim_min = axes_lim[0]
             xlim_max = axes_lim[1]
             ylim_min = axes_lim[2]

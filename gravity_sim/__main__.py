@@ -1065,39 +1065,10 @@ class GravitySimulatorCLI:
                 "Enter dots per inch (dpi) (recommended value is 200): ",
                 larger_than=0,
             )
-            is_dynamic_axes = get_bool("Use dynamic axes limit?")
-
-            axes_lim = None
-            is_custom_axes = False
-            if not is_dynamic_axes:
-                if get_bool("Set your own axes limit?"):
-                    is_custom_axes = True
-
-                    xlim_min = get_float("Enter min x-axis limit (AU): ")
-                    xlim_max = get_float("Enter max x-axis limit (AU): ")
-                    ylim_min = get_float("Enter min y-axis limit (AU): ")
-                    ylim_max = get_float("Enter max y-axis limit (AU): ")
-
-                    if dim == 2:
-                        axes_lim = [xlim_min, xlim_max, ylim_min, ylim_max]
-                    elif dim == 3:
-                        zlim_min = get_float("Enter min z-axis limit (AU): ")
-                        zlim_max = get_float("Enter max z-axis limit (AU): ")
-
-                        axes_lim = [
-                            xlim_min,
-                            xlim_max,
-                            ylim_min,
-                            ylim_max,
-                            zlim_min,
-                            zlim_max,
-                        ]
-
-            is_maintain_fixed_dt = False
-            if get_bool(
-                "Try to maintain fixed dt for the animation? (useful if you are using variable dt)"
-            ):
-                is_maintain_fixed_dt = True
+            traj_len = get_int(
+                "Enter the number of points for the trail (Enter -1 for full trajectory): ",
+                larger_than=-2, smaller_than=self.data_size,
+            )
 
             print()
 
@@ -1107,18 +1078,7 @@ class GravitySimulatorCLI:
             print(f"Estimated time length: {(frame_size / fps):.1f} s")
             print(f"File name: {file_name}")
             print(f"dpi: {dpi:.1f}")
-            print(f"Use dynamic axes limits: {is_dynamic_axes}")
-
-            if not is_dynamic_axes:
-                print(f"Customize axes limits: {is_custom_axes}")
-
-            if is_custom_axes:
-                print(f"x-axis (AU): {axes_lim[0]} to {axes_lim[1]}")
-                print(f"y-axis (AU): {axes_lim[2]} to {axes_lim[3]}")
-                if dim == 3:
-                    print(f"z-axis (AU): {axes_lim[4]} to {axes_lim[5]}")
-
-            print(f"Maintain fixed dt: {is_maintain_fixed_dt}")
+            print(f"Trail length: {traj_len}")
 
             is_cancel = False
             if get_bool("Proceed?"):
@@ -1139,11 +1099,8 @@ class GravitySimulatorCLI:
             plot_every_nth_point,
             file_name,
             dpi,
-            is_dynamic_axes,
-            is_custom_axes,
-            axes_lim,
+            traj_len,
             is_cancel,
-            is_maintain_fixed_dt,
         )
 
     def _animate_2d_trajectory_wrapper(self):
@@ -1152,11 +1109,8 @@ class GravitySimulatorCLI:
             plot_every_nth_point,
             file_name,
             dpi,
-            is_dynamic_axes,
-            is_custom_axes,
-            axes_lim,
+            traj_len,
             is_cancel,
-            is_maintain_fixed_dt,
         ) = self._animation_get_user_input(dim=2)
         if not is_cancel:
             print("Animating 2D trajectory (xy plane) in .gif...")
@@ -1210,10 +1164,7 @@ class GravitySimulatorCLI:
                 fps,
                 plot_every_nth_point,
                 dpi,
-                is_dynamic_axes,
-                is_custom_axes,
-                axes_lim,
-                is_maintain_fixed_dt,
+                traj_len=traj_len,
                 colors=colors,
                 labels=labels,
                 legend=legend,
@@ -1228,11 +1179,8 @@ class GravitySimulatorCLI:
             plot_every_nth_point,
             file_name,
             dpi,
-            is_dynamic_axes,
-            is_custom_axes,
-            axes_lim,
+            traj_len,
             is_cancel,
-            is_maintain_fixed_dt,
         ) = self._animation_get_user_input(dim=3)
         if not is_cancel:
             print("Animating 3D trajectory in .gif...")
@@ -1286,10 +1234,7 @@ class GravitySimulatorCLI:
                 fps,
                 plot_every_nth_point,
                 dpi,
-                is_dynamic_axes,
-                is_custom_axes,
-                axes_lim,
-                is_maintain_fixed_dt,
+                traj_len=traj_len,
                 colors=colors,
                 labels=labels,
                 legend=legend,

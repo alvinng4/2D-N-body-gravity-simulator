@@ -46,14 +46,12 @@ class GravitySimulator:
                 self.c_lib = ctypes.cdll.LoadLibrary(
                     str(Path(__file__).parent / "c_lib.so")
                 )
-            self.has_c_lib = True
         except Exception as e:
             warnings.warn(
                 f"Failed to load C library (Exception: {e}).\n"
                 + "NumPy is still available.\n"
                 + "To use C library, try to compile the C files provided in the src folders."
             )
-            self.has_c_lib = False
 
         self.simulator = Simulator(self.c_lib)
 
