@@ -1,3 +1,7 @@
+"""
+Terminal user interface for N-body gravity simulator
+"""
+
 import argparse
 import ctypes
 import csv
@@ -15,11 +19,11 @@ from common import get_bool
 from common import get_int
 from common import get_float
 from simulator import Simulator
-from plotter import Plotter
+import plotting
 from progress_bar import Progress_bar
 
 
-class GravitySimulator:
+class GravitySimulatorCLI:
     DAYS_PER_YEAR = 365.242189
 
     def __init__(self):
@@ -202,69 +206,19 @@ class GravitySimulator:
 
             match action:
                 case 1:
-                    Plotter.plot_2d_trajectory(self)
+                    self._plot_2d_trajectory_wrapper()
                 case 2:
-                    Plotter.plot_3d_trajectory(self)
+                    self._plot_3d_trajectory_wrapper()
                 case 3:
-                    (
-                        fps,
-                        plot_every_nth_point,
-                        file_name,
-                        dpi,
-                        is_dynamic_axes,
-                        is_custom_axes,
-                        axes_lim,
-                        is_cancel,
-                        is_maintain_fixed_dt,
-                    ) = Plotter.animation_user_interface(2, self)
-                    if not is_cancel:
-                        Plotter.animation_2d_traj_gif(
-                            self,
-                            fps,
-                            plot_every_nth_point,
-                            file_name,
-                            dpi,
-                            is_dynamic_axes,
-                            is_custom_axes,
-                            axes_lim,
-                            is_maintain_fixed_dt,
-                        )
+                    self._animate_2d_trajectory_wrapper()
                 case 4:
-                    (
-                        fps,
-                        plot_every_nth_point,
-                        file_name,
-                        dpi,
-                        is_dynamic_axes,
-                        is_custom_axes,
-                        axes_lim,
-                        is_cancel,
-                        is_maintain_fixed_dt,
-                    ) = Plotter.animation_user_interface(3, self)
-                    if not is_cancel:
-                        Plotter.animation_3d_traj_gif(
-                            self,
-                            fps,
-                            plot_every_nth_point,
-                            file_name,
-                            dpi,
-                            is_dynamic_axes,
-                            is_custom_axes,
-                            axes_lim,
-                            is_maintain_fixed_dt,
-                        )
+                    self._animate_3d_trajectory_wrapper()
                 case 5:
-                    if not self.computed_energy:
-                        self.simulator.compute_energy()
-                        self.computed_energy = True
-                    Plotter.plot_rel_energy(self)
+                    self._plot_rel_energy_wrapper()
                 case 6:
-                    if not self.computed_angular_momentum:
-                        self.simulator.compute_angular_momentum()
-                        self.computed_angular_momentum = True
-                    Plotter.plot_rel_angular_momentum(self)
+                    self._plot_rel_angular_momentum_wrapper()
                 case 7:
-                    Plotter.plot_dt(self)
+                    self._plot_dt_wrapper()
                 case 8:
                     print(f"There are {self.data_size} lines of data.")
                     print()
@@ -280,7 +234,7 @@ class GravitySimulator:
                     if not self.computed_energy:
                         self.simulator.compute_energy()
                         self.computed_energy = True
-                    Plotter.plot_compare_rel_energy(self)
+                    plotting.plot_compare_rel_energy(self)
                 case 12:
                     break
                 case 13:
@@ -984,7 +938,418 @@ class GravitySimulator:
         except FileNotFoundError:
             sys.exit("Error: file is not found. Exiting the program")
 
+    def _plot_2d_trajectory_wrapper(self):
+        print("Plotting 2D trajectory (xy plane)...(Please check the window)")
+
+        colors = None
+        labels = None
+        legend = False
+
+        if self.simulator.system in self.solar_like_systems:
+            # Get specific colors if the system is solar-like
+            match self.simulator.system:
+                case "sun_earth_moon":
+                    objs_name = ["Sun", "Earth", "Moon"]
+                case "solar_system":
+                    objs_name = [
+                        "Sun",
+                        "Mercury",
+                        "Venus",
+                        "Earth",
+                        "Mars",
+                        "Jupiter",
+                        "Saturn",
+                        "Uranus",
+                        "Neptune",
+                    ]
+                case "solar_system_plus":
+                    objs_name = [
+                        "Sun",
+                        "Mercury",
+                        "Venus",
+                        "Earth",
+                        "Mars",
+                        "Jupiter",
+                        "Saturn",
+                        "Uranus",
+                        "Neptune",
+                        "Pluto",
+                        "Ceres",
+                        "Vesta",
+                    ]
+            colors = [
+                self.solar_like_systems_colors[objs_name[i]]
+                for i in range(grav_plot.simulator.objects_count)
+            ]
+            labels = objs_name
+            legend = True
+
+        plotting.plot_2d_trajectory(
+            self.simulator.objects_count,
+            self.simulator.sol_state,
+            colors=colors,
+            labels=labels,
+            legend=legend,
+        )
+        print()
+
+    def _plot_3d_trajectory_wrapper(self):
+        print("Plotting 3D trajectory...(Please check the window)")
+
+        colors = None
+        labels = None
+        legend = False
+
+        if self.simulator.system in self.solar_like_systems:
+            # Get specific colors if the system is solar-like
+            match self.simulator.system:
+                case "sun_earth_moon":
+                    objs_name = ["Sun", "Earth", "Moon"]
+                case "solar_system":
+                    objs_name = [
+                        "Sun",
+                        "Mercury",
+                        "Venus",
+                        "Earth",
+                        "Mars",
+                        "Jupiter",
+                        "Saturn",
+                        "Uranus",
+                        "Neptune",
+                    ]
+                case "solar_system_plus":
+                    objs_name = [
+                        "Sun",
+                        "Mercury",
+                        "Venus",
+                        "Earth",
+                        "Mars",
+                        "Jupiter",
+                        "Saturn",
+                        "Uranus",
+                        "Neptune",
+                        "Pluto",
+                        "Ceres",
+                        "Vesta",
+                    ]
+            colors = [
+                self.solar_like_systems_colors[objs_name[i]]
+                for i in range(grav_plot.simulator.objects_count)
+            ]
+            labels = objs_name
+            legend = True
+
+        plotting.plot_3d_trajectory(
+            self.simulator.objects_count,
+            self.simulator.sol_state,
+            colors=colors,
+            labels=labels,
+            legend=legend,
+        )
+
+        print()
+
+    def _animation_get_user_input(self, dim: int):
+        while True:
+            fps = get_float("Enter FPS: ", larger_than=0)
+
+            while True:
+                desired_time = get_float(
+                    "Enter desired time length for the gif (in seconds): ",
+                    larger_than=0,
+                )
+                if desired_time <= self.data_size / fps:
+                    break
+                else:
+                    print(
+                        f"For FPS = {fps:.1f}, the maximum length is {(self.data_size / fps):.1f} s!"
+                    )
+                    print()
+
+            print()
+
+            plot_every_nth_point = math.floor(self.data_size / (desired_time * fps))
+            print(f"Plot every nth point: {plot_every_nth_point}")
+            frame_size = math.floor(self.data_size / plot_every_nth_point) + 1
+            print(f"Estimated time length: {(frame_size / fps):.1f} s")
+            print()
+
+            file_name = input(
+                "Enter file name without extension (carefully, the program cannot check the validity of the filename): "
+            )
+            dpi = get_float(
+                "Enter dots per inch (dpi) (recommended value is 200): ",
+                larger_than=0,
+            )
+            is_dynamic_axes = get_bool("Use dynamic axes limit?")
+
+            axes_lim = None
+            is_custom_axes = False
+            if not is_dynamic_axes:
+                if get_bool("Set your own axes limit?"):
+                    is_custom_axes = True
+
+                    xlim_min = get_float("Enter min x-axis limit (AU): ")
+                    xlim_max = get_float("Enter max x-axis limit (AU): ")
+                    ylim_min = get_float("Enter min y-axis limit (AU): ")
+                    ylim_max = get_float("Enter max y-axis limit (AU): ")
+
+                    if dim == 2:
+                        axes_lim = [xlim_min, xlim_max, ylim_min, ylim_max]
+                    elif dim == 3:
+                        zlim_min = get_float("Enter min z-axis limit (AU): ")
+                        zlim_max = get_float("Enter max z-axis limit (AU): ")
+
+                        axes_lim = [
+                            xlim_min,
+                            xlim_max,
+                            ylim_min,
+                            ylim_max,
+                            zlim_min,
+                            zlim_max,
+                        ]
+
+            is_maintain_fixed_dt = False
+            if get_bool(
+                "Try to maintain fixed dt for the animation? (useful if you are using variable dt)"
+            ):
+                is_maintain_fixed_dt = True
+
+            print()
+
+            print(f"FPS = {fps:.1f}")
+            print(f"Plot every nth point: {plot_every_nth_point}")
+            print(f"Estimated frame size: about {frame_size} frames")
+            print(f"Estimated time length: {(frame_size / fps):.1f} s")
+            print(f"File name: {file_name}")
+            print(f"dpi: {dpi:.1f}")
+            print(f"Use dynamic axes limits: {is_dynamic_axes}")
+
+            if not is_dynamic_axes:
+                print(f"Customize axes limits: {is_custom_axes}")
+
+            if is_custom_axes:
+                print(f"x-axis (AU): {axes_lim[0]} to {axes_lim[1]}")
+                print(f"y-axis (AU): {axes_lim[2]} to {axes_lim[3]}")
+                if dim == 3:
+                    print(f"z-axis (AU): {axes_lim[4]} to {axes_lim[5]}")
+
+            print(f"Maintain fixed dt: {is_maintain_fixed_dt}")
+
+            is_cancel = False
+            if get_bool("Proceed?"):
+                print()
+                break
+            else:
+                print()
+
+            if get_bool("Return to menu?"):
+                is_cancel = True
+                print()
+                break
+            else:
+                print()
+
+        return (
+            fps,
+            plot_every_nth_point,
+            file_name,
+            dpi,
+            is_dynamic_axes,
+            is_custom_axes,
+            axes_lim,
+            is_cancel,
+            is_maintain_fixed_dt,
+        )
+
+    def _animate_2d_trajectory_wrapper(self):
+        (
+            fps,
+            plot_every_nth_point,
+            file_name,
+            dpi,
+            is_dynamic_axes,
+            is_custom_axes,
+            axes_lim,
+            is_cancel,
+            is_maintain_fixed_dt,
+        ) = self._animation_get_user_input(dim=2)
+        if not is_cancel:
+            print("Animating 2D trajectory (xy plane) in .gif...")
+
+            colors = None
+            labels = None
+            legend = False
+
+            if self.simulator.system in self.solar_like_systems:
+                # Get specific colors if the system is solar-like
+                match self.simulator.system:
+                    case "sun_earth_moon":
+                        objs_name = ["Sun", "Earth", "Moon"]
+                    case "solar_system":
+                        objs_name = [
+                            "Sun",
+                            "Mercury",
+                            "Venus",
+                            "Earth",
+                            "Mars",
+                            "Jupiter",
+                            "Saturn",
+                            "Uranus",
+                            "Neptune",
+                        ]
+                    case "solar_system_plus":
+                        objs_name = [
+                            "Sun",
+                            "Mercury",
+                            "Venus",
+                            "Earth",
+                            "Mars",
+                            "Jupiter",
+                            "Saturn",
+                            "Uranus",
+                            "Neptune",
+                            "Pluto",
+                            "Ceres",
+                            "Vesta",
+                        ]
+                colors = [
+                    self.solar_like_systems_colors[objs_name[i]]
+                    for i in range(grav_plot.simulator.objects_count)
+                ]
+                labels = objs_name
+                legend = True
+
+            plotting.animate_2d_traj_gif(
+                self.simulator.objects_count,
+                self.simulator.sol_state,
+                fps,
+                plot_every_nth_point,
+                dpi,
+                is_dynamic_axes,
+                is_custom_axes,
+                axes_lim,
+                is_maintain_fixed_dt,
+                colors=colors,
+                labels=labels,
+                legend=legend,
+                file_name=file_name,
+                sol_time=self.simulator.sol_time,
+            )
+            print()
+
+    def _animate_3d_trajectory_wrapper(self):
+        (
+            fps,
+            plot_every_nth_point,
+            file_name,
+            dpi,
+            is_dynamic_axes,
+            is_custom_axes,
+            axes_lim,
+            is_cancel,
+            is_maintain_fixed_dt,
+        ) = self._animation_get_user_input(dim=3)
+        if not is_cancel:
+            print("Animating 3D trajectory in .gif...")
+
+            colors = None
+            labels = None
+            legend = False
+
+            if self.simulator.system in self.solar_like_systems:
+                # Get specific colors if the system is solar-like
+                match self.simulator.system:
+                    case "sun_earth_moon":
+                        objs_name = ["Sun", "Earth", "Moon"]
+                    case "solar_system":
+                        objs_name = [
+                            "Sun",
+                            "Mercury",
+                            "Venus",
+                            "Earth",
+                            "Mars",
+                            "Jupiter",
+                            "Saturn",
+                            "Uranus",
+                            "Neptune",
+                        ]
+                    case "solar_system_plus":
+                        objs_name = [
+                            "Sun",
+                            "Mercury",
+                            "Venus",
+                            "Earth",
+                            "Mars",
+                            "Jupiter",
+                            "Saturn",
+                            "Uranus",
+                            "Neptune",
+                            "Pluto",
+                            "Ceres",
+                            "Vesta",
+                        ]
+                colors = [
+                    self.solar_like_systems_colors[objs_name[i]]
+                    for i in range(grav_plot.simulator.objects_count)
+                ]
+                labels = objs_name
+                legend = True
+
+            plotting.animate_3d_traj_gif(
+                self.simulator.objects_count,
+                self.simulator.sol_state,
+                fps,
+                plot_every_nth_point,
+                dpi,
+                is_dynamic_axes,
+                is_custom_axes,
+                axes_lim,
+                is_maintain_fixed_dt,
+                colors=colors,
+                labels=labels,
+                legend=legend,
+                file_name=file_name,
+                sol_time=self.simulator.sol_time,
+            )
+            print()
+
+    def _plot_rel_energy_wrapper(self):
+        if not self.computed_energy:
+            self.simulator.compute_energy()
+            self.computed_energy = True
+        print("Plotting relative energy error...(Please check the window)")
+        plotting.plot_rel_energy(
+            self.simulator.energy,
+            self.sol_time_in_tf_unit,
+            xlabel=f"Time ({self.tf_unit})",
+        )
+        print()
+
+    def _plot_rel_angular_momentum_wrapper(self):
+        if not self.computed_angular_momentum:
+            self.simulator.compute_angular_momentum()
+            self.computed_angular_momentum = True
+
+        print("Plotting relative angular momentum error...(Please check the window)")
+        plotting.plot_rel_angular_momentum(
+            self.simulator.angular_momentum,
+            self.sol_time_in_tf_unit,
+            xlabel=f"Time ({self.tf_unit})",
+        )
+        print()
+
+    def _plot_dt_wrapper(self):
+        print("Plotting dt...(Please check the window)")
+        plotting.plot_dt(
+            self.simulator.sol_dt,
+            self.sol_time_in_tf_unit,
+            xlabel=f"Time ({self.tf_unit})",
+            ylabel="dt (days)",
+        )
+        print()
+
 
 if __name__ == "__main__":
-    grav_plot = GravitySimulator()
+    grav_plot = GravitySimulatorCLI()
     grav_plot.run_prog()
