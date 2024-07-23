@@ -175,6 +175,7 @@ class GravitationalSystem:
 
     def __init__(self) -> None:
         self.name = None
+        self.objects_names = []
         self.x = None
         self.v = None
         self.m = None
@@ -192,6 +193,7 @@ class GravitationalSystem:
         x: typing.Union[list, np.ndarray],
         v: typing.Union[list, np.ndarray],
         m: float,
+        objects_name: str = None,
     ) -> None:
         """
         Add a celestial body to the system
@@ -215,6 +217,7 @@ class GravitationalSystem:
             self.m = np.append(self.m, m)
 
         self.objects_count = self.m.size
+        self.objects_names.append(objects_name)
 
     def remove(self, index: int) -> None:
         """
@@ -235,6 +238,7 @@ class GravitationalSystem:
         self.v = np.delete(self.v, index, axis=0)
         self.m = np.delete(self.m, index)
         self.objects_count = self.m.size
+        del self.objects_names[index]
 
     def save(
         self,
@@ -243,7 +247,7 @@ class GravitationalSystem:
     ) -> None:
         if system_name is not None:
             self.name = system_name
-            
+
         if file_path is None:
             file_path = Path(__file__).parent / "customized_systems.csv"
 
@@ -278,39 +282,32 @@ class GravitationalSystem:
             customized_systems.csv
         """
 
-        x = None
-        v = None
-        m = None
-        objects_count = None
-        G = None
-        self.name = system
-
+        loaded_system_flag = False
         match system:
             # Default systems
             case "circular_binary_orbit":
-                G = self.CONSTANT_G
+                loaded_system_flag = True
+                self.G = self.CONSTANT_G
                 R1 = np.array([1.0, 0.0, 0.0])
                 R2 = np.array([-1.0, 0.0, 0.0])
                 V1 = np.array([0.0, 0.5, 0.0])
                 V2 = np.array([0.0, -0.5, 0.0])
-                x = np.array([R1, R2])
-                v = np.array([V1, V2])
-                m = np.array([1.0 / G, 1.0 / G])
-                objects_count = 2
+                self.add(R1, V1, 1.0 / self.G, None)
+                self.add(R2, V2, 1.0 / self.G, None)
 
             case "eccentric_binary_orbit":
-                G = self.CONSTANT_G
+                loaded_system_flag = True
+                self.G = self.CONSTANT_G
                 R1 = np.array([1.0, 0.0, 0.0])
                 R2 = np.array([-1.25, 0.0, 0.0])
                 V1 = np.array([0.0, 0.5, 0.0])
                 V2 = np.array([0.0, -0.625, 0.0])
-                x = np.array([R1, R2])
-                v = np.array([V1, V2])
-                m = np.array([1.0 / G, 0.8 / G])
-                objects_count = 2
+                self.add(R1, V1, 1.0 / self.G, None)
+                self.add(R2, V2, 0.8 / self.G, None)
 
             case "3d_helix":
-                G = self.CONSTANT_G
+                loaded_system_flag = True
+                self.G = self.CONSTANT_G
                 R1 = np.array([0.0, 0.0, -1.0])
                 R2 = np.array([-math.sqrt(3.0) / 2.0, 0.0, 0.5])
                 R3 = np.array([math.sqrt(3.0) / 2.0, 0.0, 0.5])
@@ -318,13 +315,13 @@ class GravitationalSystem:
                 V1 = np.array([-v0, 0.5, 0.0])
                 V2 = np.array([0.5 * v0, 0.5, (math.sqrt(3.0) / 2.0) * v0])
                 V3 = np.array([0.5 * v0, 0.5, -(math.sqrt(3.0) / 2.0) * v0])
-                x = np.array([R1, R2, R3])
-                v = np.array([V1, V2, V3])
-                m = np.array([1.0 / G, 1.0 / G, 1.0 / G])
-                objects_count = 3
+                self.add(R1, V1, 1.0 / self.G, None)
+                self.add(R2, V2, 1.0 / self.G, None)
+                self.add(R3, V3, 1.0 / self.G, None)
 
             case "sun_earth_moon":
-                G = self.CONSTANT_G
+                loaded_system_flag = True
+                self.G = self.CONSTANT_G
                 m = np.array(
                     [
                         GravitationalSystem.SOLAR_SYSTEM_MASSES["Sun"],
@@ -356,12 +353,13 @@ class GravitationalSystem:
                 V1 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Sun"] - V_CM)
                 V2 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Earth"] - V_CM)
                 V3 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Moon"] - V_CM)
-                x = np.array([R1, R2, R3])
-                v = np.array([V1, V2, V3])
-                objects_count = 3
+                self.add(R1, V1, m[0], "Sun")
+                self.add(R2, V2, m[1], "Earth")
+                self.add(R3, V3, m[2], "Moon")
 
             case "figure-8":
-                G = self.CONSTANT_G
+                loaded_system_flag = True
+                self.G = self.CONSTANT_G
                 R1 = np.array([0.970043, -0.24308753, 0.0])
                 R2 = np.array([-0.970043, 0.24308753, 0.0])
                 R3 = np.array([0.0, 0.0, 0.0])
@@ -370,24 +368,27 @@ class GravitationalSystem:
                 V3 = np.array([-0.93240737, -0.86473146, 0.0])
                 x = np.array([R1, R2, R3])
                 v = np.array([V1, V2, V3])
-                m = np.array([1.0 / G, 1.0 / G, 1.0 / G])
-                objects_count = 3
+                m = np.array([1.0 / self.G, 1.0 / self.G, 1.0 / self.G])
+                self.add(R1, V1, 1.0 / self.G)
+                self.add(R2, V2, 1.0 / self.G)
+                self.add(R3, V3, 1.0 / self.G)
 
             case "pyth-3-body":
-                G = self.CONSTANT_G
+                loaded_system_flag = True
+                self.G = self.CONSTANT_G
                 R1 = np.array([1.0, 3.0, 0.0])
                 R2 = np.array([-2.0, -1.0, 0.0])
                 R3 = np.array([1.0, -1.0, 0.0])
                 V1 = np.array([0.0, 0.0, 0.0])
                 V2 = np.array([0.0, 0.0, 0.0])
                 V3 = np.array([0.0, 0.0, 0.0])
-                x = np.array([R1, R2, R3])
-                v = np.array([V1, V2, V3])
-                m = np.array([3.0 / G, 4.0 / G, 5.0 / G])
-                objects_count = 3
+                self.add(R1, V1, 3.0 / self.G)
+                self.add(R2, V2, 4.0 / self.G)
+                self.add(R3, V3, 5.0 / self.G)
 
             case "solar_system":
-                G = self.CONSTANT_G
+                loaded_system_flag = True
+                self.G = self.CONSTANT_G
                 m = np.array(
                     [
                         GravitationalSystem.SOLAR_SYSTEM_MASSES["Sun"],
@@ -462,12 +463,19 @@ class GravitationalSystem:
                 V8 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Uranus"] - V_CM)
                 V9 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Neptune"] - V_CM)
 
-                x = np.array([R1, R2, R3, R4, R5, R6, R7, R8, R9])
-                v = np.array([V1, V2, V3, V4, V5, V6, V7, V8, V9])
-                objects_count = 9
+                self.add(R1, V1, m[0], "Sun")
+                self.add(R2, V2, m[1], "Mercury")
+                self.add(R3, V3, m[2], "Venus")
+                self.add(R4, V4, m[3], "Earth")
+                self.add(R5, V5, m[4], "Mars")
+                self.add(R6, V6, m[5], "Jupiter")
+                self.add(R7, V7, m[6], "Saturn")
+                self.add(R8, V8, m[7], "Uranus")
+                self.add(R9, V9, m[8], "Neptune")
 
             case "solar_system_plus":
-                G = self.CONSTANT_G
+                loaded_system_flag = True
+                self.G = self.CONSTANT_G
                 m = np.array(
                     [
                         GravitationalSystem.SOLAR_SYSTEM_MASSES["Sun"],
@@ -563,9 +571,18 @@ class GravitationalSystem:
                 V11 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Ceres"] - V_CM)
                 V12 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Vesta"] - V_CM)
 
-                x = np.array([R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12])
-                v = np.array([V1, V2, V3, V4, V5, V6, V7, V8, V9, V10, V11, V12])
-                objects_count = 12
+                self.add(R1, V1, m[0], "Sun")
+                self.add(R2, V2, m[1], "Mercury")
+                self.add(R3, V3, m[2], "Venus")
+                self.add(R4, V4, m[3], "Earth")
+                self.add(R5, V5, m[4], "Mars")
+                self.add(R6, V6, m[5], "Jupiter")
+                self.add(R7, V7, m[6], "Saturn")
+                self.add(R8, V8, m[7], "Uranus")
+                self.add(R9, V9, m[8], "Neptune")
+                self.add(R10, V10, m[9], "Pluto")
+                self.add(R11, V11, m[10], "Ceres")
+                self.add(R12, V12, m[11], "Vesta")
 
             # Customized system
             case _:
@@ -575,24 +592,26 @@ class GravitationalSystem:
                         reader = csv.reader(file)
                         for row in reader:
                             if system == row[0]:
-                                G = float(row[1])
+                                loaded_system_flag = True
+                                self.G = float(row[1])
                                 objects_count = int(row[2])
                                 m = np.zeros(objects_count)
                                 for i in range(objects_count):
                                     m[i] = row[3 + i]
 
-                                x = np.zeros((objects_count, 3))
-                                v = np.zeros((objects_count, 3))
+                                x = np.zeros(3)
+                                v = np.zeros(3)
                                 for i in range(objects_count):
                                     for j in range(3):
-                                        x[i][j] = row[3 + objects_count + i * 3 + j]
-                                        v[i][j] = row[
+                                        x[j] = row[3 + objects_count + i * 3 + j]
+                                        v[j] = row[
                                             3
                                             + objects_count
                                             + objects_count * 3
                                             + i * 3
                                             + j
                                         ]
+                                    self.add(x, v, m[i])
 
                 except FileNotFoundError:
                     warnings.warn(
@@ -600,20 +619,10 @@ class GravitationalSystem:
                         + f"{Path(__file__).parent} folder."
                     )
 
-        if x is None and v is None and m is None and objects_count == 0:
-            raise ValueError("Error: system not recognized.")
-
-        if self.x is None:
-            self.x = x
-            self.v = v
-            self.m = m
+        if loaded_system_flag:
+            self.name = system
         else:
-            self.x = np.vstack((self.x, x))
-            self.v = np.vstack((self.v, v))
-            self.m = np.append(self.m, m)
-
-        self.objects_count = self.m.size
-        self.G = G
+            raise ValueError("Error: system name is not recognized.")
 
     def plot_2d_system(
         self,

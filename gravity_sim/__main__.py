@@ -925,48 +925,18 @@ class GravitySimulatorCLI:
     def _plot_2d_trajectory_wrapper(self):
         print("Plotting 2D trajectory (xy plane)...(Please check the window)")
 
-        colors = None
-        labels = None
+        colors = []
+        labels = []
         legend = False
 
-        if self.gravitational_system in self.solar_like_systems:
-            # Get specific colors if the system is solar-like
-            match self.gravitational_system:
-                case "sun_earth_moon":
-                    objs_name = ["Sun", "Earth", "Moon"]
-                case "solar_system":
-                    objs_name = [
-                        "Sun",
-                        "Mercury",
-                        "Venus",
-                        "Earth",
-                        "Mars",
-                        "Jupiter",
-                        "Saturn",
-                        "Uranus",
-                        "Neptune",
-                    ]
-                case "solar_system_plus":
-                    objs_name = [
-                        "Sun",
-                        "Mercury",
-                        "Venus",
-                        "Earth",
-                        "Mars",
-                        "Jupiter",
-                        "Saturn",
-                        "Uranus",
-                        "Neptune",
-                        "Pluto",
-                        "Ceres",
-                        "Vesta",
-                    ]
-            colors = [
-                self.solar_like_systems_colors[objs_name[i]]
-                for i in range(grav_plot.simulator.objects_count)
-            ]
-            labels = objs_name
-            legend = True
+        for object_name in self.gravitational_system.objects_names:
+            try:
+                colors.append(self.solar_like_systems_colors[object_name])
+                legend = True  # Show legend if one of the name is recognized
+            except:
+                colors.append(None)
+
+            labels.append(object_name)
 
         plotting.plot_2d_trajectory(
             self.simulator.objects_count,
@@ -980,48 +950,18 @@ class GravitySimulatorCLI:
     def _plot_3d_trajectory_wrapper(self):
         print("Plotting 3D trajectory...(Please check the window)")
 
-        colors = None
-        labels = None
+        colors = []
+        labels = []
         legend = False
 
-        if self.gravitational_system in self.solar_like_systems:
-            # Get specific colors if the system is solar-like
-            match self.gravitational_system:
-                case "sun_earth_moon":
-                    objs_name = ["Sun", "Earth", "Moon"]
-                case "solar_system":
-                    objs_name = [
-                        "Sun",
-                        "Mercury",
-                        "Venus",
-                        "Earth",
-                        "Mars",
-                        "Jupiter",
-                        "Saturn",
-                        "Uranus",
-                        "Neptune",
-                    ]
-                case "solar_system_plus":
-                    objs_name = [
-                        "Sun",
-                        "Mercury",
-                        "Venus",
-                        "Earth",
-                        "Mars",
-                        "Jupiter",
-                        "Saturn",
-                        "Uranus",
-                        "Neptune",
-                        "Pluto",
-                        "Ceres",
-                        "Vesta",
-                    ]
-            colors = [
-                self.solar_like_systems_colors[objs_name[i]]
-                for i in range(grav_plot.simulator.objects_count)
-            ]
-            labels = objs_name
-            legend = True
+        for object_name in self.gravitational_system.objects_names:
+            try:
+                colors.append(self.solar_like_systems_colors[object_name])
+                legend = True  # Show legend if one of the name is recognized
+            except:
+                colors.append(None)
+
+            labels.append(object_name)
 
         plotting.plot_3d_trajectory(
             self.simulator.objects_count,
@@ -1067,7 +1007,8 @@ class GravitySimulatorCLI:
             )
             traj_len = get_int(
                 "Enter the number of points for the trail (Enter -1 for full trajectory): ",
-                larger_than=-2, smaller_than=self.data_size,
+                larger_than=-2,
+                smaller_than=self.data_size,
             )
 
             print()

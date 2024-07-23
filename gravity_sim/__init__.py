@@ -128,9 +128,9 @@ class GravitySimulator:
 
     def animate_2d_traj_gif(
         self,
-        fps: int=30,
-        animation_length: float=None,
-        plot_every_nth_point: int=None,
+        fps: int = 30,
+        animation_length: float = None,
+        plot_every_nth_point: int = None,
         dpi=200,
         is_dynamic_axes=False,
         is_custom_axes=False,
@@ -150,29 +150,41 @@ class GravitySimulator:
     ):
         if animation_length is not None and animation_length <= 0.0:
             raise ValueError("gif_time must be greater than 0.")
-        
+
         if animation_length is None and plot_every_nth_point is None:
             animation_length = 10.0
-            plot_every_nth_point = math.floor(len(self.simulator.sol_state) / (animation_length * fps))
+            plot_every_nth_point = math.floor(
+                len(self.simulator.sol_state) / (animation_length * fps)
+            )
             if plot_every_nth_point <= 0:
                 plot_every_nth_point = 1
 
         elif animation_length is None and plot_every_nth_point is not None:
             if plot_every_nth_point <= 0:
-                warnings.warn("plot_every_nth_point must be greater than 0. Using default value of 1.")
+                warnings.warn(
+                    "plot_every_nth_point must be greater than 0. Using default value of 1."
+                )
                 plot_every_nth_point = 1
             elif plot_every_nth_point > len(self.simulator.sol_state):
-                warnings.warn(f"plot_every_nth_point is greater than data size ({len(self.simulator.sol_state)}). Using default value of 1.")
+                warnings.warn(
+                    f"plot_every_nth_point is greater than data size ({len(self.simulator.sol_state)}). Using default value of 1."
+                )
                 plot_every_nth_point = 1
 
         elif animation_length is not None and plot_every_nth_point is None:
-            plot_every_nth_point = math.floor(len(self.simulator.sol_state) / (animation_length * fps))
+            plot_every_nth_point = math.floor(
+                len(self.simulator.sol_state) / (animation_length * fps)
+            )
             if plot_every_nth_point <= 0:
                 plot_every_nth_point = 1
 
         elif animation_length is not None and plot_every_nth_point is not None:
-            warnings.warn("Both animation_length and plot_every_nth_point are provided. plot_every_nth_point will be ignored.")
-            plot_every_nth_point = math.floor(len(self.simulator.sol_state) / (animation_length * fps))
+            warnings.warn(
+                "Both animation_length and plot_every_nth_point are provided. plot_every_nth_point will be ignored."
+            )
+            plot_every_nth_point = math.floor(
+                len(self.simulator.sol_state) / (animation_length * fps)
+            )
             if plot_every_nth_point <= 0:
                 plot_every_nth_point = 1
 
@@ -201,9 +213,9 @@ class GravitySimulator:
 
     def animate_3d_traj_gif(
         self,
-        fps: int=30,
-        animation_length: float=None,
-        plot_every_nth_point: int=None,
+        fps: int = 30,
+        animation_length: float = None,
+        plot_every_nth_point: int = None,
         dpi=200,
         is_dynamic_axes=False,
         is_custom_axes=False,
@@ -222,29 +234,40 @@ class GravitySimulator:
         file_path=None,
         sol_time=None,
     ) -> None:
-        
         if animation_length is None and plot_every_nth_point is None:
             animation_length = 10.0
-            plot_every_nth_point = math.floor(len(self.simulator.sol_state) / (animation_length * fps))
+            plot_every_nth_point = math.floor(
+                len(self.simulator.sol_state) / (animation_length * fps)
+            )
             if plot_every_nth_point <= 0:
                 plot_every_nth_point = 1
 
         elif animation_length is None and plot_every_nth_point is not None:
             if plot_every_nth_point <= 0:
-                warnings.warn("plot_every_nth_point must be greater than 0. Using default value of 1.")
+                warnings.warn(
+                    "plot_every_nth_point must be greater than 0. Using default value of 1."
+                )
                 plot_every_nth_point = 1
             elif plot_every_nth_point > len(self.simulator.sol_state):
-                warnings.warn(f"plot_every_nth_point is greater than data size ({len(self.simulator.sol_state)}). Using default value of 1.")
+                warnings.warn(
+                    f"plot_every_nth_point is greater than data size ({len(self.simulator.sol_state)}). Using default value of 1."
+                )
                 plot_every_nth_point = 1
 
         elif animation_length is not None and plot_every_nth_point is None:
-            plot_every_nth_point = math.floor(len(self.simulator.sol_state) / (animation_length * fps))
+            plot_every_nth_point = math.floor(
+                len(self.simulator.sol_state) / (animation_length * fps)
+            )
             if plot_every_nth_point <= 0:
                 plot_every_nth_point = 1
 
         elif animation_length is not None and plot_every_nth_point is not None:
-            warnings.warn("Both animation_length and plot_every_nth_point are provided. plot_every_nth_point will be ignored.")
-            plot_every_nth_point = math.floor(len(self.simulator.sol_state) / (animation_length * fps))
+            warnings.warn(
+                "Both animation_length and plot_every_nth_point are provided. plot_every_nth_point will be ignored."
+            )
+            plot_every_nth_point = math.floor(
+                len(self.simulator.sol_state) / (animation_length * fps)
+            )
             if plot_every_nth_point <= 0:
                 plot_every_nth_point = 1
 
