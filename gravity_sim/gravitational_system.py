@@ -175,7 +175,7 @@ class GravitationalSystem:
 
     def __init__(self) -> None:
         self.name = None
-        self.objects_names = []
+        self.object_names = []
         self.x = None
         self.v = None
         self.m = None
@@ -217,19 +217,42 @@ class GravitationalSystem:
             self.m = np.append(self.m, m)
 
         self.objects_count = self.m.size
-        self.objects_names.append(objects_name)
+        self.object_names.append(objects_name)
 
-    def remove(self, index: int) -> None:
+    def remove(self, index: int = None, name: str = None) -> None:
         """
-        Remove a celestial body from the system
+        Remove a celestial body from the system,
+        either by index or by name
 
         Parameters
         ----------
-        index : int
+        index : int (optional)
             Index of the celestial body to be removed
+        name : str (optional)
+            Name of the celestial body to be removed
+
+        Raises
+        ------
+        ValueError
+            If index or name is not provided
+        ValueError
+            If system has no celestial bodies
+        ValueError
+            If name is not found in system
+        ValueError
+            If index is out of range
         """
+        if index is None and name is None:
+            raise ValueError("Error: index or name must be provided.")
+
         if self.m is None or self.m.size == 0:
             raise ValueError("Error: system has no celestial bodies.")
+
+        if name is not None:
+            if name not in self.object_names:
+                raise ValueError("Error: name not found in system.")
+
+            index = self.object_names.index(name)
 
         if index >= self.m.size or index < 0:
             raise ValueError("Error: index out of range.")
@@ -238,7 +261,7 @@ class GravitationalSystem:
         self.v = np.delete(self.v, index, axis=0)
         self.m = np.delete(self.m, index)
         self.objects_count = self.m.size
-        del self.objects_names[index]
+        del self.object_names[index]
 
     def save(
         self,
