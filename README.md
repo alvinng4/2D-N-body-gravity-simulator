@@ -1,8 +1,9 @@
 # Gravity Simulator
 Newtonian N-body gravity simulator accelerated with C library.
 
-<img src="./examples/solar_plus_3d.gif" alt="Image" width="400">
-<img src="./examples/rel_energy.png" alt="Image" width="400">
+<img src="./examples/solar_plus_3d.gif" alt="Image" width="300">
+<img src="./examples/rel_energy.png" alt="Image" width="300">
+<img src="./examples/astroid_belt.gif" alt="Image" width="300">
 
 ## Interactive simulator: 
 Checkout the interactive simulator at https://www.github.com/alvinng4/OrbitSim
@@ -13,8 +14,8 @@ Checkout the interactive simulator at https://www.github.com/alvinng4/OrbitSim
 * [Quick Start](#quick-start)
     - [Python version](#python-version)
     - [Installation](#installation)
-    - [Running the program](#running-the-program)
-* [Running the program](#running-the-program-2)
+* [Importing as library](#importing-as-library)
+* [Running the program](#running-the-program)
     - [C library / Numpy (Optional)](#c-library--numpy-optional-1)
 * [Available systems](#available-systems-1)
 * [Customizing system](#customizing-system)
@@ -43,6 +44,29 @@ git clone https://github.com/alvinng4/Gravity-Simulator
 Install the required packages by
 ```
 pip install .
+```
+
+## Importing as library
+
+You may import the `gravity_sim` library to perform gravity simulation.
+See `tutorial.ipynb` or `astroid_belt_animation.py` for some example uses.
+```
+import gravity_sim
+
+grav_sim = gravity_sim.GravitySimulator()
+
+system = grav_sim.create_system()
+system.load("solar_system")
+
+grav_sim.simulator.launch_simulation(
+    system,
+    integrator="ias15",
+    tf=grav_sim.years_to_days(1000.0),
+    tolerance=1e-9,
+    store_every_n=50,
+)
+
+grav_sim.save_results(system.name)
 ```
 
 ## Running the program

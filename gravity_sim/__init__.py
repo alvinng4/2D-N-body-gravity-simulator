@@ -323,7 +323,7 @@ class GravitySimulator:
         """
         system = GravitationalSystem()
         system.name = system_name
-        
+
         if objects_names is not None:
             if len(objects_names) < self.simulator.objects_count:
                 temp = [
@@ -355,7 +355,13 @@ class GravitySimulator:
 
         return system
 
-    def save_results(self, system_name: str=None, path: str=None, computed_energy: bool=False, store_energy_as_zeros: bool=False) -> None:
+    def save_results(
+        self,
+        system_name: str = None,
+        path: str = None,
+        computed_energy: bool = False,
+        store_energy_as_zeros: bool = False,
+    ) -> None:
         """
         Save the results in a csv file
         Unit: Solar masses, AU, day
@@ -394,9 +400,11 @@ class GravitySimulator:
             writer.writerow([f"# System Name: {system_name}"])
 
             try:
-                integrator_name = GravitySimulator.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
-                    self.simulator.integrator
-                ]
+                integrator_name = (
+                    GravitySimulator.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
+                        self.simulator.integrator
+                    ]
+                )
             except KeyError:
                 integrator_name = None
 
@@ -406,7 +414,9 @@ class GravitySimulator:
             writer.writerow([f"# dt (days): {self.simulator.dt}"])
             writer.writerow([f"# Tolerance: {self.simulator.tolerance}"])
             writer.writerow([f"# Data size: {data_size}"])
-            writer.writerow([f"# Store every nth point: {self.simulator.store_every_n}"])
+            writer.writerow(
+                [f"# Store every nth point: {self.simulator.store_every_n}"]
+            )
             writer.writerow([f"# Run time (s): {self.simulator.run_time}"])
             masses_str = " ".join(map(str, self.simulator.m))
             writer.writerow([f"# masses: {masses_str}"])

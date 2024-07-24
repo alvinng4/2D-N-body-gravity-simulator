@@ -86,7 +86,7 @@ class GravitySimulatorCLI:
             "Venus": "wheat",
             "Earth": "skyblue",
             "Mars": "red",
-            "Jupiter": "brown",
+            "Jupiter": "goldenrod",
             "Saturn": "gold",
             "Uranus": "paleturquoise",
             "Neptune": "blue",
@@ -666,9 +666,11 @@ class GravitySimulatorCLI:
             writer.writerow([f"# System Name: {self.gravitational_system}"])
 
             try:
-                integrator_name = GravitySimulatorCLI.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
-                    self.simulator.integrator
-                ]
+                integrator_name = (
+                    GravitySimulatorCLI.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
+                        self.simulator.integrator
+                    ]
+                )
             except KeyError:
                 integrator_name = None
 
