@@ -290,3 +290,52 @@ class GravitySimulator:
             file_path=file_path,
             sol_time=self.simulator.sol_time,
         )
+
+    def sol_state_to_system(
+        self, index: int = -1, objects_names: list = None
+    ) -> GravitationalSystem:
+        """
+        Convert the latest state of the solution to a new GravitationalSystem object
+        
+        Parameters
+        ----------
+        index : int (optional)
+            Index of the solution state. Default is the latest state.
+        objects_names : list (optional)
+            List of names of the objects in the system.
+
+        Returns
+        -------
+        GravitationalSystem object
+        """
+        system = GravitationalSystem()
+
+        if objects_names is not None:
+            if len(objects_names) < self.simulator.objects_count:
+                temp = [
+                    None for _ in range(self.simulator.objects_count - len(objects_names))
+                ]
+                objects_names += temp
+            elif len(objects_names) > self.simulator.objects_count:
+                warnings.warn(
+                    "Number of names provided is greater than number of objects. Ignoring extra names."
+                )
+
+        for i in range(self.simulator.objects_count):
+            x = self.simulator.sol_state[index, (i * 3) : (i * 3) + 3]
+            v = self.simulator.sol_state[
+                index,
+                ((self.simulator.objects_count + i) * 3) : (
+                    self.simulator.objects_count + i
+                )
+                * 3
+                + 3,
+            ]
+            m = self.simulator.m[i]
+
+            if objects_names is None:
+                system.add(x, v, m)
+            else:
+                system.add(x, v, m, objects_name=objects_names[i])
+
+        return system
