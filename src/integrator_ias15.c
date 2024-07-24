@@ -16,6 +16,7 @@
  * \param t Pointer to the current simulation time
  * \param tf Total time to be integrated
  * \param input_tolerance Tolerance of the integrator
+ * \param acceleration Pointer to the acceleration function
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
  * \param solution Pointer to a Solution struct, in order to store the solution
@@ -79,6 +80,7 @@ void ias15_aux_r(real *aux_r);
  * \param a Array of acceleration vectors of all objects
  * \param m Array of masses for all objects
  * \param G Gravitational constant
+ * \param acceleration Pointer to the acceleration function
  * 
  * \return initial dt for IAS15 integrator
  * \retval -1.0 If failed to allocate memory for calculation
@@ -136,6 +138,7 @@ real ias15_initial_dt(
  * \param v_err_comp_sum Array of round off errors of velocity vectors
  * \param temp_x_err_comp_sum Temporary array of round off errors of position vectors
  * \param temp_v_err_comp_sum Temporary array of round off errors of velocity vectors
+ * \param acceleration Pointer to the acceleration function
  * 
  * \return None
  */

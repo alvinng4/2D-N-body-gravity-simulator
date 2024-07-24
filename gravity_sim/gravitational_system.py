@@ -263,6 +263,16 @@ class GravitationalSystem:
         self.objects_count = self.m.size
         del self.objects_names[index]
 
+    def center_of_mass_correction(self) -> None:
+        """
+        Set center of mass of position and V_CM to zero
+        """
+        r_cm = np.sum(self.m[:, np.newaxis] * self.x, axis=0) / np.sum(self.m)
+        v_cm = np.sum(self.m[:, np.newaxis] * self.v, axis=0) / np.sum(self.m)
+
+        self.x -= r_cm
+        self.v -= v_cm
+
     def save(
         self,
         system_name: str = None,
@@ -352,33 +362,18 @@ class GravitationalSystem:
                         GravitationalSystem.SOLAR_SYSTEM_MASSES["Moon"],
                     ]
                 )
-                R_CM = (
-                    1
-                    / np.sum(m)
-                    * (
-                        m[0] * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Sun"])
-                        + m[1] * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Earth"])
-                        + m[2] * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Moon"])
-                    )
-                )
-                V_CM = (
-                    1
-                    / np.sum(m)
-                    * (
-                        m[0] * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Sun"])
-                        + m[1] * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Earth"])
-                        + m[2] * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Moon"])
-                    )
-                )
-                R1 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Sun"] - R_CM)
-                R2 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Earth"] - R_CM)
-                R3 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Moon"] - R_CM)
-                V1 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Sun"] - V_CM)
-                V2 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Earth"] - V_CM)
-                V3 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Moon"] - V_CM)
+
+                R1 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Sun"])
+                R2 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Earth"])
+                R3 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Moon"])
+                V1 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Sun"])
+                V2 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Earth"])
+                V3 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Moon"])
                 self.add(R1, V1, m[0], "Sun")
                 self.add(R2, V2, m[1], "Earth")
                 self.add(R3, V3, m[2], "Moon")
+
+                self.center_of_mass_correction()
 
             case "figure-8":
                 loaded_system_flag = True
@@ -425,66 +420,26 @@ class GravitationalSystem:
                         GravitationalSystem.SOLAR_SYSTEM_MASSES["Neptune"],
                     ]
                 )
-                R_CM = (
-                    1
-                    / np.sum(m)
-                    * (
-                        m[0] * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Sun"])
-                        + m[1]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Mercury"])
-                        + m[2] * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Venus"])
-                        + m[3] * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Earth"])
-                        + m[4] * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Mars"])
-                        + m[5]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Jupiter"])
-                        + m[6]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Saturn"])
-                        + m[7]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Uranus"])
-                        + m[8]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Neptune"])
-                    )
-                )
-                V_CM = (
-                    1
-                    / np.sum(m)
-                    * (
-                        m[0] * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Sun"])
-                        + m[1]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Mercury"])
-                        + m[2] * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Venus"])
-                        + m[3] * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Earth"])
-                        + m[4] * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Mars"])
-                        + m[5]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Jupiter"])
-                        + m[6]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Saturn"])
-                        + m[7]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Uranus"])
-                        + m[8]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Neptune"])
-                    )
-                )
 
-                R1 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Sun"] - R_CM)
-                R2 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Mercury"] - R_CM)
-                R3 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Venus"] - R_CM)
-                R4 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Earth"] - R_CM)
-                R5 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Mars"] - R_CM)
-                R6 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Jupiter"] - R_CM)
-                R7 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Saturn"] - R_CM)
-                R8 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Uranus"] - R_CM)
-                R9 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Neptune"] - R_CM)
+                R1 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Sun"])
+                R2 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Mercury"])
+                R3 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Venus"])
+                R4 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Earth"])
+                R5 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Mars"])
+                R6 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Jupiter"])
+                R7 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Saturn"])
+                R8 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Uranus"])
+                R9 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Neptune"])
 
-                V1 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Sun"] - V_CM)
-                V2 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Mercury"] - V_CM)
-                V3 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Venus"] - V_CM)
-                V4 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Earth"] - V_CM)
-                V5 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Mars"] - V_CM)
-                V6 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Jupiter"] - V_CM)
-                V7 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Saturn"] - V_CM)
-                V8 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Uranus"] - V_CM)
-                V9 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Neptune"] - V_CM)
+                V1 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Sun"])
+                V2 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Mercury"])
+                V3 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Venus"])
+                V4 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Earth"])
+                V5 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Mars"])
+                V6 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Jupiter"])
+                V7 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Saturn"])
+                V8 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Uranus"])
+                V9 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Neptune"])
 
                 self.add(R1, V1, m[0], "Sun")
                 self.add(R2, V2, m[1], "Mercury")
@@ -495,6 +450,8 @@ class GravitationalSystem:
                 self.add(R7, V7, m[6], "Saturn")
                 self.add(R8, V8, m[7], "Uranus")
                 self.add(R9, V9, m[8], "Neptune")
+
+                self.center_of_mass_correction()
 
             case "solar_system_plus":
                 loaded_system_flag = True
@@ -516,83 +473,31 @@ class GravitationalSystem:
                     ]
                 )
 
-                R_CM = (
-                    1
-                    / np.sum(m)
-                    * (
-                        m[0] * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Sun"])
-                        + m[1]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Mercury"])
-                        + m[2] * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Venus"])
-                        + m[3] * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Earth"])
-                        + m[4] * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Mars"])
-                        + m[5]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Jupiter"])
-                        + m[6]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Saturn"])
-                        + m[7]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Uranus"])
-                        + m[8]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Neptune"])
-                        + m[9] * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Pluto"])
-                        + m[10]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Ceres"])
-                        + m[11]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Vesta"])
-                    )
-                )
+                R1 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Sun"])
+                R2 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Mercury"])
+                R3 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Venus"])
+                R4 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Earth"])
+                R5 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Mars"])
+                R6 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Jupiter"])
+                R7 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Saturn"])
+                R8 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Uranus"])
+                R9 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Neptune"])
+                R10 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Pluto"])
+                R11 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Ceres"])
+                R12 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Vesta"])
 
-                V_CM = (
-                    1
-                    / np.sum(m)
-                    * (
-                        m[0] * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Sun"])
-                        + m[1]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Mercury"])
-                        + m[2] * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Venus"])
-                        + m[3] * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Earth"])
-                        + m[4] * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Mars"])
-                        + m[5]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Jupiter"])
-                        + m[6]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Saturn"])
-                        + m[7]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Uranus"])
-                        + m[8]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Neptune"])
-                        + m[9] * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Pluto"])
-                        + m[10]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Ceres"])
-                        + m[11]
-                        * np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Vesta"])
-                    )
-                )
-
-                R1 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Sun"] - R_CM)
-                R2 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Mercury"] - R_CM)
-                R3 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Venus"] - R_CM)
-                R4 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Earth"] - R_CM)
-                R5 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Mars"] - R_CM)
-                R6 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Jupiter"] - R_CM)
-                R7 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Saturn"] - R_CM)
-                R8 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Uranus"] - R_CM)
-                R9 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Neptune"] - R_CM)
-                R10 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Pluto"] - R_CM)
-                R11 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Ceres"] - R_CM)
-                R12 = np.array(GravitationalSystem.SOLAR_SYSTEM_POS["Vesta"] - R_CM)
-
-                V1 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Sun"] - V_CM)
-                V2 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Mercury"] - V_CM)
-                V3 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Venus"] - V_CM)
-                V4 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Earth"] - V_CM)
-                V5 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Mars"] - V_CM)
-                V6 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Jupiter"] - V_CM)
-                V7 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Saturn"] - V_CM)
-                V8 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Uranus"] - V_CM)
-                V9 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Neptune"] - V_CM)
-                V10 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Pluto"] - V_CM)
-                V11 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Ceres"] - V_CM)
-                V12 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Vesta"] - V_CM)
+                V1 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Sun"])
+                V2 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Mercury"])
+                V3 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Venus"])
+                V4 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Earth"])
+                V5 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Mars"])
+                V6 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Jupiter"])
+                V7 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Saturn"])
+                V8 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Uranus"])
+                V9 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Neptune"])
+                V10 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Pluto"])
+                V11 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Ceres"])
+                V12 = np.array(GravitationalSystem.SOLAR_SYSTEM_VEL["Vesta"])
 
                 self.add(R1, V1, m[0], "Sun")
                 self.add(R2, V2, m[1], "Mercury")
@@ -606,6 +511,8 @@ class GravitationalSystem:
                 self.add(R10, V10, m[9], "Pluto")
                 self.add(R11, V11, m[10], "Ceres")
                 self.add(R12, V12, m[11], "Vesta")
+
+                self.center_of_mass_correction()
 
             # Customized system
             case _:

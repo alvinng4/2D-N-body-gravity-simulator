@@ -259,6 +259,7 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
  * \param G Gravitational constant
  * \param abs_tolerance Absolute tolerance of the integrator
  * \param rel_tolerance Relative tolerance of the integrator
+ * \param acceleration Pointer to the acceleration function
  * 
  * \warning: Modified to return dt * 1e-2 since this function gives initial dt thats too large
  * 
@@ -403,6 +404,7 @@ WIN32DLL_API real rk_embedded_initial_dt(
  * \param tf Total time to be integrated
  * \param input_abs_tolerance Absolute tolerance of the integrator
  * \param input_rel_tolerance Relative tolerance of the integrator
+ * \param acceleration Pointer to the acceleration function
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
  * \param solution Pointer to a Solution struct, in order to store the solution

@@ -296,7 +296,7 @@ class GravitySimulator:
     ) -> GravitationalSystem:
         """
         Convert the latest state of the solution to a new GravitationalSystem object
-        
+
         Parameters
         ----------
         index : int (optional)
@@ -313,7 +313,8 @@ class GravitySimulator:
         if objects_names is not None:
             if len(objects_names) < self.simulator.objects_count:
                 temp = [
-                    None for _ in range(self.simulator.objects_count - len(objects_names))
+                    None
+                    for _ in range(self.simulator.objects_count - len(objects_names))
                 ]
                 objects_names += temp
             elif len(objects_names) > self.simulator.objects_count:

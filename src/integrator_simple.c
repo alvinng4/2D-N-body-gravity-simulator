@@ -16,6 +16,7 @@
  * \param G Gravitational constant
  * \param dt Time step of the system
  * \param npts Number of time steps to be integrated
+ * \param acceleration Pointer to the acceleration function
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
@@ -178,6 +179,7 @@ err_calc_memory:
  * \param m Array of masses for all objects
  * \param G Gravitational constant
  * \param dt Time step of the system
+ * \param acceleration Pointer to the acceleration function
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
@@ -340,6 +342,7 @@ err_calc_memory:
  * \param m Array of masses for all objects
  * \param G Gravitational constant
  * \param dt Time step of the system
+ * \param acceleration Pointer to the acceleration function
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
@@ -561,6 +564,7 @@ err_calc_memory:
  * \param m Array of masses for all objects
  * \param G Gravitational constant
  * \param dt Time step of the system
+ * \param acceleration Pointer to the acceleration function
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
