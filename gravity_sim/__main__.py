@@ -929,14 +929,14 @@ class GravitySimulatorCLI:
         labels = []
         legend = False
 
-        for object_name in self.gravitational_system.object_names:
+        for objects_name in self.gravitational_system.objects_names:
             try:
-                colors.append(self.solar_like_systems_colors[object_name])
+                colors.append(self.solar_like_systems_colors[objects_name])
                 legend = True  # Show legend if one of the name is recognized
             except:
                 colors.append(None)
 
-            labels.append(object_name)
+            labels.append(objects_name)
 
         plotting.plot_2d_trajectory(
             self.simulator.objects_count,
@@ -954,14 +954,14 @@ class GravitySimulatorCLI:
         labels = []
         legend = False
 
-        for object_name in self.gravitational_system.object_names:
+        for objects_name in self.gravitational_system.objects_names:
             try:
-                colors.append(self.solar_like_systems_colors[object_name])
+                colors.append(self.solar_like_systems_colors[objects_name])
                 legend = True  # Show legend if one of the name is recognized
             except:
                 colors.append(None)
 
-            labels.append(object_name)
+            labels.append(objects_name)
 
         plotting.plot_3d_trajectory(
             self.simulator.objects_count,
@@ -1010,6 +1010,7 @@ class GravitySimulatorCLI:
                 larger_than=-2,
                 smaller_than=self.data_size,
             )
+            is_dynamic_axes = get_bool("Use dynamic axes limit?")
 
             print()
 
@@ -1020,6 +1021,7 @@ class GravitySimulatorCLI:
             print(f"File name: {file_name}")
             print(f"dpi: {dpi:.1f}")
             print(f"Trail length: {traj_len}")
+            print(f"Dynamic axes limits: {is_dynamic_axes}")
 
             is_cancel = False
             if get_bool("Proceed?"):
@@ -1041,6 +1043,7 @@ class GravitySimulatorCLI:
             file_name,
             dpi,
             traj_len,
+            is_dynamic_axes,
             is_cancel,
         )
 
@@ -1051,6 +1054,7 @@ class GravitySimulatorCLI:
             file_name,
             dpi,
             traj_len,
+            is_dynamic_axes,
             is_cancel,
         ) = self._animation_get_user_input(dim=2)
         if not is_cancel:
@@ -1106,6 +1110,7 @@ class GravitySimulatorCLI:
                 plot_every_nth_point,
                 dpi,
                 traj_len=traj_len,
+                is_dynamic_axes=is_dynamic_axes,
                 colors=colors,
                 labels=labels,
                 legend=legend,
@@ -1121,6 +1126,7 @@ class GravitySimulatorCLI:
             file_name,
             dpi,
             traj_len,
+            is_dynamic_axes,
             is_cancel,
         ) = self._animation_get_user_input(dim=3)
         if not is_cancel:
@@ -1176,6 +1182,7 @@ class GravitySimulatorCLI:
                 plot_every_nth_point,
                 dpi,
                 traj_len=traj_len,
+                is_dynamic_axes=is_dynamic_axes,
                 colors=colors,
                 labels=labels,
                 legend=legend,

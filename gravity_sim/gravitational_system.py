@@ -175,7 +175,7 @@ class GravitationalSystem:
 
     def __init__(self) -> None:
         self.name = None
-        self.object_names = []
+        self.objects_names = []
         self.x = None
         self.v = None
         self.m = None
@@ -217,7 +217,7 @@ class GravitationalSystem:
             self.m = np.append(self.m, m)
 
         self.objects_count = self.m.size
-        self.object_names.append(objects_name)
+        self.objects_names.append(objects_name)
 
     def remove(self, index: int = None, name: str = None) -> None:
         """
@@ -249,10 +249,10 @@ class GravitationalSystem:
             raise ValueError("Error: system has no celestial bodies.")
 
         if name is not None:
-            if name not in self.object_names:
+            if name not in self.objects_names:
                 raise ValueError("Error: name not found in system.")
 
-            index = self.object_names.index(name)
+            index = self.objects_names.index(name)
 
         if index >= self.m.size or index < 0:
             raise ValueError("Error: index out of range.")
@@ -261,7 +261,7 @@ class GravitationalSystem:
         self.v = np.delete(self.v, index, axis=0)
         self.m = np.delete(self.m, index)
         self.objects_count = self.m.size
-        del self.object_names[index]
+        del self.objects_names[index]
 
     def save(
         self,
