@@ -62,7 +62,7 @@ def main():
     zlim_min = -3
     zlim_max = 3
 
-    colors = ["orange", "skyblue", "red", "goldenrod", "gold", "paleturquoise", "blue"]
+    colors = ["orange", "skyblue", "red", "darkgoldenrod", "gold", "paleturquoise", "blue"]
 
     # In the package, we use PillowWriter to generate animation
     # However, for some reason, the PillowWriter run out of memory

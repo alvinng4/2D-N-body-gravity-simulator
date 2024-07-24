@@ -86,7 +86,7 @@ class GravitySimulatorCLI:
             "Venus": "wheat",
             "Earth": "skyblue",
             "Mars": "red",
-            "Jupiter": "goldenrod",
+            "Jupiter": "darkgoldenrod",
             "Saturn": "gold",
             "Uranus": "paleturquoise",
             "Neptune": "blue",

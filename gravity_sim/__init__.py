@@ -1,5 +1,5 @@
 """
-API for N-body gravity simulator
+N-body gravity simulator Library
 """
 
 import ctypes
