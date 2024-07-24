@@ -1,9 +1,11 @@
 # Gravity Simulator
-Newtonian N-body gravity simulator accelerated with C library.
+Newtonian N-body gravity simulator accelerated with C library
+* Nine integrators including RKF7(8) and IAS15 are implemented
+* WHFast and Barnes-Hut algorithm will be implemented in the future
 
 <img src="./examples/solar_plus_3d.gif" alt="Image" width="300">
-<img src="./examples/rel_energy.png" alt="Image" width="300">
 <img src="./examples/astroid_belt.gif" alt="Image" width="300">
+<img src="./examples/rel_energy.png" alt="Image" width="300">
 
 ## Interactive simulator: 
 Checkout the interactive simulator at https://www.github.com/alvinng4/OrbitSim
