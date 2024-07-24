@@ -10,6 +10,7 @@ import PIL
 import matplotlib.pyplot as plt
 
 import gravity_sim
+from gravity_sim.progress_bar import Progress_bar
 
 
 def main():
@@ -18,6 +19,32 @@ def main():
     system.load("solar_system")
     system.remove(name="Mercury")
     system.remove(name="Venus")
+    colors = [
+        "orange",
+        "skyblue",
+        "red",
+        "darkgoldenrod",
+        "gold",
+        "paleturquoise",
+        "blue",
+    ]
+
+    # system.remove(name="Neptune")
+    # system.remove(name="Uranus")
+    # x, v = from_orbital_elements_to_cartesian(
+    #     mp=1.0,
+    #     ms=1.0,
+    #     semimajor_axis=5.5,
+    #     eccentricity=0.7,
+    #     true_anomaly=np.radians(20.0),
+    #     inclination=np.radians(0.4),
+    #     argument_of_periapsis=np.radians(4.0),
+    #     longitude_of_ascending_node=np.radians(4.0),
+    #     G=system.G,
+    # )
+    # m = 1.0
+    # system.add(x, v, m, objects_name="Added Star")
+    # colors = ["orange", "skyblue", "red", "darkgoldenrod", "gold", "orange"]
 
     massive_objects_count = system.objects_count
 
@@ -64,7 +91,15 @@ def main():
     zlim_min = -3
     zlim_max = 3
 
-    colors = ["orange", "skyblue", "red", "darkgoldenrod", "gold", "paleturquoise", "blue"]
+    colors = [
+        "orange",
+        "skyblue",
+        "red",
+        "darkgoldenrod",
+        "gold",
+        "paleturquoise",
+        "blue",
+    ]
 
     # In the package, we use PillowWriter to generate animation
     # However, for some reason, the PillowWriter run out of memory
@@ -72,93 +107,106 @@ def main():
     # combine them as gif instead.
     save_count = 0
     num_loops = 200
-    for k in range(num_loops):
-        print(f"Loop {k+1}/{num_loops}")
-        grav_sim.simulator.launch_simulation(
-            system,
-            "rk4",
-            grav_sim.years_to_days(0.02),
-            dt=grav_sim.years_to_days(0.0005),
-            store_every_n=20,
-            acceleration="massless",
-        )
-
-        # Plot once every nth point
-        for j in range(len(grav_sim.simulator.sol_state)):
-            if j == 0:
-                continue
-
-            # Plot the trajectory from the beginning to current position
-            for i in range(0, massive_objects_count):
-                ax.grid(False)
-                ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-                ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-                ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-                ax.set_xticks([])
-                ax.set_yticks([])
-                ax.set_zticks([])
-                ax.xaxis.set_visible(False)
-                ax.yaxis.set_visible(False)
-                ax.zaxis.set_visible(False)
-                ax.xaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-                ax.yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-                ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-
-                ax.plot(
-                    grav_sim.simulator.sol_state[j, i * 3],
-                    grav_sim.simulator.sol_state[j, 1 + i * 3],
-                    "o",
-                    label=system.objects_names[i],
-                    color=colors[i],
-                    markersize=6,
-                )
-
-            x = grav_sim.simulator.sol_state[
-                j, (massive_objects_count * 3) : (grav_sim.simulator.objects_count * 3) : 3
-            ]
-            y = grav_sim.simulator.sol_state[
-                j, (massive_objects_count * 3 + 1) : (grav_sim.simulator.objects_count * 3) : 3
-            ]
-            z = grav_sim.simulator.sol_state[
-                j, (massive_objects_count * 3 + 2) : (grav_sim.simulator.objects_count * 3) : 3
-            ]
-            ax.scatter(
-                x,
-                y,
-                z,
-                color="white",
-                marker=".",
-                s=0.1,
-                alpha=0.1,
+    progress_bar = Progress_bar()
+    with progress_bar:
+        print("Generating frames...")
+        for _ in progress_bar.track(range(num_loops)):
+            grav_sim.simulator.launch_simulation(
+                system,
+                "rk4",
+                grav_sim.years_to_days(0.02),
+                dt=grav_sim.years_to_days(0.0005),
+                store_every_n=20,
+                acceleration="massless",
+                no_progress_bar=True,
+                no_print=True,
             )
 
-            # Add legend
-            ax.legend(loc="center right", bbox_to_anchor=(1.325, 0.5))
-            # Adjust figure for the legend
-            if j == 0:
-                fig.subplots_adjust(right=0.7)
-                fig.tight_layout()
+            # Plot once every nth point
+            for j in range(len(grav_sim.simulator.sol_state)):
+                if j == 0:
+                    continue
 
-            # Set axis labels and setting 3d axes scale before capturing the frame
-            # ax.set_xlabel("$x$ (AU)")
-            # ax.set_ylabel("$y$ (AU)")
-            # ax.set_zlabel("$z$ (AU)")
+                # Plot the trajectory from the beginning to current position
+                for i in range(0, massive_objects_count):
+                    ax.grid(False)
+                    ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+                    ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+                    ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+                    ax.set_xticks([])
+                    ax.set_yticks([])
+                    ax.set_zticks([])
+                    ax.xaxis.set_visible(False)
+                    ax.yaxis.set_visible(False)
+                    ax.zaxis.set_visible(False)
+                    ax.xaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+                    ax.yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+                    ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
 
-            ax.set_xlim3d([xlim_min, xlim_max])
-            ax.set_ylim3d([ylim_min, ylim_max])
-            ax.set_zlim3d([zlim_min, zlim_max])
+                    ax.plot(
+                        grav_sim.simulator.sol_state[j, i * 3],
+                        grav_sim.simulator.sol_state[j, 1 + i * 3],
+                        "o",
+                        label=system.objects_names[i],
+                        color=colors[i],
+                        markersize=6,
+                    )
 
-            # Set equal aspect ratio to prevent distortion
-            ax.set_aspect("equal")
+                x = grav_sim.simulator.sol_state[
+                    j,
+                    (massive_objects_count * 3) : (
+                        grav_sim.simulator.objects_count * 3
+                    ) : 3,
+                ]
+                y = grav_sim.simulator.sol_state[
+                    j,
+                    (massive_objects_count * 3 + 1) : (
+                        grav_sim.simulator.objects_count * 3
+                    ) : 3,
+                ]
+                z = grav_sim.simulator.sol_state[
+                    j,
+                    (massive_objects_count * 3 + 2) : (
+                        grav_sim.simulator.objects_count * 3
+                    ) : 3,
+                ]
+                ax.scatter(
+                    x,
+                    y,
+                    z,
+                    color="white",
+                    marker=".",
+                    s=0.1,
+                    alpha=0.1,
+                )
 
-            # Capture the frame
-            plt.savefig(file_path / f"frames_{save_count:04d}.png", dpi=300)
-            save_count += 1
+                # Add legend
+                ax.legend(loc="center right", bbox_to_anchor=(1.325, 0.5))
+                # Adjust figure for the legend
+                if j == 0:
+                    fig.subplots_adjust(right=0.7)
+                    fig.tight_layout()
 
-            # Clear the plot to prepare for the next frame
-            ax.clear()
+                # Set axis labels and setting 3d axes scale before capturing the frame
+                # ax.set_xlabel("$x$ (AU)")
+                # ax.set_ylabel("$y$ (AU)")
+                # ax.set_zlabel("$z$ (AU)")
 
-        system = grav_sim.sol_state_to_system(objects_names=system.objects_names)
+                ax.set_xlim3d([xlim_min, xlim_max])
+                ax.set_ylim3d([ylim_min, ylim_max])
+                ax.set_zlim3d([zlim_min, zlim_max])
+
+                # Set equal aspect ratio to prevent distortion
+                ax.set_aspect("equal")
+
+                # Capture the frame
+                plt.savefig(file_path / f"frames_{save_count:04d}.png", dpi=300)
+                save_count += 1
+
+                # Clear the plot to prepare for the next frame
+                ax.clear()
+
+            system = grav_sim.sol_state_to_system(objects_names=system.objects_names)
 
     plt.close("all")
 

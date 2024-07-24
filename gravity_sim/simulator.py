@@ -45,6 +45,8 @@ class Simulator:
         tolerance: float = None,
         store_every_n: int = 1,
         acceleration: str = "pairwise",
+        no_progress_bar: bool = False,
+        no_print: bool = False,
     ) -> None:
         """
         Launch simulation
@@ -65,6 +67,10 @@ class Simulator:
             Acceleration method -- "pairwise", "massless"
                 pairwise: Pairwise acceleration
                 massless: System with massless particles
+        no_progress_bar : bool, optional
+            Disable progress bar
+        no_print : bool, optional
+            Disable print statements
         """
         self.x = gravitational_system.x.copy()
         self.v = gravitational_system.v.copy()
@@ -96,8 +102,9 @@ class Simulator:
             elif acceleration == "barnes_hut":
                 raise NotImplementedError
 
-        print("Simulating the system...")
-        start = timeit.default_timer()
+        if not no_print:
+            print("Simulating the system...")
+            start = timeit.default_timer()
 
         if self.is_c_lib:
             match self.integrator:
@@ -122,6 +129,7 @@ class Simulator:
                         self.dt,
                         self.tf,
                         acceleration_func,
+                        no_progress_bar,
                     )
 
                 case "rkf45" | "dopri" | "dverk" | "rkf78":
@@ -147,6 +155,7 @@ class Simulator:
                         self.tolerance,
                         self.tolerance,
                         acceleration_func,
+                        no_progress_bar,
                     )
 
                 case "ias15":
@@ -166,6 +175,7 @@ class Simulator:
                         self.tf,
                         self.tolerance,
                         acceleration_func,
+                        no_progress_bar,
                     )
 
         else:
@@ -190,6 +200,7 @@ class Simulator:
                         self.G,
                         self.dt,
                         self.tf,
+                        no_progress_bar,
                     )
 
                 case "rkf45" | "dopri" | "dverk" | "rkf78":
@@ -214,6 +225,7 @@ class Simulator:
                         self.tf,
                         self.tolerance,
                         self.tolerance,
+                        no_progress_bar,
                     )
 
                 case "ias15":
@@ -235,12 +247,14 @@ class Simulator:
                         self.G,
                         self.tf,
                         self.tolerance,
+                        no_progress_bar,
                     )
 
-        stop = timeit.default_timer()
-        self.run_time = stop - start
-        print(f"Run time: {self.run_time:.3f} s")
-        print("")
+        if not no_print:
+            stop = timeit.default_timer()
+            self.run_time = stop - start
+            print(f"Run time: {self.run_time:.3f} s")
+            print("")
 
     def compute_energy(self):
         """

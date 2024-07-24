@@ -39,6 +39,7 @@ class IAS15:
         tf,
         tolerance,
         acceleration_func,
+        no_progress_bar=False,
     ):
         """
         Recommended tolerance: 1e-9
@@ -56,11 +57,12 @@ class IAS15:
         t = ctypes.c_double(0.0)
         store_count = ctypes.c_int(0)
 
-        progress_bar_thread = threading.Thread(
-            target=progress_bar_c_lib_adaptive_step_size,
-            args=(tf, t, store_count, self.is_exit_ctypes_bool),
-        )
-        progress_bar_thread.start()
+        if not no_progress_bar:
+            progress_bar_thread = threading.Thread(
+                target=progress_bar_c_lib_adaptive_step_size,
+                args=(tf, t, store_count, self.is_exit_ctypes_bool),
+            )
+            progress_bar_thread.start()
 
         # parameters are double no matter what "real" is defined
         def ias15_wrapper(c_lib_ias15, return_queue, *args):
@@ -115,8 +117,9 @@ class IAS15:
                 pass  # Should be caught in run_prog and exit
 
         # Close the progress_bar_thread
-        t.value = tf
-        progress_bar_thread.join()
+        if not no_progress_bar:
+            t.value = tf
+            progress_bar_thread.join()
 
         # Convert C arrays to numpy arrays
         return_sol_state = np.ctypeslib.as_array(
@@ -142,7 +145,9 @@ class IAS15:
             return_sol_dt,
         )
 
-    def simulation_numpy(self, objects_count, x, v, m, G, tf, tolerance):
+    def simulation_numpy(
+        self, objects_count, x, v, m, G, tf, tolerance, no_progress_bar=False
+    ):
         # Recommended tolerance: 1e-9
 
         # Safety factors for step-size control
@@ -191,7 +196,8 @@ class IAS15:
         store_count = 0
         progress_bar = Progress_bar_with_data_size()
         with progress_bar:
-            task = progress_bar.add_task("", total=tf, store_count=store_count + 1)
+            if not no_progress_bar:
+                task = progress_bar.add_task("", total=tf, store_count=store_count + 1)
             while True:
                 (
                     x,
@@ -235,7 +241,8 @@ class IAS15:
                 )
 
                 # Update step
-                progress_bar.update(task, completed=t, store_count=store_count + 1)
+                if not no_progress_bar:
+                    progress_bar.update(task, completed=t, store_count=store_count + 1)
                 count += 1
 
                 # Store step
@@ -272,7 +279,8 @@ class IAS15:
                     sol_time = np.concatenate((sol_time, np.zeros(npts)))
                     sol_dt = np.concatenate((sol_dt, np.zeros(npts)))
 
-            progress_bar.update(task, completed=tf, store_count=store_count + 1)
+            if not no_progress_bar:
+                progress_bar.update(task, completed=tf, store_count=store_count + 1)
             return (
                 sol_state[0 : store_count + 1],
                 sol_time[0 : store_count + 1],

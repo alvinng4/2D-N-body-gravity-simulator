@@ -39,6 +39,7 @@ class SimpleIntegrator:
         dt,
         tf,
         acceleration_func,
+        no_progress_bar=False,
     ):
         class Solutions(ctypes.Structure):
             _fields_ = [
@@ -60,11 +61,12 @@ class SimpleIntegrator:
 
         store_count = ctypes.c_int(0)
 
-        progress_bar_thread = threading.Thread(
-            target=progress_bar_c_lib_fixed_step_size,
-            args=(store_npts, store_count, self.is_exit_ctypes_bool),
-        )
-        progress_bar_thread.start()
+        if not no_progress_bar:
+            progress_bar_thread = threading.Thread(
+                target=progress_bar_c_lib_fixed_step_size,
+                args=(store_npts, store_count, self.is_exit_ctypes_bool),
+            )
+            progress_bar_thread.start()
 
         # parameters are double no matter what "real" is defined
         def simple_integrator_wrapper(c_lib_integrator, return_queue, *args):
@@ -185,9 +187,10 @@ class SimpleIntegrator:
                 pass  # Should be caught in run_prog and exit
 
         # Close the progress_bar_thread
-        if store_count.value < (store_npts - 1):
-            store_count.value = store_npts - 1
-        progress_bar_thread.join()
+        if not no_progress_bar:
+            if store_count.value < (store_npts - 1):
+                store_count.value = store_npts - 1
+            progress_bar_thread.join()
 
         # Convert C arrays to numpy arrays
         return_sol_state = np.ctypeslib.as_array(
@@ -213,7 +216,9 @@ class SimpleIntegrator:
             return_sol_dt,
         )
 
-    def simulation_numpy(self, integrator, objects_count, x, v, m, G, dt, tf):
+    def simulation_numpy(
+        self, integrator, objects_count, x, v, m, G, dt, tf, no_progress_bar=False
+    ):
         npts = int(np.floor((tf / dt))) + 1  # + 1 for t0
         if self.store_every_n != 1:
             store_npts = math.floor((npts - 1) / self.store_every_n) + 1  # + 1 for t0
@@ -235,7 +240,8 @@ class SimpleIntegrator:
         progress_bar = Progress_bar_with_data_size()
         store_count = 0
         with progress_bar:
-            task = progress_bar.add_task("", total=store_npts, store_count=1)
+            if not no_progress_bar:
+                task = progress_bar.add_task("", total=store_npts, store_count=1)
             match integrator:
                 case "euler":
                     for count in range(npts - 1):
@@ -260,12 +266,15 @@ class SimpleIntegrator:
                                 )
                             )
 
+                        if not no_progress_bar:
+                            progress_bar.update(
+                                task, completed=store_count, store_count=store_count + 1
+                            )
+
+                    if not no_progress_bar:
                         progress_bar.update(
-                            task, completed=store_count, store_count=store_count + 1
+                            task, completed=store_npts, store_count=store_npts
                         )
-                    progress_bar.update(
-                        task, completed=store_npts, store_count=store_npts
-                    )
 
                 case "euler_cromer":
                     for count in range(npts - 1):
@@ -290,12 +299,15 @@ class SimpleIntegrator:
                                 )
                             )
 
+                        if not no_progress_bar:
+                            progress_bar.update(
+                                task, completed=store_count, store_count=store_count + 1
+                            )
+
+                    if not no_progress_bar:
                         progress_bar.update(
-                            task, completed=store_count, store_count=store_count + 1
+                            task, completed=store_npts, store_count=store_npts
                         )
-                    progress_bar.update(
-                        task, completed=store_npts, store_count=store_npts
-                    )
 
                 case "rk4":
                     for count in range(npts - 1):
@@ -326,12 +338,15 @@ class SimpleIntegrator:
                                 )
                             )
 
+                        if not no_progress_bar:
+                            progress_bar.update(
+                                task, completed=store_count, store_count=store_count + 1
+                            )
+
+                    if not no_progress_bar:
                         progress_bar.update(
-                            task, completed=store_count, store_count=store_count + 1
+                            task, completed=store_npts, store_count=store_npts
                         )
-                    progress_bar.update(
-                        task, completed=store_npts, store_count=store_npts
-                    )
 
                 case "leapfrog":
                     a = acceleration(objects_count, x, m, G)
@@ -364,12 +379,15 @@ class SimpleIntegrator:
                                 )
                             )
 
+                        if not no_progress_bar:
+                            progress_bar.update(
+                                task, completed=store_count, store_count=store_count + 1
+                            )
+
+                    if not no_progress_bar:
                         progress_bar.update(
-                            task, completed=store_count, store_count=store_count + 1
+                            task, completed=store_npts, store_count=store_npts
                         )
-                    progress_bar.update(
-                        task, completed=store_npts, store_count=store_npts
-                    )
 
         return self.sol_state, self.sol_time, self.sol_dt
 

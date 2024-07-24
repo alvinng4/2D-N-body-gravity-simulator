@@ -13,6 +13,7 @@ import typing
 import warnings
 
 import numpy as np
+
 sys.path.append(str(Path(__file__).parent))
 
 from gravitational_system import GravitationalSystem

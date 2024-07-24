@@ -56,6 +56,7 @@ class RKEmbedded:
         abs_tolerance,
         rel_tolerance,
         acceleration_func,
+        no_progress_bar=False,
     ):
         class Solutions(ctypes.Structure):
             _fields_ = [
@@ -69,11 +70,12 @@ class RKEmbedded:
         t = ctypes.c_double(0.0)
         store_count = ctypes.c_int(0)
 
-        progress_bar_thread = threading.Thread(
-            target=progress_bar_c_lib_adaptive_step_size,
-            args=(tf, t, store_count, self.is_exit_ctypes_bool),
-        )
-        progress_bar_thread.start()
+        if not no_progress_bar:
+            progress_bar_thread = threading.Thread(
+                target=progress_bar_c_lib_adaptive_step_size,
+                args=(tf, t, store_count, self.is_exit_ctypes_bool),
+            )
+            progress_bar_thread.start()
 
         # parameters are double no matter what "real" is defined
         def rk_embedded_wrapper(c_lib_rk_embedded, return_queue, *args):
@@ -130,8 +132,9 @@ class RKEmbedded:
                 pass  # Should be caught in run_prog and exit
 
         # Close the progress_bar_thread
-        t.value = tf
-        progress_bar_thread.join()
+        if not no_progress_bar:
+            t.value = tf
+            progress_bar_thread.join()
 
         # Convert C arrays to numpy arrays
         return_sol_state = np.ctypeslib.as_array(
@@ -158,7 +161,17 @@ class RKEmbedded:
         )
 
     def simulation_numpy(
-        self, order, objects_count, x, v, m, G, tf, abs_tolerance, rel_tolerance
+        self,
+        order,
+        objects_count,
+        x,
+        v,
+        m,
+        G,
+        tf,
+        abs_tolerance,
+        rel_tolerance,
+        no_progress_bar=False,
     ):
         (
             self.power,
@@ -200,6 +213,7 @@ class RKEmbedded:
                 abs_tolerance,
                 rel_tolerance,
                 self.store_every_n,
+                no_progress_bar,
             )
 
     @staticmethod
@@ -220,6 +234,7 @@ class RKEmbedded:
         abs_tolerance: float,
         rel_tolerance: float,
         store_every_n: int,
+        no_progress_bar: bool,
     ):
         """
         Perform simulation using rk_embedded methods
@@ -265,7 +280,9 @@ class RKEmbedded:
         # Launch integration:
         count = 0
         store_count = 0
-        task = progress_bar.add_task("", total=tf, store_count=store_count + 1)
+        if not no_progress_bar:
+            task = progress_bar.add_task("", total=tf, store_count=store_count + 1)
+
         while True:
             # Calculate xk and vk
             vk[0] = acceleration(objects_count, x, m, G)
@@ -353,7 +370,8 @@ class RKEmbedded:
                     sol_time[store_count] = t
                     sol_dt[store_count] = dt
 
-                progress_bar.update(task, completed=t, store_count=store_count + 1)
+                if not no_progress_bar:
+                    progress_bar.update(task, completed=t, store_count=store_count + 1)
 
                 # Check buffer size and extend if needed :
                 if (store_count + 1) == len(sol_state):
@@ -380,7 +398,8 @@ class RKEmbedded:
                 dt = tf - t
 
             if t >= tf:
-                progress_bar.update(task, completed=tf, store_count=store_count + 1)
+                if not no_progress_bar:
+                    progress_bar.update(task, completed=tf, store_count=store_count + 1)
                 return (
                     sol_state[0 : store_count + 1],
                     sol_time[0 : store_count + 1],
