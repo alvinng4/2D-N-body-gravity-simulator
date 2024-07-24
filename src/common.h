@@ -41,7 +41,7 @@ typedef struct Solutions
  * 
  * \return None
  */
-void acceleration(
+void acceleration_pairwise(
     int objects_count,
     real *restrict x,
     real *restrict a,

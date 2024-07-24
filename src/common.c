@@ -5,7 +5,7 @@
 #include "common.h"
 
 
-WIN32DLL_API void acceleration(
+WIN32DLL_API void acceleration_pairwise(
     int objects_count,
     real *restrict x,
     real *restrict a,
@@ -50,7 +50,99 @@ WIN32DLL_API void acceleration(
         }
     }
 }
- 
+
+WIN32DLL_API void acceleration_with_massless(
+    int objects_count,
+    real *restrict x,
+    real *restrict a,
+    const real *restrict m,
+    real G
+)
+{   
+    real R_norm;
+    real temp_value;
+    real temp_vec[3];
+    real R[3];
+    
+    // Empty the input array
+    for (int i = 0; i < objects_count; i++)
+    {
+        a[i * 3 + 0] = 0.0;
+        a[i * 3 + 1] = 0.0;
+        a[i * 3 + 2] = 0.0;
+    }
+
+    int *restrict massive_indices = calloc(objects_count, sizeof(int));
+    int *restrict massless_indices = calloc(objects_count, sizeof(int));
+    int massive_idx = 0;
+    int massless_idx = 0;
+    for (int i = 0; i < objects_count; i++)
+    {
+        if (m[i] != 0)
+        {
+            massive_indices[massive_idx] = i;
+            massive_idx++;
+        }
+        else
+        {
+            massless_indices[massless_idx] = i;
+            massless_idx++;
+        }
+    }
+
+    // Pairwise acceleration calculation for massive objects
+    for (int i = 0; i < massive_idx; i++)
+    {
+        for (int j = i + 1; j < massive_idx; j++)
+        {
+            int idx_i = massive_indices[i];
+            int idx_j = massive_indices[j];
+
+            // Calculate \vec{R} and its norm
+            R[0] = x[idx_i * 3 + 0] - x[idx_j * 3 + 0];
+            R[1] = x[idx_i * 3 + 1] - x[idx_j * 3 + 1];
+            R[2] = x[idx_i * 3 + 2] - x[idx_j * 3 + 2];
+            R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2]);
+
+            // Calculate the acceleration
+            temp_value = G / (R_norm * R_norm * R_norm);
+            temp_vec[0] = temp_value * R[0];
+            temp_vec[1] = temp_value * R[1];
+            temp_vec[2] = temp_value * R[2];
+            a[idx_i * 3 + 0] -= temp_vec[0] * m[j];
+            a[idx_i * 3 + 1] -= temp_vec[1] * m[j];
+            a[idx_i * 3 + 2] -= temp_vec[2] * m[j];
+            a[idx_j * 3 + 0] += temp_vec[0] * m[i];
+            a[idx_j * 3 + 1] += temp_vec[1] * m[i];
+            a[idx_j * 3 + 2] += temp_vec[2] * m[i];
+        }
+    }
+
+    for (int i = 0; i < massive_idx; i++)
+    {
+        for (int j = 0; j < massless_idx; j++)
+        {
+            int idx_i = massive_indices[i];
+            int idx_j = massless_indices[j];
+
+            // Calculate \vec{R} and its norm
+            R[0] = x[idx_i * 3 + 0] - x[idx_j * 3 + 0];
+            R[1] = x[idx_i * 3 + 1] - x[idx_j * 3 + 1];
+            R[2] = x[idx_i * 3 + 2] - x[idx_j * 3 + 2];
+            R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2]);
+
+            // Calculate the acceleration
+            temp_value = G / (R_norm * R_norm * R_norm);
+            a[idx_j * 3 + 0] += temp_value * R[0] * m[i];
+            a[idx_j * 3 + 1] += temp_value * R[1] * m[i];
+            a[idx_j * 3 + 2] += temp_value * R[2] * m[i];
+        }
+    }
+
+    free(massive_indices);
+    free(massless_indices);
+}
+
 WIN32DLL_API int initialize_system(
     const char *restrict system,
     real **x,

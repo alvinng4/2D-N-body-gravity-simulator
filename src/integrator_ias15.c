@@ -35,6 +35,7 @@ int ias15(
     double *restrict t,
     double tf, 
     double input_tolerance,
+    void (*acceleration)(int, real*, real*, const real*, real),
     int store_every_n,
     int *restrict store_count,
     Solutions *restrict solution,
@@ -89,7 +90,8 @@ real ias15_initial_dt(
     real *restrict v,
     real *restrict a,
     const real *m,
-    real G
+    real G,
+    void (*acceleration)(int, real*, real*, const real*, real)
 );
 
 /**
@@ -172,7 +174,8 @@ void ias15_step(
     real *restrict x_err_comp_sum, 
     real *restrict v_err_comp_sum,
     real *restrict temp_x_err_comp_sum,
-    real *restrict temp_v_err_comp_sum
+    real *restrict temp_v_err_comp_sum,
+    void (*acceleration)(int, real*, real*, const real*, real)
 );
 
 /**
@@ -356,6 +359,7 @@ WIN32DLL_API int ias15(
     double *restrict t,
     double tf, 
     double input_tolerance,
+    void (*acceleration)(int, real*, real*, const real*, real),
     int store_every_n,
     int *restrict store_count,
     Solutions *restrict solution,
@@ -469,7 +473,7 @@ WIN32DLL_API int ias15(
         }
     }
     sol_time[0] = 0.0;
-    real dt = ias15_initial_dt(objects_count, 15, x, v, a, m, G);
+    real dt = ias15_initial_dt(objects_count, 15, x, v, a, m, G, acceleration);
     if (dt == -1.0)
     {
         goto err_initial_dt_memory;
@@ -513,7 +517,8 @@ WIN32DLL_API int ias15(
             x_err_comp_sum, 
             v_err_comp_sum,
             temp_x_err_comp_sum,
-            temp_v_err_comp_sum
+            temp_v_err_comp_sum,
+            acceleration
         );
 
         // Update count
@@ -722,7 +727,8 @@ WIN32DLL_API real ias15_initial_dt(
     real *restrict v,
     real *restrict a,
     const real *m,
-    real G
+    real G,
+    void (*acceleration)(int, real*, real*, const real*, real)
 )
 {
     acceleration(objects_count, x, a, m, G);
@@ -818,7 +824,8 @@ WIN32DLL_API void ias15_step(
     real *restrict x_err_comp_sum, 
     real *restrict v_err_comp_sum,
     real *restrict temp_x_err_comp_sum,
-    real *restrict temp_v_err_comp_sum
+    real *restrict temp_v_err_comp_sum,
+    void (*acceleration)(int, real*, real*, const real*, real)
 )
 {
     real error, error_b7, dt_new;

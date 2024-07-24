@@ -55,6 +55,7 @@ class RKEmbedded:
         tf,
         abs_tolerance,
         rel_tolerance,
+        acceleration_func,
     ):
         class Solutions(ctypes.Structure):
             _fields_ = [
@@ -81,6 +82,7 @@ class RKEmbedded:
 
         queue = Queue()
         solution = Solutions()
+
         rk_embedded_thread = threading.Thread(
             target=rk_embedded_wrapper,
             args=(
@@ -96,6 +98,7 @@ class RKEmbedded:
                 ctypes.c_double(tf),
                 ctypes.c_double(abs_tolerance),
                 ctypes.c_double(rel_tolerance),
+                acceleration_func,
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
                 ctypes.byref(solution),

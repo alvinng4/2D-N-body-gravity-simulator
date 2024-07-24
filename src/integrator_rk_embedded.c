@@ -274,7 +274,8 @@ WIN32DLL_API real rk_embedded_initial_dt(
     real *restrict m,
     real G,
     real abs_tolerance,
-    real rel_tolerance
+    real rel_tolerance,
+    void (*acceleration)(int, real*, real*, const real*, real)
 )
 {
     real *tolerance_scale_x = malloc(objects_count * 3 * sizeof(real));
@@ -423,6 +424,7 @@ WIN32DLL_API int rk_embedded(
     double tf, 
     double input_abs_tolerance,
     double input_rel_tolerance,
+    void (*acceleration)(int, real*, real*, const real*, real),
     int store_every_n,
     int *restrict store_count,
     Solutions *restrict solution,
@@ -538,7 +540,18 @@ WIN32DLL_API int rk_embedded(
         }
     }
     sol_time[0] = 0.0;
-    real dt = rk_embedded_initial_dt(objects_count, power, x, v, a, m, G, abs_tolerance, rel_tolerance);
+    real dt = rk_embedded_initial_dt(
+        objects_count,
+        power,
+        x,
+        v,
+        a,
+        m,
+        G,
+        abs_tolerance,
+        rel_tolerance,
+        acceleration
+    );
     if (dt == -1.0)
     {
         goto err_initial_dt_memory;

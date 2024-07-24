@@ -38,6 +38,7 @@ class SimpleIntegrator:
         G,
         dt,
         tf,
+        acceleration_func,
     ):
         class Solutions(ctypes.Structure):
             _fields_ = [
@@ -72,6 +73,7 @@ class SimpleIntegrator:
 
         queue = Queue()
         solution = Solutions()
+
         match integrator:
             case "euler":
                 simple_integrator_thread = threading.Thread(
@@ -85,6 +87,7 @@ class SimpleIntegrator:
                         m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                         ctypes.c_double(G),
                         ctypes.c_double(dt),
+                        acceleration_func,
                         ctypes.c_int64(npts),
                         ctypes.c_int(store_npts),
                         ctypes.c_int(self.store_every_n),
@@ -105,6 +108,7 @@ class SimpleIntegrator:
                         m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                         ctypes.c_double(G),
                         ctypes.c_double(dt),
+                        acceleration_func,
                         ctypes.c_int64(npts),
                         ctypes.c_int(store_npts),
                         ctypes.c_int(self.store_every_n),
@@ -125,6 +129,7 @@ class SimpleIntegrator:
                         m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                         ctypes.c_double(G),
                         ctypes.c_double(dt),
+                        acceleration_func,
                         ctypes.c_int64(npts),
                         ctypes.c_int(store_npts),
                         ctypes.c_int(self.store_every_n),
@@ -145,6 +150,7 @@ class SimpleIntegrator:
                         m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                         ctypes.c_double(G),
                         ctypes.c_double(dt),
+                        acceleration_func,
                         ctypes.c_int64(npts),
                         ctypes.c_int(store_npts),
                         ctypes.c_int(self.store_every_n),

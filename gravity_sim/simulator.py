@@ -1,10 +1,7 @@
-import csv
 import ctypes
-import math
-from pathlib import Path
-import sys
 import threading
 import timeit
+import warnings
 
 import numpy as np
 
@@ -47,7 +44,28 @@ class Simulator:
         dt: float = None,
         tolerance: float = None,
         store_every_n: int = 1,
+        acceleration: str = "pairwise",
     ) -> None:
+        """
+        Launch simulation
+
+        Parameters
+        ----------
+        gravitational_system : GravitationalSystem
+        integrator : str
+        tf : float
+            Integration time
+        dt : float, optional
+            Time step
+        tolerance : float, optional
+            Tolerance for adaptive time step integrators
+        store_every_n : int, optional
+            Store every nth time step
+        acceleration : str, optional
+            Acceleration method -- "pairwise", "massless"
+                pairwise: Pairwise acceleration
+                massless: System with massless particles
+        """
         self.x = gravitational_system.x.copy()
         self.v = gravitational_system.v.copy()
         self.m = gravitational_system.m.copy()
@@ -64,11 +82,22 @@ class Simulator:
         self.dt = dt
         self.tolerance = tolerance
 
+        if not self.is_c_lib and acceleration != "pairwise":
+            warnings.warn(
+                "Only pairwise acceleration is available for numpy integrators. "
+                + 'Setting acceleration method to "pairwise".'
+            )
+            acceleration_func = self.c_lib.acceleration_pairwise
+        elif self.is_c_lib:
+            if acceleration == "pairwise":
+                acceleration_func = self.c_lib.acceleration_pairwise
+            elif acceleration == "massless":
+                acceleration_func = self.c_lib.acceleration_with_massless
+            elif acceleration == "barnes_hut":
+                raise NotImplementedError
+
         print("Simulating the system...")
         start = timeit.default_timer()
-
-        # self.x.resize((self.objects_count * 3,))
-        # self.v.resize((self.objects_count * 3,))
 
         if self.is_c_lib:
             match self.integrator:
@@ -92,6 +121,7 @@ class Simulator:
                         self.G,
                         self.dt,
                         self.tf,
+                        acceleration_func,
                     )
 
                 case "rkf45" | "dopri" | "dverk" | "rkf78":
@@ -116,6 +146,7 @@ class Simulator:
                         self.tf,
                         self.tolerance,
                         self.tolerance,
+                        acceleration_func,
                     )
 
                 case "ias15":
@@ -134,6 +165,7 @@ class Simulator:
                         self.G,
                         self.tf,
                         self.tolerance,
+                        acceleration_func,
                     )
 
         else:

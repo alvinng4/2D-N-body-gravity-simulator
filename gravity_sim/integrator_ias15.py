@@ -38,6 +38,7 @@ class IAS15:
         G,
         tf,
         tolerance,
+        acceleration_func,
     ):
         """
         Recommended tolerance: 1e-9
@@ -82,6 +83,7 @@ class IAS15:
                 ctypes.byref(t),
                 ctypes.c_double(tf),
                 ctypes.c_double(tolerance),
+                acceleration_func,
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
                 ctypes.byref(solution),
