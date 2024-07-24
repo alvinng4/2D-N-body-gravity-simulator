@@ -91,17 +91,7 @@ def main():
     zlim_min = -3
     zlim_max = 3
 
-    colors = [
-        "orange",
-        "skyblue",
-        "red",
-        "darkgoldenrod",
-        "gold",
-        "paleturquoise",
-        "blue",
-    ]
-
-    # In the package, we use PillowWriter to generate animation
+    # In the library, we use PillowWriter to generate animation
     # However, for some reason, the PillowWriter run out of memory
     # in this case. Therefore, we save each frames as images and
     # combine them as gif instead.
@@ -200,7 +190,7 @@ def main():
                 ax.set_aspect("equal")
 
                 # Capture the frame
-                plt.savefig(file_path / f"frames_{save_count:04d}.png", dpi=300)
+                plt.savefig(file_path / f"frames_{save_count:04d}.png", dpi=100)
                 save_count += 1
 
                 # Clear the plot to prepare for the next frame

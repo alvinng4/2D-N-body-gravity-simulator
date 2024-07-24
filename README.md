@@ -4,7 +4,7 @@ Newtonian N-body gravity simulator accelerated with C library
 * WHFast and Barnes-Hut algorithm will be implemented in the future
 
 <img src="./examples/solar_plus_3d.gif" alt="Image" width="300">
-<img src="./examples/astroid_belt.gif" alt="Image" width="300">
+<img src="./examples/astroid_belt_added_star.gif" alt="Image" width="300">
 <img src="./examples/rel_energy.png" alt="Image" width="300">
 
 ## Interactive simulator: 
