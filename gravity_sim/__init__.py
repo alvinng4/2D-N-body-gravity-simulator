@@ -9,17 +9,12 @@ import math
 from pathlib import Path
 import platform
 import sys
-import timeit
 import typing
 import warnings
 
 import numpy as np
-
 sys.path.append(str(Path(__file__).parent))
 
-from common import get_bool
-from common import get_int
-from common import get_float
 from gravitational_system import GravitationalSystem
 from simulator import Simulator
 import plotting

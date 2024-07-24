@@ -19,6 +19,8 @@ def main():
     system.remove(name="Mercury")
     system.remove(name="Venus")
 
+    massive_objects_count = system.objects_count
+
     N = 50000
 
     rng = np.random.default_rng()
@@ -87,7 +89,7 @@ def main():
                 continue
 
             # Plot the trajectory from the beginning to current position
-            for i in range(0, 7):
+            for i in range(0, massive_objects_count):
                 ax.grid(False)
                 ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
                 ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
@@ -112,13 +114,13 @@ def main():
                 )
 
             x = grav_sim.simulator.sol_state[
-                j, (7 * 3) : (grav_sim.simulator.objects_count * 3) : 3
+                j, (massive_objects_count * 3) : (grav_sim.simulator.objects_count * 3) : 3
             ]
             y = grav_sim.simulator.sol_state[
-                j, (7 * 3 + 1) : (grav_sim.simulator.objects_count * 3) : 3
+                j, (massive_objects_count * 3 + 1) : (grav_sim.simulator.objects_count * 3) : 3
             ]
             z = grav_sim.simulator.sol_state[
-                j, (7 * 3 + 2) : (grav_sim.simulator.objects_count * 3) : 3
+                j, (massive_objects_count * 3 + 2) : (grav_sim.simulator.objects_count * 3) : 3
             ]
             ax.scatter(
                 x,
