@@ -30,6 +30,17 @@ class GravitySimulator:
     DEFAULT_SYSTEMS = GravitationalSystem.DEFAULT_SYSTEMS
     AVAILABLE_INTEGRATORS = Simulator.AVAILABLE_INTEGRATORS
     DAYS_PER_YEAR = 365.242189
+    AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES = {
+        "euler": "Euler",
+        "euler_cromer": "Euler_Cromer",
+        "rk4": "RK4",
+        "leapfrog": "LeapFrog",
+        "rkf45": "RKF45",
+        "dopri": "DOPRI",
+        "dverk": "DVERK",
+        "rkf78": "RKF78",
+        "ias15": "IAS15",
+    }
 
     def __init__(self):
         self.c_lib = None
@@ -292,7 +303,7 @@ class GravitySimulator:
         )
 
     def sol_state_to_system(
-        self, index: int = -1, objects_names: list = None
+        self, index: int = -1, system_name: str = None, objects_names: list = None
     ) -> GravitationalSystem:
         """
         Convert the latest state of the solution to a new GravitationalSystem object
@@ -301,6 +312,8 @@ class GravitySimulator:
         ----------
         index : int (optional)
             Index of the solution state. Default is the latest state.
+        system_name : str (optional)
+            Name of the system.
         objects_names : list (optional)
             List of names of the objects in the system.
 
@@ -309,7 +322,8 @@ class GravitySimulator:
         GravitationalSystem object
         """
         system = GravitationalSystem()
-
+        system.name = system_name
+        
         if objects_names is not None:
             if len(objects_names) < self.simulator.objects_count:
                 temp = [
@@ -340,3 +354,74 @@ class GravitySimulator:
                 system.add(x, v, m, objects_name=objects_names[i])
 
         return system
+
+    def save_results(self, system_name: str=None, path: str=None, computed_energy: bool=False, store_energy_as_zeros: bool=False) -> None:
+        """
+        Save the results in a csv file
+        Unit: Solar masses, AU, day
+        Format: time, G, dt, total energy, x1, y1, z1, x2, y2, z2, ... vx1, vy1, vz1, vx2, vy2, vz2, ...
+        """
+        data_size = len(self.simulator.sol_time)
+
+        if not computed_energy or store_energy_as_zeros:
+            print("Computing energy...")
+            self.simulator.compute_energy()
+            energy = self.simulator.energy
+        elif store_energy_as_zeros:
+            energy = np.zeros(data_size)
+
+        # Storing the result
+        print("Storing simulation results...")
+        file_path = Path(__file__).parent / "results"
+        file_path.mkdir(parents=True, exist_ok=True)
+        file_path = (
+            Path(__file__).parent
+            / "results"
+            / (
+                str(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+                + "_result.csv"
+            )
+        )
+
+        # Storing metadata
+        with open(file_path, "w", newline="") as file:
+            writer = csv.writer(file, quoting=csv.QUOTE_NONE)
+            writer.writerow(
+                [
+                    f"# Data saved on (YYYY-MM-DD): {str(datetime.datetime.now().strftime('%Y-%m-%d'))}"
+                ]
+            )
+            writer.writerow([f"# System Name: {system_name}"])
+
+            try:
+                integrator_name = GravitySimulator.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
+                    self.simulator.integrator
+                ]
+            except KeyError:
+                integrator_name = None
+
+            writer.writerow([f"# Integrator: {integrator_name}"])
+            writer.writerow([f"# Number of objects: {self.simulator.objects_count}"])
+            writer.writerow([f"# Simulation time (days): {self.simulator.tf}"])
+            writer.writerow([f"# dt (days): {self.simulator.dt}"])
+            writer.writerow([f"# Tolerance: {self.simulator.tolerance}"])
+            writer.writerow([f"# Data size: {data_size}"])
+            writer.writerow([f"# Store every nth point: {self.simulator.store_every_n}"])
+            writer.writerow([f"# Run time (s): {self.simulator.run_time}"])
+            masses_str = " ".join(map(str, self.simulator.m))
+            writer.writerow([f"# masses: {masses_str}"])
+
+        progress_bar = Progress_bar()
+        with progress_bar:
+            with open(file_path, "a", newline="") as file:
+                writer = csv.writer(file)
+                for count in progress_bar.track(range(data_size)):
+                    row = np.insert(
+                        self.simulator.sol_state[count],
+                        0,
+                        energy[count],
+                    )
+                    row = np.insert(row, 0, self.simulator.sol_dt[count])
+                    row = np.insert(row, 0, self.simulator.sol_time[count])
+                    writer.writerow(row.tolist())
+        print(f"Storing completed. Please check {file_path}")

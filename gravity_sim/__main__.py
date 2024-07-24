@@ -26,6 +26,17 @@ from progress_bar import Progress_bar
 
 class GravitySimulatorCLI:
     DAYS_PER_YEAR = 365.242189
+    AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES = {
+        "euler": "Euler",
+        "euler_cromer": "Euler_Cromer",
+        "rk4": "RK4",
+        "leapfrog": "LeapFrog",
+        "rkf45": "RKF45",
+        "dopri": "DOPRI",
+        "dverk": "DVERK",
+        "rkf78": "RKF78",
+        "ias15": "IAS15",
+    }
 
     def __init__(self):
         # --------------------Read command line arguments--------------------
@@ -64,17 +75,6 @@ class GravitySimulatorCLI:
         self.simulator = Simulator(self.c_lib, self.is_exit_ctypes_bool)
         self.tolerance = None
         self.dt = None
-        self.available_integrators_to_printable_names = {
-            "euler": "Euler",
-            "euler_cromer": "Euler_Cromer",
-            "rk4": "RK4",
-            "leapfrog": "LeapFrog",
-            "rkf45": "RKF45",
-            "dopri": "DOPRI",
-            "dverk": "DVERK",
-            "rkf78": "RKF78",
-            "ias15": "IAS15",
-        }
         self.solar_like_systems = [
             "sun_earth_moon",
             "solar_system",
@@ -208,7 +208,7 @@ class GravitySimulatorCLI:
                     if not self.computed_energy:
                         self.simulator.compute_energy()
                         self.computed_energy = True
-                    self._save_result()
+                    self._save_results()
                 case 11:
                     if not self.computed_energy:
                         self.simulator.compute_energy()
@@ -386,7 +386,7 @@ class GravitySimulatorCLI:
             print("Available integrators: ")
             for i, integrator in enumerate(Simulator.AVAILABLE_INTEGRATORS):
                 print(
-                    f"{i + 1}. {self.available_integrators_to_printable_names[integrator]}"
+                    f"{i + 1}. {GravitySimulatorCLI.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[integrator]}"
                 )
             self.integrator = input("Enter integrator (Number or name): ")
             # Temporary string
@@ -493,7 +493,7 @@ class GravitySimulatorCLI:
     def _print_user_simulation_input(self):
         print(f"System: {self.system}")
         print(
-            f"Integrator: {self.available_integrators_to_printable_names[self.integrator]}"
+            f"Integrator: {GravitySimulatorCLI.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[self.integrator]}"
         )
         if self.tf_unit == "years":
             print(f"tf: {self.tf / self.DAYS_PER_YEAR:g} years")
@@ -602,11 +602,11 @@ class GravitySimulatorCLI:
             else:
                 self.sol_time_in_tf_unit = self.simulator.sol_time
 
-    def _save_result(self):
+    def _save_results(self):
         """
-        Save the result in a csv file
+        Save the results in a csv file
         Unit: Solar masses, AU, day
-        Format: time, dt, total energy, x1, y1, z1, x2, y2, z2, ... vx1, vy1, vz1, vx2, vy2, vz2, ...
+        Format: time, G, dt, total energy, x1, y1, z1, x2, y2, z2, ... vx1, vy1, vz1, vx2, vy2, vz2, ...
         """
         if not self.computed_energy:
             if get_bool(
@@ -666,7 +666,7 @@ class GravitySimulatorCLI:
             writer.writerow([f"# System Name: {self.gravitational_system}"])
 
             try:
-                integrator_name = self.available_integrators_to_printable_names[
+                integrator_name = GravitySimulatorCLI.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
                     self.simulator.integrator
                 ]
             except KeyError:
@@ -743,10 +743,10 @@ class GravitySimulatorCLI:
 
                     try:
                         self.simulator.integrator = list(
-                            self.available_integrators_to_printable_names.keys()
+                            GravitySimulatorCLI.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES.keys()
                         )[
                             list(
-                                self.available_integrators_to_printable_names.values()
+                                GravitySimulatorCLI.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES.values()
                             ).index(integrator)
                         ]
                     except KeyError:
