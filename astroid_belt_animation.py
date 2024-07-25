@@ -118,11 +118,17 @@ def main():
     # in this case. Therefore, we save each frames as images and
     # combine them as gif instead.
     save_count = 0
-    csv.field_size_limit(sys.maxsize)
+    while True:
+        try:
+            csv.field_size_limit(new_field_lim)
+            break
+        except OverflowError:
+            new_field_lim = new_field_lim // 10
+
     with open(data_path, "r") as file:
         reader = csv.reader(file)
         for row in reader:
-            if row[0].startswith("#"):
+            if len(row) == 0 or row[0].startswith("#"):
                 continue
 
             row = row[3:]
