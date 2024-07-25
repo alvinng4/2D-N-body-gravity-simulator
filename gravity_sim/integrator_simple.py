@@ -21,7 +21,6 @@ class SimpleIntegrator:
     def __init__(self, store_every_n=1, c_lib=None, is_exit_ctypes_bool=None):
         self.store_every_n = store_every_n
         self.c_lib = c_lib
-        self.is_c_lib = c_lib is not None
 
         if is_exit_ctypes_bool is None:
             self.is_exit_ctypes_bool = ctypes.c_bool(False)

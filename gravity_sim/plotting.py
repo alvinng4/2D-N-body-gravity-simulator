@@ -686,7 +686,7 @@ def plot_dt(
     sol_time: np.ndarray,
     title: str = "dt against time",
     xlabel: str = "Time",
-    ylabel: str = "dt",
+    ylabel: str = "$dt$ (days)",
     yscale: str = "log",
     marker_size: float = 0.1,
 ) -> None:
@@ -699,7 +699,7 @@ def plot_dt(
     ax.set_yscale(yscale)
     ax.set_title(title)
     ax.set_xlabel(xlabel)
-    ax.set_ylabel(xlabel)
+    ax.set_ylabel(ylabel)
 
     plt.show()
 

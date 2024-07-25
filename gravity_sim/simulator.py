@@ -27,7 +27,10 @@ class Simulator:
 
     def __init__(self, c_lib=None, is_exit_ctypes_bool=None):
         self.c_lib = c_lib
-        self.is_c_lib = c_lib is not None
+        if c_lib is not None:
+            self.integration_mode = "c_lib"
+        else:
+            self.integration_mode = "numpy"
 
         if is_exit_ctypes_bool is None:
             self.is_exit_ctypes_bool = ctypes.c_bool(False)
@@ -88,13 +91,13 @@ class Simulator:
         self.dt = dt
         self.tolerance = tolerance
 
-        if not self.is_c_lib and acceleration != "pairwise":
+        if (self.integration_mode == "numpy") and acceleration != "pairwise":
             warnings.warn(
                 "Only pairwise acceleration is available for numpy integrators. "
                 + 'Setting acceleration method to "pairwise".'
             )
             acceleration_func = self.c_lib.acceleration_pairwise
-        elif self.is_c_lib:
+        elif self.integration_mode == "c_lib":
             if acceleration == "pairwise":
                 acceleration_func = self.c_lib.acceleration_pairwise
             elif acceleration == "massless":
@@ -104,9 +107,9 @@ class Simulator:
 
         if not no_print:
             print("Simulating the system...")
-            start = timeit.default_timer()
+        start = timeit.default_timer()
 
-        if self.is_c_lib:
+        if self.integration_mode == "c_lib":
             match self.integrator:
                 case "euler" | "euler_cromer" | "rk4" | "leapfrog":
                     integrator = SimpleIntegrator(
@@ -250,9 +253,10 @@ class Simulator:
                         no_progress_bar,
                     )
 
+        stop = timeit.default_timer()
+        self.run_time = stop - start
+
         if not no_print:
-            stop = timeit.default_timer()
-            self.run_time = stop - start
             print(f"Run time: {self.run_time:.3f} s")
             print("")
 
@@ -265,7 +269,7 @@ class Simulator:
         self.energy = np.zeros(npts)
 
         start = timeit.default_timer()
-        if self.is_c_lib == True:
+        if self.integration_mode == "c_lib":
             count = ctypes.c_int(0)
             progress_bar_thread = threading.Thread(
                 target=progress_bar_c_lib_fixed_step_size,
@@ -292,7 +296,7 @@ class Simulator:
             count.value = npts
             progress_bar_thread.join()
 
-        elif self.is_c_lib == False:
+        else:
             progress_bar = Progress_bar()
             with progress_bar:
                 for count in progress_bar.track(range(npts), description=""):
@@ -341,7 +345,7 @@ class Simulator:
         self.linear_momentum = np.zeros(npts)
 
         start = timeit.default_timer()
-        if self.is_c_lib == True:
+        if self.integration_mode == "c_lib":
             count = ctypes.c_int(0)
             progress_bar_thread = threading.Thread(
                 target=progress_bar_c_lib_fixed_step_size,
@@ -369,7 +373,7 @@ class Simulator:
             count.value = npts
             progress_bar_thread.join()
 
-        elif self.is_c_lib == False:
+        else:
             progress_bar = Progress_bar()
             with progress_bar:
                 for count in progress_bar.track(range(npts), description=""):
@@ -407,7 +411,7 @@ class Simulator:
         self.angular_momentum = np.zeros(npts)
 
         start = timeit.default_timer()
-        if self.is_c_lib == True:
+        if self.integration_mode == "c_lib":
             count = ctypes.c_int(0)
             progress_bar_thread = threading.Thread(
                 target=progress_bar_c_lib_fixed_step_size,
@@ -435,7 +439,7 @@ class Simulator:
             count.value = npts
             progress_bar_thread.join()
 
-        elif self.is_c_lib == False:
+        else:
             progress_bar = Progress_bar()
             with progress_bar:
                 for count in progress_bar.track(range(npts), description=""):
@@ -456,3 +460,23 @@ class Simulator:
         print("")
 
         return 0
+
+    @property
+    def integration_mode(self) -> str:
+        return self._integration_mode
+
+    @integration_mode.setter
+    def integration_mode(self, integration_mode: str):
+        match integration_mode:
+            case "numpy":
+                self._integration_mode = "numpy"
+            case "c_lib":
+                if self.c_lib is not None:
+                    self._integration_mode = "c_lib"
+                else:
+                    warnings.warn("C library not available. Defaulting to numpy.")
+                    self._integration_mode = "numpy"
+            case _:
+                raise ValueError(
+                    'Invalid integration mode. Must be "numpy" or "c_lib".'
+                )

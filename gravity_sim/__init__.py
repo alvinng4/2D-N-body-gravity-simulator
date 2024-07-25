@@ -61,6 +61,9 @@ class GravitySimulator:
             )
 
         self.simulator = Simulator(self.c_lib)
+        self.launch_simulation = self.simulator.launch_simulation
+        self.compute_energy = self.simulator.compute_energy
+        self.compute_angular_momentum = self.simulator.compute_angular_momentum
 
     def create_system(self, system: str = None):
         """
@@ -298,6 +301,55 @@ class GravitySimulator:
             sol_time=self.simulator.sol_time,
         )
 
+    def plot_rel_energy(
+        self,
+        energy: np.ndarray = None,
+        sol_time: np.ndarray = None,
+        title="Relative energy error against time",
+        xlabel=f"Time",
+        ylabel="$|(E(t)-E_0)/E_0|$",
+    ):
+        if energy is None:
+            energy = self.simulator.energy
+        if sol_time is None:
+            sol_time = self.simulator.sol_time
+
+        plotting.plot_rel_energy(energy, sol_time, title, xlabel, ylabel)
+
+    def plot_rel_angular_momentum(
+        self,
+        angular_momentum: np.ndarray = None,
+        sol_time: np.ndarray = None,
+        title: str = "Relative angular momentum error against time",
+        xlabel: str = "Time",
+        ylabel: str = "$|(L(t)-L_0)/L_0|$",
+    ):
+        if angular_momentum is None:
+            angular_momentum = self.simulator.angular_momentum
+        if sol_time is None:
+            sol_time = self.simulator.sol_time
+
+        plotting.plot_rel_angular_momentum(
+            angular_momentum, sol_time, title, xlabel, ylabel
+        )
+
+    def plot_dt(
+        self,
+        sol_dt: np.ndarray = None,
+        sol_time: np.ndarray = None,
+        title: str = "dt against time",
+        xlabel: str = "Time",
+        ylabel: str = "$dt$ (days)",
+        yscale: str = "log",
+        marker_size: float = 0.1,
+    ) -> None:
+        if sol_dt is None:
+            sol_dt = self.simulator.sol_dt
+        if sol_time is None:
+            sol_time = self.simulator.sol_time
+
+        plotting.plot_dt(sol_dt, sol_time, title, xlabel, ylabel, yscale, marker_size)
+
     def sol_state_to_system(
         self, index: int = -1, system_name: str = None, objects_names: list = None
     ) -> GravitationalSystem:
@@ -431,3 +483,59 @@ class GravitySimulator:
                     row = np.insert(row, 0, self.simulator.sol_time[count])
                     writer.writerow(row.tolist())
         print(f"Storing completed. Please check {file_path}")
+
+    @property
+    def integration_mode(self) -> str:
+        return self.simulator.integration_mode
+
+    @integration_mode.setter
+    def integration_mode(self, value: str) -> None:
+        self.simulator.integration_mode = value
+
+    @property
+    def objects_count(self) -> int:
+        return self.simulator.objects_count
+
+    @objects_count.setter
+    def objects_count(self, value: int) -> None:
+        self.simulator.objects_count = value
+
+    @property
+    def sol_time(self) -> np.ndarray:
+        return self.simulator.sol_time
+
+    @sol_time.setter
+    def sol_time(self, value: np.ndarray) -> None:
+        self.simulator.sol_time = value
+
+    @property
+    def sol_state(self) -> np.ndarray:
+        return self.simulator.sol_state
+
+    @sol_state.setter
+    def sol_state(self, value: np.ndarray) -> None:
+        self.simulator.sol_state = value
+
+    @property
+    def sol_dt(self) -> np.ndarray:
+        return self.simulator.sol_dt
+
+    @sol_dt.setter
+    def sol_dt(self, value: np.ndarray) -> None:
+        self.simulator.sol_dt = value
+
+    @property
+    def energy(self) -> np.ndarray:
+        return self.simulator.energy
+
+    @energy.setter
+    def energy(self, value: np.ndarray) -> None:
+        self.simulator.energy = value
+
+    @property
+    def angular_momentum(self) -> np.ndarray:
+        return self.simulator.angular_momentum
+
+    @angular_momentum.setter
+    def angular_momentum(self, value: np.ndarray) -> None:
+        self.simulator.angular_momentum = value
