@@ -506,6 +506,14 @@ class GravitySimulator:
         self.simulator.sol_dt = value
 
     @property
+    def data_size(self) -> int:
+        return self.simulator.data_size
+
+    @data_size.setter
+    def data_size(self, value: int) -> None:
+        self.simulator.data_size = value
+
+    @property
     def energy(self) -> np.ndarray:
         return self.simulator.energy
 

@@ -1,16 +1,19 @@
 """
 Demonstration on using the gravity simulator to simulate the asteroid belt
+
+Warning: This script will take a lot of storage space on your computer (probably a few GBs).
+         It will attempt to erase the data after the video is generated.
 """
 
-import os
+import csv
 from pathlib import Path
+import sys
 
 import numpy as np
 import PIL
 import matplotlib.pyplot as plt
 
 import gravity_sim
-from gravity_sim.progress_bar import Progress_bar
 
 
 def main():
@@ -28,6 +31,7 @@ def main():
         "paleturquoise",
         "blue",
     ]
+    marker_sizes = [6.0, 1.0, 1.0, 2.0, 1.5, 4.0, 3.5, 3.0, 3.0]
 
     # system.remove(name="Neptune")
     # system.remove(name="Uranus")
@@ -45,6 +49,7 @@ def main():
     # m = 1.0
     # system.add(x, v, m, objects_name="Added Star")
     # colors = ["orange", "skyblue", "red", "darkgoldenrod", "gold", "orange"]
+    # marker_sizes = [6.0, 2.0, 1.5, 4.0, 3.5, 6.0]
 
     massive_objects_count = system.objects_count
 
@@ -77,12 +82,29 @@ def main():
 
     system.center_of_mass_correction()
 
+    file_path = Path(__file__).parent / "gravity_sim" / "results"
+    file_path.mkdir(parents=True, exist_ok=True)
+    data_path = file_path / "astroid_belt_sim.csv"
+
+    print("Simulating asteroid belt...")
+    grav_sim.launch_simulation(
+        system,
+        "rk4",
+        grav_sim.years_to_days(5.0),
+        dt=grav_sim.years_to_days(0.001),
+        store_every_n=10,
+        acceleration="massless",
+        flush=True,
+        flush_results_path=str(data_path),
+        no_print=True,
+    )
+
+    # Draw frames
+    print()
+    print("Drawing frames...")
     fig = plt.figure()
     plt.style.use("dark_background")
     ax = fig.add_subplot(111, projection="3d")
-
-    file_path = Path(__file__).parent / "gravity_sim" / "results"
-    file_path.mkdir(parents=True, exist_ok=True)
 
     xlim_min = -3
     xlim_max = 3
@@ -91,115 +113,90 @@ def main():
     zlim_min = -3
     zlim_max = 3
 
-    # In the library, we use PillowWriter to generate animation
+    # In the library, we use PillowWriter to generate animations.
     # However, for some reason, the PillowWriter run out of memory
     # in this case. Therefore, we save each frames as images and
     # combine them as gif instead.
     save_count = 0
-    num_loops = 200
-    progress_bar = Progress_bar()
-    with progress_bar:
-        print("Generating frames...")
-        for _ in progress_bar.track(range(num_loops)):
-            grav_sim.simulator.launch_simulation(
-                system,
-                "rk4",
-                grav_sim.years_to_days(0.02),
-                dt=grav_sim.years_to_days(0.0005),
-                store_every_n=20,
-                acceleration="massless",
-                no_progress_bar=True,
-                no_print=True,
-            )
+    csv.field_size_limit(sys.maxsize)
+    with open(data_path, "r") as file:
+        reader = csv.reader(file)
+        for row in reader:
+            if row[0].startswith("#"):
+                continue
 
-            # Plot once every nth point
-            for j in range(len(grav_sim.simulator.sol_state)):
-                if j == 0:
-                    continue
+            row = row[3:]
+            row = list(map(float, row))
 
-                # Plot the trajectory from the beginning to current position
-                for i in range(0, massive_objects_count):
-                    ax.grid(False)
-                    ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-                    ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-                    ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-                    ax.set_xticks([])
-                    ax.set_yticks([])
-                    ax.set_zticks([])
-                    ax.xaxis.set_visible(False)
-                    ax.yaxis.set_visible(False)
-                    ax.zaxis.set_visible(False)
-                    ax.xaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-                    ax.yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-                    ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+            # Plot the trajectory from the beginning to current position
+            for i in range(0, massive_objects_count):
+                ax.grid(False)
+                ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+                ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+                ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+                ax.set_xticks([])
+                ax.set_yticks([])
+                ax.set_zticks([])
+                ax.xaxis.set_visible(False)
+                ax.yaxis.set_visible(False)
+                ax.zaxis.set_visible(False)
+                ax.xaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+                ax.yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+                ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
 
-                    ax.plot(
-                        grav_sim.simulator.sol_state[j, i * 3],
-                        grav_sim.simulator.sol_state[j, 1 + i * 3],
-                        "o",
-                        label=system.objects_names[i],
-                        color=colors[i],
-                        markersize=6,
-                    )
-
-                x = grav_sim.simulator.sol_state[
-                    j,
-                    (massive_objects_count * 3) : (
-                        grav_sim.simulator.objects_count * 3
-                    ) : 3,
-                ]
-                y = grav_sim.simulator.sol_state[
-                    j,
-                    (massive_objects_count * 3 + 1) : (
-                        grav_sim.simulator.objects_count * 3
-                    ) : 3,
-                ]
-                z = grav_sim.simulator.sol_state[
-                    j,
-                    (massive_objects_count * 3 + 2) : (
-                        grav_sim.simulator.objects_count * 3
-                    ) : 3,
-                ]
-                ax.scatter(
-                    x,
-                    y,
-                    z,
-                    color="white",
-                    marker=".",
-                    s=0.1,
-                    alpha=0.1,
+                ax.plot(
+                    np.array(row[i * 3]),
+                    np.array(row[1 + i * 3]),
+                    "o",
+                    label=system.objects_names[i],
+                    color=colors[i],
+                    markersize=marker_sizes[i],
                 )
 
-                # Add legend
-                ax.legend(loc="center right", bbox_to_anchor=(1.325, 0.5))
-                # Adjust figure for the legend
-                if j == 0:
-                    fig.subplots_adjust(right=0.7)
-                    fig.tight_layout()
+            x = row[(massive_objects_count * 3) : (system.objects_count * 3) : 3]
+            y = row[(massive_objects_count * 3 + 1) : (system.objects_count * 3) : 3]
+            z = row[(massive_objects_count * 3 + 2) : (system.objects_count * 3) : 3]
+            ax.scatter(
+                x,
+                y,
+                z,
+                color="white",
+                marker=".",
+                s=0.1,
+                alpha=0.1,
+            )
 
-                # Set axis labels and setting 3d axes scale before capturing the frame
-                # ax.set_xlabel("$x$ (AU)")
-                # ax.set_ylabel("$y$ (AU)")
-                # ax.set_zlabel("$z$ (AU)")
+            # Add legend
+            legend = ax.legend(loc="center right", bbox_to_anchor=(1.325, 0.5))
+            legend.facecolor = "transparent"
 
-                ax.set_xlim3d([xlim_min, xlim_max])
-                ax.set_ylim3d([ylim_min, ylim_max])
-                ax.set_zlim3d([zlim_min, zlim_max])
+            # Adjust figure for the legend
+            if save_count == 0:
+                fig.subplots_adjust(right=0.7)
+                fig.tight_layout()
 
-                # Set equal aspect ratio to prevent distortion
-                ax.set_aspect("equal")
+            # Set axis labels and setting 3d axes scale before capturing the frame
+            # ax.set_xlabel("$x$ (AU)")
+            # ax.set_ylabel("$y$ (AU)")
+            # ax.set_zlabel("$z$ (AU)")
 
-                # Capture the frame
-                plt.savefig(file_path / f"frames_{save_count:04d}.png", dpi=100)
-                save_count += 1
+            ax.set_xlim3d([xlim_min, xlim_max])
+            ax.set_ylim3d([ylim_min, ylim_max])
+            ax.set_zlim3d([zlim_min, zlim_max])
 
-                # Clear the plot to prepare for the next frame
-                ax.clear()
+            # Set equal aspect ratio to prevent distortion
+            ax.set_aspect("equal")
 
-            system = grav_sim.sol_state_to_system(objects_names=system.objects_names)
+            # Capture the frame
+            plt.savefig(file_path / f"frames_{save_count:04d}.png", dpi=300)
+            save_count += 1
 
-    plt.close("all")
+            # Clear the plot to prepare for the next frame
+            ax.clear()
 
+        plt.close("all")
+
+    print()
     print("Combining frames to gif...")
     frames = []
     for i in range(save_count):
@@ -214,8 +211,10 @@ def main():
     )
 
     for i in range(save_count):
-        os.remove(file_path / f"frames_{i:04d}.png")
-    print(f"Output completed! Please check {file_path}")
+        (file_path / f"frames_{i:04d}.png").unlink()
+    data_path.unlink()
+
+    print(f"Output completed! Please check {file_path / 'astroid_belt.gif'}")
     print()
 
 
@@ -297,40 +296,6 @@ def from_orbital_elements_to_cartesian(
     )
 
     return position_vector, velocity_vector
-
-
-def set_3d_axes_equal(ax: plt.Axes) -> None:
-    """
-    Make axes of 3D plot have equal scale
-
-    Parameters
-    ----------
-    ax : matplotlib axis
-        The axis to set equal scale
-
-    Reference
-    ---------
-    karlo, https://stackoverflow.com/questions/13685386/how-to-set-the-equal-aspect-ratio-for-all-axes-x-y-z
-    """
-
-    x_limits = ax.get_xlim3d()
-    y_limits = ax.get_ylim3d()
-    z_limits = ax.get_zlim3d()
-
-    x_range = abs(x_limits[1] - x_limits[0])
-    x_middle = np.mean(x_limits)
-    y_range = abs(y_limits[1] - y_limits[0])
-    y_middle = np.mean(y_limits)
-    z_range = abs(z_limits[1] - z_limits[0])
-    z_middle = np.mean(z_limits)
-
-    # The plot bounding box is a sphere in the sense of the infinity
-    # norm, hence I call half the max range the plot radius.
-    plot_radius = 0.5 * max([x_range, y_range, z_range])
-
-    ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
-    ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
-    ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
 
 if __name__ == "__main__":

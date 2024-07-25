@@ -64,6 +64,7 @@ class Simulator:
         store_every_n: int = 1,
         acceleration: str = "pairwise",
         flush: bool = False,
+        flush_results_path: str = None,
         no_progress_bar: bool = False,
         no_print: bool = False,
     ) -> None:
@@ -304,14 +305,17 @@ class Simulator:
             print("")
 
         if flush:
-            file_path = (
-                Path(__file__).parent
-                / "results"
-                / (
-                    str(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-                    + "_result.csv"
+            if flush_results_path is None:
+                file_path = (
+                    Path(__file__).parent
+                    / "results"
+                    / (
+                        str(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+                        + "_result.csv"
+                    )
                 )
-            )
+            else:
+                file_path = Path(flush_results_path)
 
             try:
                 integrator_name = self.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
@@ -337,6 +341,9 @@ class Simulator:
                 masses=self.m,
             )
             flush_path.unlink()
+
+        else:
+            self.data_size = len(self.sol_time)
 
     def compute_energy(self):
         """
@@ -553,6 +560,7 @@ class Simulator:
         store_every_n: int,
         run_time: float,
         masses: np.ndarray,
+        no_print: bool = False,
     ):
         common.save_results(
             file_path=results_file_path,
@@ -567,6 +575,7 @@ class Simulator:
             run_time=run_time,
             masses=masses,
             only_metadata=True,
+            no_print=no_print,
         )
 
         with open(results_file_path, "a") as results_file:
