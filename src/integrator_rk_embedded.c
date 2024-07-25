@@ -560,9 +560,9 @@ WIN32DLL_API int rk_embedded(
     } 
     else
     {
-        double *sol_state = malloc(NPTS * objects_count * 6 * sizeof(double));
-        double *sol_time = malloc(NPTS * sizeof(double));
-        double *sol_dt = malloc(NPTS * sizeof(double));
+        sol_state = malloc(NPTS * objects_count * 6 * sizeof(double));
+        sol_time = malloc(NPTS * sizeof(double));
+        sol_dt = malloc(NPTS * sizeof(double));
 
         if (!sol_state || !sol_time || !sol_dt)
         {
