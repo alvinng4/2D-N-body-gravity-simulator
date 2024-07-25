@@ -179,9 +179,16 @@ WIN32DLL_API int euler(
     free(x_err_comp_sum);
     free(v_err_comp_sum);
 
-    solution->sol_state = sol_state;
-    solution->sol_time = sol_time;
-    solution->sol_dt = sol_dt;
+    if (flush)
+    {
+        fclose(flush_file);
+    }
+    else
+    {
+        solution->sol_state = sol_state;
+        solution->sol_time = sol_time;
+        solution->sol_dt = sol_dt;
+    }
 
     return 0;
 
@@ -385,9 +392,16 @@ WIN32DLL_API int euler_cromer(
     free(x_err_comp_sum);
     free(v_err_comp_sum);
 
-    solution->sol_state = sol_state;
-    solution->sol_time = sol_time;
-    solution->sol_dt = sol_dt;
+    if (flush)
+    {
+        fclose(flush_file);
+    }
+    else
+    {
+        solution->sol_state = sol_state;
+        solution->sol_time = sol_time;
+        solution->sol_dt = sol_dt;
+    }
 
     return 0;
 
@@ -642,9 +656,16 @@ WIN32DLL_API int rk4(
     free(x_err_comp_sum);
     free(v_err_comp_sum);
 
-    solution->sol_state = sol_state;
-    solution->sol_time = sol_time;
-    solution->sol_dt = sol_dt;
+    if (flush)
+    {
+        fclose(flush_file);
+    }
+    else
+    {
+        solution->sol_state = sol_state;
+        solution->sol_time = sol_time;
+        solution->sol_dt = sol_dt;
+    }
 
     return 0;
 
@@ -867,9 +888,16 @@ WIN32DLL_API int leapfrog(
     free(x_err_comp_sum);
     free(v_err_comp_sum);
 
-    solution->sol_state = sol_state;
-    solution->sol_time = sol_time;
-    solution->sol_dt = sol_dt;
+    if (flush)
+    {
+        fclose(flush_file);
+    }
+    else
+    {
+        solution->sol_state = sol_state;
+        solution->sol_time = sol_time;
+        solution->sol_dt = sol_dt;
+    }
 
     return 0;
 

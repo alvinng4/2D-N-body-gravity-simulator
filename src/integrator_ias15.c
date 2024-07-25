@@ -616,9 +616,16 @@ WIN32DLL_API int ias15(
             free(temp_x_err_comp_sum);
             free(temp_v_err_comp_sum);
             
-            solution->sol_state = sol_state;
-            solution->sol_time = sol_time;
-            solution->sol_dt = sol_dt;
+            if (flush)
+            {
+                fclose(flush_file);
+            }
+            else
+            {
+                solution->sol_state = sol_state;
+                solution->sol_time = sol_time;
+                solution->sol_dt = sol_dt;
+            }
 
             return 0;
         }
