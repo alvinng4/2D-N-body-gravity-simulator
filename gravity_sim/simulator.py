@@ -578,9 +578,9 @@ class Simulator:
             no_print=no_print,
         )
 
-        with open(results_file_path, "a") as results_file:
+        with open(results_file_path, "a", newline="") as results_file:
             writer = csv.writer(results_file)
-            with open(flushed_file_path, "r") as flushed_file:
+            with open(flushed_file_path, "r", newline="") as flushed_file:
                 reader = csv.reader(flushed_file)
                 for row in reader:
                     writer.writerow(row)
