@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +21,8 @@
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
+ * \param flush Flag to indicate whether to store solution into data file directly
+ * \param flush_path Path to the file to store the solution
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
@@ -40,18 +43,20 @@ WIN32DLL_API int euler(
     int store_npts,
     int store_every_n,
     int *restrict store_count,
+    const bool flush,
+    const char *restrict flush_path,
     Solutions *restrict solution,
-    int *restrict is_exit
+    bool *restrict is_exit
 )
 {   
     // Allocate memory for calculation
-    real *temp_x = malloc(objects_count * 3 * sizeof(real));
-    real *temp_v = malloc(objects_count * 3 * sizeof(real));
-    real *a = malloc(objects_count * 3 * sizeof(real));
+    real *restrict temp_x = malloc(objects_count * 3 * sizeof(real));
+    real *restrict temp_v = malloc(objects_count * 3 * sizeof(real));
+    real *restrict a = malloc(objects_count * 3 * sizeof(real));
     
     // Allocate memory for compensated summation
-    real *x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
-    real *v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
 
     if (!temp_x || !temp_v || !a || !x_err_comp_sum || !v_err_comp_sum)
     {
@@ -61,29 +66,49 @@ WIN32DLL_API int euler(
 
     // Allocate memory for solution output
     int64 count = 0;
-    double *sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
-    double *sol_time = malloc(store_npts * sizeof(double));
-    double *sol_dt = malloc(store_npts * sizeof(double));
-
-    if (!sol_state || !sol_time || !sol_dt)
+    FILE *flush_file = NULL;
+    double *sol_state = NULL;
+    double *sol_time = NULL;
+    double *sol_dt = NULL;
+    if (flush)
     {
-        printf("Error: Failed to allocate memory for solution output\n");
-        goto err_sol_output_memory;
-    }
+        flush_file = fopen(flush_path, "w");
 
-    // Initial value
-    for (int i = 0; i < objects_count; i++)
-    {
-        for (int j = 0; j < 3; j++)
+        if (!flush_file)
         {
-            sol_state[i * 3 + j] = x[i * 3 + j];
-            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+            printf("Error: Failed to open file for flushing\n");
+            goto err_flush_file;
         }
-    }
-    sol_time[0] = 0.0;
-    for (int i = 0; i < store_npts; i++)
+
+        // Initial value
+        write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
+    } 
+    else
     {
-        sol_dt[i] = dt;
+        sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
+        sol_time = malloc(store_npts * sizeof(double));
+        sol_dt = malloc(store_npts * sizeof(double));
+
+        if (!sol_state || !sol_time || !sol_dt)
+        {
+            printf("Error: Failed to allocate memory for solution output\n");
+            goto err_sol_output_memory;
+        }
+
+        // Initial value
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                sol_state[i * 3 + j] = x[i * 3 + j];
+                sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+            }
+        }
+        sol_time[0] = 0.0;
+        for (int i = 0; i < store_npts; i++)
+        {
+            sol_dt[i] = dt;
+        }
     }
 
     // Main Loop
@@ -113,19 +138,30 @@ WIN32DLL_API int euler(
         // Store solution
         if ((count + 1) == npts)
         {
-            memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-            memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-            sol_time[store_npts - 1] = dt * count;
-        }
-        else if (((count + 1) % store_every_n == 0))
-        {
-            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-            sol_time[*store_count + 1] = dt * (count + 1);
-            if (!((*store_count + 1) == (store_npts - 1)))
+            if (flush)
             {
-                (*store_count)++;
+                write_to_csv_file(flush_file, dt * count, dt, objects_count, x, v, m, G);
             }
+            else
+            {
+                memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[store_npts - 1] = dt * count;
+            }
+        }
+        else if (((count + 1) % store_every_n == 0) && ((*store_count + 1) != (store_npts - 1)))
+        {
+            if (flush)
+            {
+                write_to_csv_file(flush_file, dt * (count + 1), dt, objects_count, x, v, m, G);
+            }
+            else
+            {
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[*store_count + 1] = dt * (count + 1);
+            }
+            (*store_count)++;
         }
         count++;
 
@@ -150,10 +186,18 @@ WIN32DLL_API int euler(
     return 0;
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
+err_flush_file:
 err_sol_output_memory:
-    free(sol_state);
-    free(sol_time);
-    free(sol_dt);
+    if (flush)
+    {
+        fclose(flush_file);
+    }
+    else
+    {
+        free(sol_state);
+        free(sol_time);
+        free(sol_dt);
+    }    
 err_calc_memory:
     free(temp_x);
     free(temp_v);
@@ -184,6 +228,8 @@ err_calc_memory:
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
+ * \param flush Flag to indicate whether to store solution into data file directly
+ * \param flush_path Path to the file to store the solution
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
@@ -204,18 +250,20 @@ WIN32DLL_API int euler_cromer(
     int store_npts,
     int store_every_n,
     int *restrict store_count,
+    const bool flush,
+    const char *restrict flush_path,
     Solutions *restrict solution,
-    int *restrict is_exit
+    bool *restrict is_exit
 )
 {   
     // Allocate memory for calculation
-    real *temp_x = malloc(objects_count * 3 * sizeof(real));
-    real *temp_v = malloc(objects_count * 3 * sizeof(real));
-    real *a = malloc(objects_count * 3 * sizeof(real));
+    real *restrict temp_x = malloc(objects_count * 3 * sizeof(real));
+    real *restrict temp_v = malloc(objects_count * 3 * sizeof(real));
+    real *restrict a = malloc(objects_count * 3 * sizeof(real));
     
     // Allocate memory for compensated summation
-    real *x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
-    real *v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
     
     if (!temp_x || !temp_v || !a || !x_err_comp_sum || !v_err_comp_sum)
     {
@@ -225,29 +273,49 @@ WIN32DLL_API int euler_cromer(
 
     // Allocate memory for solution output
     int64 count = 0;
-    double *sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
-    double *sol_time = malloc(store_npts * sizeof(double));
-    double *sol_dt = malloc(store_npts * sizeof(double));
-
-    if (!sol_state || !sol_time || !sol_dt)
+    FILE *flush_file = NULL;
+    double *sol_state = NULL;
+    double *sol_time = NULL;
+    double *sol_dt = NULL;
+    if (flush)
     {
-        printf("Error: Failed to allocate memory for solution output\n");
-        goto err_sol_output_memory;
-    }
+        flush_file = fopen(flush_path, "w");
 
-    // Initial value
-    for (int i = 0; i < objects_count; i++)
-    {
-        for (int j = 0; j < 3; j++)
+        if (!flush_file)
         {
-            sol_state[i * 3 + j] = x[i * 3 + j];
-            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+            printf("Error: Failed to open file for flushing\n");
+            goto err_flush_file;
         }
-    }
-    sol_time[0] = 0.0;
-    for (int i = 0; i < store_npts; i++)
+
+        // Initial value
+        write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
+    } 
+    else
     {
-        sol_dt[i] = dt;
+        double *sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
+        double *sol_time = malloc(store_npts * sizeof(double));
+        double *sol_dt = malloc(store_npts * sizeof(double));
+
+        if (!sol_state || !sol_time || !sol_dt)
+        {
+            printf("Error: Failed to allocate memory for solution output\n");
+            goto err_sol_output_memory;
+        }
+
+        // Initial value
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                sol_state[i * 3 + j] = x[i * 3 + j];
+                sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+            }
+        }
+        sol_time[0] = 0.0;
+        for (int i = 0; i < store_npts; i++)
+        {
+            sol_dt[i] = dt;
+        }
     }
 
     // Main Loop
@@ -276,19 +344,30 @@ WIN32DLL_API int euler_cromer(
         // Store solution
         if ((count + 1) == npts)
         {
-            memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-            memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-            sol_time[store_npts - 1] = dt * count;
-        }
-        else if (((count + 1) % store_every_n == 0))
-        {
-            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-            sol_time[*store_count + 1] = dt * (count + 1);
-            if (!((*store_count + 1) == (store_npts - 1)))
+            if (flush)
             {
-                (*store_count)++;
+                write_to_csv_file(flush_file, dt * count, dt, objects_count, x, v, m, G);
             }
+            else
+            {
+                memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[store_npts - 1] = dt * count;
+            }
+        }
+        else if (((count + 1) % store_every_n == 0) && ((*store_count + 1) != (store_npts - 1)))
+        {
+            if (flush)
+            {
+                write_to_csv_file(flush_file, dt * (count + 1), dt, objects_count, x, v, m, G);
+            }
+            else
+            {
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[*store_count + 1] = dt * (count + 1);
+            }
+            (*store_count)++;
         }
         count++;
 
@@ -313,10 +392,18 @@ WIN32DLL_API int euler_cromer(
     return 0;
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
+err_flush_file:
 err_sol_output_memory:
-    free(sol_state);
-    free(sol_time);
-    free(sol_dt);
+    if (flush)
+    {
+        fclose(flush_file);
+    }
+    else
+    {
+        free(sol_state);
+        free(sol_time);
+        free(sol_dt);
+    }    
 err_calc_memory:
     free(temp_x);
     free(temp_v);
@@ -347,6 +434,8 @@ err_calc_memory:
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
+ * \param flush Flag to indicate whether to store solution into data file directly
+ * \param flush_path Path to the file to store the solution
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
@@ -367,26 +456,28 @@ WIN32DLL_API int rk4(
     int store_npts,
     int store_every_n,
     int *restrict store_count,
+    const bool flush,
+    const char *restrict flush_path,
     Solutions *restrict solution,
     int *restrict is_exit
 )
 {
     // Allocate memory for calculation
-    real *temp_x = malloc(objects_count * 3 * sizeof(real));
-    real *temp_v = malloc(objects_count * 3 * sizeof(real));
-    real *a = malloc(objects_count * 3 * sizeof(real));
-    real *vk1 = malloc(objects_count * 3 * sizeof(real));
-    real *vk2 = malloc(objects_count * 3 * sizeof(real));
-    real *vk3 = malloc(objects_count * 3 * sizeof(real));
-    real *vk4 = malloc(objects_count * 3 * sizeof(real));
-    real *xk1 = malloc(objects_count * 3 * sizeof(real));
-    real *xk2 = malloc(objects_count * 3 * sizeof(real));
-    real *xk3 = malloc(objects_count * 3 * sizeof(real));
-    real *xk4 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict temp_x = malloc(objects_count * 3 * sizeof(real));
+    real *restrict temp_v = malloc(objects_count * 3 * sizeof(real));
+    real *restrict a = malloc(objects_count * 3 * sizeof(real));
+    real *restrict vk1 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict vk2 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict vk3 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict vk4 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict xk1 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict xk2 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict xk3 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict xk4 = malloc(objects_count * 3 * sizeof(real));
 
     // Allocate memory for compensated summation
-    real *x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
-    real *v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
 
     if (!temp_x || !temp_v || !a || !vk1 || !vk2 || !vk3 || !vk4 || !xk1 || !xk2 || !xk3 || !xk4 || !x_err_comp_sum || !v_err_comp_sum)
     {
@@ -396,29 +487,49 @@ WIN32DLL_API int rk4(
 
     // Allocate memory for solution output
     int64 count = 0;
-    double *sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
-    double *sol_time = malloc(store_npts * sizeof(double));
-    double *sol_dt = malloc(store_npts * sizeof(double));
-
-    if (!sol_state || !sol_time || !sol_dt)
+    FILE *flush_file = NULL;
+    double *sol_state = NULL;
+    double *sol_time = NULL;
+    double *sol_dt = NULL;
+    if (flush)
     {
-        printf("Error: Failed to allocate memory for solution output\n");
-        goto err_sol_output_memory;
-    }
+        flush_file = fopen(flush_path, "w");
 
-    // Initial value
-    for (int i = 0; i < objects_count; i++)
-    {
-        for (int j = 0; j < 3; j++)
+        if (!flush_file)
         {
-            sol_state[i * 3 + j] = x[i * 3 + j];
-            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+            printf("Error: Failed to open file for flushing\n");
+            goto err_flush_file;
         }
-    }
-    sol_time[0] = 0.0;
-    for (int i = 0; i < store_npts; i++)
+
+        // Initial value
+        write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
+    } 
+    else
     {
-        sol_dt[i] = dt;
+        sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
+        sol_time = malloc(store_npts * sizeof(double));
+        sol_dt = malloc(store_npts * sizeof(double));
+
+        if (!sol_state || !sol_time || !sol_dt)
+        {
+            printf("Error: Failed to allocate memory for solution output\n");
+            goto err_sol_output_memory;
+        }
+
+        // Initial value
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                sol_state[i * 3 + j] = x[i * 3 + j];
+                sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+            }
+        }
+        sol_time[0] = 0.0;
+        for (int i = 0; i < store_npts; i++)
+        {
+            sol_dt[i] = dt;
+        }
     }
 
     // Main Loop
@@ -482,19 +593,30 @@ WIN32DLL_API int rk4(
         // Store solution
         if ((count + 1) == npts)
         {
-            memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-            memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-            sol_time[store_npts - 1] = dt * count;
-        }
-        else if (((count + 1) % store_every_n == 0))
-        {
-            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-            sol_time[*store_count + 1] = dt * (count + 1);
-            if (!((*store_count + 1) == (store_npts - 1)))
+            if (flush)
             {
-                (*store_count)++;
+                write_to_csv_file(flush_file, dt * count, dt, objects_count, x, v, m, G);
             }
+            else
+            {
+                memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[store_npts - 1] = dt * count;
+            }
+        }
+        else if (((count + 1) % store_every_n == 0) && ((*store_count + 1) != (store_npts - 1)))
+        {
+            if (flush)
+            {
+                write_to_csv_file(flush_file, dt * (count + 1), dt, objects_count, x, v, m, G);
+            }
+            else
+            {
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[*store_count + 1] = dt * (count + 1);
+            }
+            (*store_count)++;
         }
         count++;
 
@@ -527,10 +649,18 @@ WIN32DLL_API int rk4(
     return 0;
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
+err_flush_file:
 err_sol_output_memory:
-    free(sol_state);
-    free(sol_time);
-    free(sol_dt);
+    if (flush)
+    {
+        fclose(flush_file);
+    }
+    else
+    {
+        free(sol_state);
+        free(sol_time);
+        free(sol_dt);
+    }    
 err_calc_memory:
     free(temp_x);
     free(temp_v);
@@ -569,6 +699,8 @@ err_calc_memory:
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
+ * \param flush Flag to indicate whether to store solution into data file directly
+ * \param flush_path Path to the file to store the solution
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
@@ -589,19 +721,21 @@ WIN32DLL_API int leapfrog(
     int store_npts,
     int store_every_n,
     int *restrict store_count,
+    const bool flush,
+    const char *restrict flush_path,
     Solutions *restrict solution,
     int *restrict is_exit
 )
 {   
     // Allocate memory for calculation
-    real *temp_x = malloc(objects_count * 3 * sizeof(real));
-    real *temp_v = malloc(objects_count * 3 * sizeof(real));
-    real *a_0 = malloc(objects_count * 3 * sizeof(real));
-    real *a_1 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict temp_x = malloc(objects_count * 3 * sizeof(real));
+    real *restrict temp_v = malloc(objects_count * 3 * sizeof(real));
+    real *restrict a_0 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict a_1 = malloc(objects_count * 3 * sizeof(real));
 
     // Allocate memory for compensated summation
-    real *x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
-    real *v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
 
     if (!temp_x || !temp_v || !a_0 || !a_1 || !x_err_comp_sum || !v_err_comp_sum)
     {
@@ -611,29 +745,49 @@ WIN32DLL_API int leapfrog(
 
     // Allocate memory for solution output
     int64 count = 0;
-    double *sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
-    double *sol_time = malloc(store_npts * sizeof(double));
-    double *sol_dt = malloc(store_npts * sizeof(double));
-
-    if (!sol_state || !sol_time || !sol_dt)
+    FILE *flush_file = NULL;
+    double *sol_state = NULL;
+    double *sol_time = NULL;
+    double *sol_dt = NULL;
+    if (flush)
     {
-        printf("Error: Failed to allocate memory for solution output\n");
-        goto err_sol_output_memory;
-    }
+        flush_file = fopen(flush_path, "w");
 
-    // Initial value
-    for (int i = 0; i < objects_count; i++)
-    {
-        for (int j = 0; j < 3; j++)
+        if (!flush_file)
         {
-            sol_state[i * 3 + j] = x[i * 3 + j];
-            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+            printf("Error: Failed to open file for flushing\n");
+            goto err_flush_file;
         }
-    }
-    sol_time[0] = 0.0;
-    for (int i = 0; i < store_npts; i++)
+
+        // Initial value
+        write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
+    } 
+    else
     {
-        sol_dt[i] = dt;
+        sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
+        sol_time = malloc(store_npts * sizeof(double));
+        sol_dt = malloc(store_npts * sizeof(double));
+
+        if (!sol_state || !sol_time || !sol_dt)
+        {
+            printf("Error: Failed to allocate memory for solution output\n");
+            goto err_sol_output_memory;
+        }
+
+        // Initial value
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                sol_state[i * 3 + j] = x[i * 3 + j];
+                sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+            }
+        }
+        sol_time[0] = 0.0;
+        for (int i = 0; i < store_npts; i++)
+        {
+            sol_dt[i] = dt;
+        }
     }
 
     // Main Loop
@@ -671,19 +825,30 @@ WIN32DLL_API int leapfrog(
         // Store solution
         if ((count + 1) == npts)
         {
-            memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-            memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-            sol_time[store_npts - 1] = dt * count;
-        }
-        else if (((count + 1) % store_every_n == 0))
-        {
-            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-            sol_time[*store_count + 1] = dt * (count + 1);
-            if (!((*store_count + 1) == (store_npts - 1)))
+            if (flush)
             {
-                (*store_count)++;
+                write_to_csv_file(flush_file, dt * count, dt, objects_count, x, v, m, G);
             }
+            else
+            {
+                memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[store_npts - 1] = dt * count;
+            }
+        }
+        else if (((count + 1) % store_every_n == 0) && ((*store_count + 1) != (store_npts - 1)))
+        {
+            if (flush)
+            {
+                write_to_csv_file(flush_file, dt * (count + 1), dt, objects_count, x, v, m, G);
+            }
+            else
+            {
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[*store_count + 1] = dt * (count + 1);
+            }
+            (*store_count)++;
         }
         count++;
 
@@ -709,10 +874,18 @@ WIN32DLL_API int leapfrog(
     return 0;
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
+err_flush_file:
 err_sol_output_memory:
-    free(sol_state);
-    free(sol_time);
-    free(sol_dt);
+    if (flush)
+    {
+        fclose(flush_file);
+    }
+    else
+    {
+        free(sol_state);
+        free(sol_time);
+        free(sol_dt);
+    }    
 err_calc_memory:
     free(temp_x);
     free(temp_v);

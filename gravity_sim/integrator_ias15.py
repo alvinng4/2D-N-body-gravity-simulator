@@ -39,7 +39,9 @@ class IAS15:
         tf,
         tolerance,
         acceleration_func,
-        no_progress_bar=False,
+        flush: bool = False,
+        flush_path: str = "",
+        no_progress_bar: bool = False,
     ):
         """
         Recommended tolerance: 1e-9
@@ -71,6 +73,7 @@ class IAS15:
 
         queue = Queue()
         solution = Solutions()
+        flush_path = flush_path.encode("utf-8")
 
         ias15_thread = threading.Thread(
             target=ias15_wrapper,
@@ -88,6 +91,8 @@ class IAS15:
                 acceleration_func,
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
+                ctypes.c_bool(flush),
+                flush_path,
                 ctypes.byref(solution),
                 ctypes.byref(self.is_exit_ctypes_bool),
             ),
@@ -121,33 +126,55 @@ class IAS15:
             t.value = tf
             progress_bar_thread.join()
 
-        # Convert C arrays to numpy arrays
-        return_sol_state = np.ctypeslib.as_array(
-            solution.sol_state,
-            shape=(store_count.value + 1, objects_count * 6),
-        ).copy()
+        if not flush:
+            # Convert C arrays to numpy arrays
+            return_sol_state = np.ctypeslib.as_array(
+                solution.sol_state,
+                shape=(store_count.value + 1, objects_count * 6),
+            ).copy()
 
-        return_sol_time = np.ctypeslib.as_array(
-            solution.sol_time, shape=(store_count.value + 1,)
-        ).copy()
-        return_sol_dt = np.ctypeslib.as_array(
-            solution.sol_dt, shape=(store_count.value + 1,)
-        ).copy()
+            return_sol_time = np.ctypeslib.as_array(
+                solution.sol_time, shape=(store_count.value + 1,)
+            ).copy()
+            return_sol_dt = np.ctypeslib.as_array(
+                solution.sol_dt, shape=(store_count.value + 1,)
+            ).copy()
 
-        # Free memory
-        self.c_lib.free_memory_real(solution.sol_state)
-        self.c_lib.free_memory_real(solution.sol_time)
-        self.c_lib.free_memory_real(solution.sol_dt)
+            # Free memory
+            self.c_lib.free_memory_real(solution.sol_state)
+            self.c_lib.free_memory_real(solution.sol_time)
+            self.c_lib.free_memory_real(solution.sol_dt)
 
-        return (
-            return_sol_state,
-            return_sol_time,
-            return_sol_dt,
-        )
+            return (
+                return_sol_state,
+                return_sol_time,
+                return_sol_dt,
+                store_count.value,
+            )
+        else:
+            return (
+                None,
+                None,
+                None,
+                store_count.value,
+            )
 
     def simulation_numpy(
-        self, objects_count, x, v, m, G, tf, tolerance, no_progress_bar=False
+        self,
+        objects_count,
+        x,
+        v,
+        m,
+        G,
+        tf,
+        tolerance,
+        flush: bool = False,
+        flush_path: str = "",
+        no_progress_bar: bool = False,
     ):
+        if flush:
+            raise NotImplementedError("Flush is not implemented for numpy")
+
         # Recommended tolerance: 1e-9
 
         # Safety factors for step-size control

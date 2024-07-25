@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,6 +20,8 @@
  * \param acceleration Pointer to the acceleration function
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
+ * \param flush Flag to indicate whether to store solution into data file directly
+ * \param flush_path Path to the file to store the solution
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
@@ -39,8 +42,10 @@ int ias15(
     void (*acceleration)(int, real*, real*, const real*, real),
     int store_every_n,
     int *restrict store_count,
+    const bool flush,
+    const char *restrict flush_path,
     Solutions *restrict solution,
-    int *restrict is_exit
+    bool *restrict is_exit
 );
 
 /**
@@ -365,8 +370,10 @@ WIN32DLL_API int ias15(
     void (*acceleration)(int, real*, real*, const real*, real),
     int store_every_n,
     int *restrict store_count,
+    const bool flush,
+    const char *restrict flush_path,
     Solutions *restrict solution,
-    int *restrict is_exit
+    bool *restrict is_exit
 )
 {   
     real *a = malloc(objects_count * 3 * sizeof(real));
@@ -392,13 +399,13 @@ WIN32DLL_API int ias15(
     int dim_nodes = 8;
     int dim_nodes_minus_1 = 7;
     int dim_nodes_minus_2 = 6;
-    real *nodes = calloc(dim_nodes, sizeof(real));
-    real *aux_c = calloc(7 * 7, sizeof(real));
-    real *aux_r = calloc(8 * 8, sizeof(real));
-    real *aux_b0 = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
-    real *aux_b = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
-    real *aux_g = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
-    real *aux_e = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
+    real *restrict nodes = calloc(dim_nodes, sizeof(real));
+    real *restrict aux_c = calloc(7 * 7, sizeof(real));
+    real *restrict aux_r = calloc(8 * 8, sizeof(real));
+    real *restrict aux_b0 = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
+    real *restrict aux_b = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
+    real *restrict aux_g = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
+    real *restrict aux_e = calloc((dim_nodes - 1) * objects_count * 3, sizeof(real));
 
     if (!nodes || !aux_c || !aux_r || !aux_b0 || !aux_b || !aux_g || !aux_e)
     {
@@ -412,23 +419,23 @@ WIN32DLL_API int ias15(
     int ias15_refine_flag = 0;
 
     // Arrays for ias15_step
-    real *aux_a = calloc(dim_nodes * objects_count * 3, sizeof(real));
-    real *x_step = calloc(objects_count * 3, sizeof(real));
-    real *v_step = calloc(objects_count * 3, sizeof(real));
-    real *a_step = calloc(objects_count * 3, sizeof(real));
-    real *delta_b7 = calloc(objects_count * 3, sizeof(real));
+    real *restrict aux_a = calloc(dim_nodes * objects_count * 3, sizeof(real));
+    real *restrict x_step = calloc(objects_count * 3, sizeof(real));
+    real *restrict v_step = calloc(objects_count * 3, sizeof(real));
+    real *restrict a_step = calloc(objects_count * 3, sizeof(real));
+    real *restrict delta_b7 = calloc(objects_count * 3, sizeof(real));
 
     // Array for compute aux_g
-    real *F = calloc(8 * objects_count * 3, sizeof(real));
+    real *restrict F = calloc(8 * objects_count * 3, sizeof(real));
 
     // Array for refine aux_b
-    real *delta_aux_b = calloc(dim_nodes_minus_1 * objects_count * 3, sizeof(real));
+    real *restrict delta_aux_b = calloc(dim_nodes_minus_1 * objects_count * 3, sizeof(real));
 
     // Arrays for compensated summation
-    real *x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
-    real *v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
-    real *temp_x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
-    real *temp_v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict temp_x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict temp_v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
 
     if (
         !aux_a || 
@@ -450,38 +457,60 @@ WIN32DLL_API int ias15(
 
     // Allocate memory for solution output
     int64 count = 0;
-    double *sol_state = malloc(NPTS * objects_count * 6 * sizeof(double));
-    double *sol_time = malloc(NPTS * sizeof(double));
-    double *sol_dt = malloc(NPTS * sizeof(double));
-    int buffer_size = NPTS;
+    real dt = ias15_initial_dt(objects_count, 15, x, v, a, m, G, acceleration);
 
-    if (!sol_state || !sol_time || !sol_dt)
-    {
-        printf("Error: Failed to allocate memory for solution output\n");
-        goto err_sol_output_memory;
-    }
+    FILE *flush_file = NULL;
+    double *sol_state = NULL;
+    double *sol_time = NULL;
+    double *sol_dt = NULL;
+    int buffer_size = NPTS;
 
     // For realloc solution output
     double *temp_sol_state = NULL;
     double *temp_sol_time = NULL;
     double *temp_sol_dt = NULL;
+    
+    if (flush)
+    {
+        flush_file = fopen(flush_path, "w");
 
-    // Initial value
-    for (int i = 0; i < objects_count; i++)
-    {
-        for (int j = 0; j < 3; j++)
+        if (!flush_file)
         {
-            sol_state[i * 3 + j] = x[i * 3 + j];
-            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+            printf("Error: Failed to open file for flushing\n");
+            goto err_flush_file;
         }
-    }
-    sol_time[0] = 0.0;
-    real dt = ias15_initial_dt(objects_count, 15, x, v, a, m, G, acceleration);
-    if (dt == -1.0)
+
+        // Initial value
+        write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
+    } 
+    else
     {
-        goto err_initial_dt_memory;
+        double *sol_state = malloc(NPTS * objects_count * 6 * sizeof(double));
+        double *sol_time = malloc(NPTS * sizeof(double));
+        double *sol_dt = malloc(NPTS * sizeof(double));
+
+        if (!sol_state || !sol_time || !sol_dt)
+        {
+            printf("Error: Failed to allocate memory for solution output\n");
+            goto err_sol_output_memory;
+        }
+
+        // Initial value
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                sol_state[i * 3 + j] = x[i * 3 + j];
+                sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+            }
+        }
+        sol_time[0] = 0.0;
+        if (dt == -1.0)
+        {
+            goto err_initial_dt_memory;
+        }
+        sol_dt[0] = dt;
     }
-    sol_dt[0] = dt;
 
     while (1)
     {
@@ -530,18 +559,32 @@ WIN32DLL_API int ias15(
         // Store step
         if ((count + 1) % store_every_n == 0)
         {
-            sol_time[*store_count + 1] = *t;
-            sol_dt[*store_count + 1] = dt;
-            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+            if (flush)
+            {
+                write_to_csv_file(flush_file, *t, dt, objects_count, x, v, m, G);
+            }
+            else
+            {
+                sol_time[*store_count + 1] = *t;
+                sol_dt[*store_count + 1] = dt;
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+            }
             *store_count += 1;
         }
         else if (*t >= tf)
         {
-            sol_time[*store_count + 1] = *t;
-            sol_dt[*store_count + 1] = dt;
-            memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-            memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+            if (flush)
+            {
+                write_to_csv_file(flush_file, *t, dt, objects_count, x, v, m, G);
+            }
+            else
+            {
+                sol_time[*store_count + 1] = *t;
+                sol_dt[*store_count + 1] = dt;
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+            }
         }
 
         // Check if user sends KeyboardInterrupt in main thread
@@ -602,10 +645,18 @@ WIN32DLL_API int ias15(
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_initial_dt_memory:
+err_flush_file:
 err_sol_output_memory:
-    free(sol_state);
-    free(sol_time);
-    free(sol_dt);
+    if (flush)
+    {
+        fclose(flush_file);
+    }
+    else
+    {
+        free(sol_state);
+        free(sol_time);
+        free(sol_dt);
+    }    
 err_calc_memory:
     free(aux_a);
     free(x_step);

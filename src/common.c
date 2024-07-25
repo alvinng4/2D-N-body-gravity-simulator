@@ -1,9 +1,10 @@
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "common.h"
-
+#include "tools.h"
 
 WIN32DLL_API void acceleration_pairwise(
     int objects_count,
@@ -659,4 +660,36 @@ WIN32DLL_API real vec_norm(const real *restrict vec, int vec_length)
         }
     }
     return sqrt(sum);
+}
+
+WIN32DLL_API void write_to_csv_file(
+    FILE *restrict file,
+    double time,
+    double dt,
+    int objects_count,
+    const double *restrict x,
+    const double *restrict v,
+    const double *restrict m,
+    real G
+)
+{
+    fprintf(file, "%.17g", time);
+    fprintf(file, ",%.17g", dt);
+    fprintf(file, ",%.17g", compute_energy_one_step(objects_count, x, v, m, G));
+    for (int i = 0; i < objects_count; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            fprintf(file, ",%.17g", x[i * 3 + j]);
+        }
+    }
+    for (int i = 0; i < objects_count; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            fprintf(file, ",%.17g", v[i * 3 + j]);
+        }
+    }
+    fprintf(file, "\n");
+    fflush(file);
 }

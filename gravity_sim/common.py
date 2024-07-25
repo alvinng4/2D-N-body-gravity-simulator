@@ -1,6 +1,10 @@
+import csv
+import datetime
 import re
 
 import numpy as np
+
+from progress_bar import Progress_bar
 
 
 def get_bool(msg: str) -> bool:
@@ -145,3 +149,75 @@ def acceleration(objects_count, x, m, G):
     )
 
     return a
+
+
+def save_results(
+    file_path: str,
+    system_name: str,
+    integrator_name: str,
+    objects_count: int,
+    tf: float,
+    dt: float,
+    tolerance: float,
+    data_size: int,
+    store_every_n: int,
+    run_time: float,
+    masses: np.ndarray,
+    sol_state: np.ndarray = None,
+    sol_time: np.ndarray = None,
+    sol_dt: np.ndarray = None,
+    energy: np.ndarray = None,
+    only_metadata: bool = False,
+    no_print: bool = False,
+    no_progress_bar: bool = False,
+):
+    # Storing metadata
+    with open(file_path, "w", newline="") as file:
+        writer = csv.writer(file, quoting=csv.QUOTE_NONE)
+        writer.writerow(
+            [
+                f"# Data saved on (YYYY-MM-DD): {str(datetime.datetime.now().strftime('%Y-%m-%d'))}"
+            ]
+        )
+        writer.writerow([f"# System Name: {system_name}"])
+        writer.writerow([f"# Integrator: {integrator_name}"])
+        writer.writerow([f"# Number of objects: {objects_count}"])
+        writer.writerow([f"# Simulation time (days): {tf}"])
+        writer.writerow([f"# dt (days): {dt}"])
+        writer.writerow([f"# Tolerance: {tolerance}"])
+        writer.writerow([f"# Data size: {data_size}"])
+        writer.writerow([f"# Store every nth point: {store_every_n}"])
+        writer.writerow([f"# Run time (s): {run_time}"])
+        masses_str = " ".join(map(str, masses))
+        writer.writerow([f"# masses: {masses_str}"])
+
+    if not only_metadata:
+        if not no_progress_bar:
+            progress_bar = Progress_bar()
+            with progress_bar:
+                with open(file_path, "a", newline="") as file:
+                    writer = csv.writer(file)
+                    for count in progress_bar.track(range(data_size)):
+                        row = np.insert(
+                            sol_state[count],
+                            0,
+                            energy[count],
+                        )
+                        row = np.insert(row, 0, sol_dt[count])
+                        row = np.insert(row, 0, sol_time[count])
+                        writer.writerow(row.tolist())
+        else:
+            with open(file_path, "a", newline="") as file:
+                writer = csv.writer(file)
+                for count in range(data_size):
+                    row = np.insert(
+                        sol_state[count],
+                        0,
+                        energy[count],
+                    )
+                    row = np.insert(row, 0, sol_dt[count])
+                    row = np.insert(row, 0, sol_time[count])
+                    writer.writerow(row.tolist())
+
+    if not no_print:
+        print(f"Storing completed. Please check {file_path}")

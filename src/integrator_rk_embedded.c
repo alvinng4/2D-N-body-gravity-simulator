@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -279,8 +280,8 @@ WIN32DLL_API real rk_embedded_initial_dt(
     void (*acceleration)(int, real*, real*, const real*, real)
 )
 {
-    real *tolerance_scale_x = malloc(objects_count * 3 * sizeof(real));
-    real *tolerance_scale_v = malloc(objects_count * 3 * sizeof(real));
+    real *restrict tolerance_scale_x = malloc(objects_count * 3 * sizeof(real));
+    real *restrict tolerance_scale_v = malloc(objects_count * 3 * sizeof(real));
     real sum_0 = 0;
     real sum_1 = 0;
     real sum_2 = 0;
@@ -290,9 +291,9 @@ WIN32DLL_API real rk_embedded_initial_dt(
     real dt_0;
     real dt_1;
     real dt;
-    real *x_1 = malloc(objects_count * 3 * sizeof(real));
-    real *v_1 = malloc(objects_count * 3 * sizeof(real));
-    real *a_1 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict x_1 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict v_1 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict a_1 = malloc(objects_count * 3 * sizeof(real));
 
     if (
         !tolerance_scale_x ||
@@ -407,6 +408,8 @@ WIN32DLL_API real rk_embedded_initial_dt(
  * \param acceleration Pointer to the acceleration function
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
+ * \param flush Flag to indicate whether to store solution into data file directly
+ * \param flush_path Path to the file to store the solution
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
@@ -429,8 +432,10 @@ WIN32DLL_API int rk_embedded(
     void (*acceleration)(int, real*, real*, const real*, real),
     int store_every_n,
     int *restrict store_count,
+    const bool flush,
+    const char *restrict flush_path,
     Solutions *restrict solution,
-    int *restrict is_exit
+    bool *restrict is_exit
 )
 {   
     // Initialization
@@ -449,7 +454,7 @@ WIN32DLL_API int rk_embedded(
     int stages = len_weights;
     int min_power = power < power_test ? power : power_test;
 
-    real *error_estimation_delta_weights = malloc(len_weights * sizeof(real));
+    real *restrict error_estimation_delta_weights = malloc(len_weights * sizeof(real));
     if (!error_estimation_delta_weights)
     {
         printf("Error: Failed to allocate memory for error_estimation_delta_weights variable in rk_embedded()\n");
@@ -472,24 +477,24 @@ WIN32DLL_API int rk_embedded(
 
     // Initialize memory for calculation
     real sum, error, dt_new; 
-    real *a = malloc(objects_count * 3 * sizeof(real));
-    real *v_1 = calloc(objects_count * 3, sizeof(real));
-    real *x_1 = calloc(objects_count * 3, sizeof(real));
-    real *vk = calloc(stages * objects_count * 3, sizeof(real));
-    real *xk = calloc(stages * objects_count * 3, sizeof(real));    
-    real *temp_a = calloc(objects_count * 3, sizeof(real));
-    real *temp_v = calloc(objects_count * 3, sizeof(real));
-    real *temp_x = calloc(objects_count * 3, sizeof(real));
-    real *error_estimation_delta_v = calloc(objects_count * 3, sizeof(real));
-    real *error_estimation_delta_x = calloc(objects_count * 3, sizeof(real));
-    real *tolerance_scale_v = calloc(objects_count * 3, sizeof(real));
-    real *tolerance_scale_x = calloc(objects_count * 3, sizeof(real));
+    real *restrict a = malloc(objects_count * 3 * sizeof(real));
+    real *restrict v_1 = calloc(objects_count * 3, sizeof(real));
+    real *restrict x_1 = calloc(objects_count * 3, sizeof(real));
+    real *restrict vk = calloc(stages * objects_count * 3, sizeof(real));
+    real *restrict xk = calloc(stages * objects_count * 3, sizeof(real));    
+    real *restrict temp_a = calloc(objects_count * 3, sizeof(real));
+    real *restrict temp_v = calloc(objects_count * 3, sizeof(real));
+    real *restrict temp_x = calloc(objects_count * 3, sizeof(real));
+    real *restrict error_estimation_delta_v = calloc(objects_count * 3, sizeof(real));
+    real *restrict error_estimation_delta_x = calloc(objects_count * 3, sizeof(real));
+    real *restrict tolerance_scale_v = calloc(objects_count * 3, sizeof(real));
+    real *restrict tolerance_scale_x = calloc(objects_count * 3, sizeof(real));
 
     // Arrays for compensated summation
-    real *x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
-    real *v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
-    real *temp_x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
-    real *temp_v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict temp_x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
+    real *restrict temp_v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
 
     if (
         !a ||
@@ -516,32 +521,6 @@ WIN32DLL_API int rk_embedded(
 
     // Allocate memory for solution output
     int64 count = 0;
-    double *sol_state = malloc(NPTS * objects_count * 6 * sizeof(double));
-    double *sol_time = malloc(NPTS * sizeof(double));
-    double *sol_dt = malloc(NPTS * sizeof(double));
-    int buffer_size = NPTS;
-
-    if (!sol_state || !sol_time || !sol_dt)
-    {
-        printf("Error: Failed to allocate memory for solution output\n");
-        goto err_sol_output_memory;
-    }
-    
-    // For realloc solution output
-    double *temp_sol_state = NULL;
-    double *temp_sol_time = NULL;
-    double *temp_sol_dt = NULL;
-
-    // Initial value
-    for (int i = 0; i < objects_count; i++)
-    {
-        for (int j = 0; j < 3; j++)
-        {
-            sol_state[i * 3 + j] = x[i * 3 + j];
-            sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
-        }
-    }
-    sol_time[0] = 0.0;
     real dt = rk_embedded_initial_dt(
         objects_count,
         power,
@@ -554,11 +533,59 @@ WIN32DLL_API int rk_embedded(
         rel_tolerance,
         acceleration
     );
-    if (dt == -1.0)
+
+    FILE *flush_file = NULL;
+    double *sol_state = NULL;
+    double *sol_time = NULL;
+    double *sol_dt = NULL;
+    int buffer_size = NPTS;
+
+    // For realloc solution output
+    double *temp_sol_state = NULL;
+    double *temp_sol_time = NULL;
+    double *temp_sol_dt = NULL;
+    
+    if (flush)
     {
-        goto err_initial_dt_memory;
+        flush_file = fopen(flush_path, "w");
+
+        if (!flush_file)
+        {
+            printf("Error: Failed to open file for flushing\n");
+            goto err_flush_file;
+        }
+
+        // Initial value
+        write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
+    } 
+    else
+    {
+        double *sol_state = malloc(NPTS * objects_count * 6 * sizeof(double));
+        double *sol_time = malloc(NPTS * sizeof(double));
+        double *sol_dt = malloc(NPTS * sizeof(double));
+
+        if (!sol_state || !sol_time || !sol_dt)
+        {
+            printf("Error: Failed to allocate memory for solution output\n");
+            goto err_sol_output_memory;
+        }
+
+        // Initial value
+        for (int i = 0; i < objects_count; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                sol_state[i * 3 + j] = x[i * 3 + j];
+                sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
+            }
+        }
+        sol_time[0] = 0.0;
+        if (dt == -1.0)
+        {
+            goto err_initial_dt_memory;
+        }
+        sol_dt[0] = dt;
     }
-    sol_dt[0] = dt;
 
     // Main Loop
     while (1)
@@ -693,19 +720,32 @@ WIN32DLL_API int rk_embedded(
             // Store step
             if ((count + 1) % store_every_n == 0)
             {
-                sol_time[*store_count + 1] = *t;
-                sol_dt[*store_count + 1] = dt;
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                if (flush)
+                {
+                    write_to_csv_file(flush_file, *t, dt, objects_count, x, v, m, G);
+                }
+                else
+                {
+                    sol_time[*store_count + 1] = *t;
+                    sol_dt[*store_count + 1] = dt;
+                    memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                    memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                }
                 *store_count += 1;
             }
-
             else if (*t >= tf)
             {
-                sol_time[*store_count] = *t;
-                sol_dt[*store_count] = dt;
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                if (flush)
+                {
+                    write_to_csv_file(flush_file, *t, dt, objects_count, x, v, m, G);
+                }
+                else
+                {
+                    sol_time[*store_count + 1] = *t;
+                    sol_dt[*store_count + 1] = dt;
+                    memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                    memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                }
             }
 
             // Check if user sends KeyboardInterrupt in main thread
@@ -802,10 +842,18 @@ WIN32DLL_API int rk_embedded(
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_initial_dt_memory:
+err_flush_file:
 err_sol_output_memory:
-    free(sol_state);
-    free(sol_time);
-    free(sol_dt);
+    if (flush)
+    {
+        fclose(flush_file);
+    }
+    else
+    {
+        free(sol_state);
+        free(sol_time);
+        free(sol_dt);
+    }  
 err_calc_memory:
     free(a);
     free(v_1);

@@ -16,6 +16,7 @@ import numpy as np
 
 sys.path.append(str(Path(__file__).parent))
 
+import common
 from gravitational_system import GravitationalSystem
 from simulator import Simulator
 import plotting
@@ -406,9 +407,10 @@ class GravitySimulator:
     def save_results(
         self,
         system_name: str = None,
-        path: str = None,
+        file_path: str = None,
         computed_energy: bool = False,
         store_energy_as_zeros: bool = False,
+        no_progress_bar: bool = False,
     ) -> None:
         """
         Save the results in a csv file
@@ -437,52 +439,31 @@ class GravitySimulator:
             )
         )
 
-        # Storing metadata
-        with open(file_path, "w", newline="") as file:
-            writer = csv.writer(file, quoting=csv.QUOTE_NONE)
-            writer.writerow(
-                [
-                    f"# Data saved on (YYYY-MM-DD): {str(datetime.datetime.now().strftime('%Y-%m-%d'))}"
-                ]
-            )
-            writer.writerow([f"# System Name: {system_name}"])
+        try:
+            integrator_name = GravitySimulator.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
+                self.simulator.integrator
+            ]
+        except KeyError:
+            integrator_name = None
 
-            try:
-                integrator_name = (
-                    GravitySimulator.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
-                        self.simulator.integrator
-                    ]
-                )
-            except KeyError:
-                integrator_name = None
-
-            writer.writerow([f"# Integrator: {integrator_name}"])
-            writer.writerow([f"# Number of objects: {self.simulator.objects_count}"])
-            writer.writerow([f"# Simulation time (days): {self.simulator.tf}"])
-            writer.writerow([f"# dt (days): {self.simulator.dt}"])
-            writer.writerow([f"# Tolerance: {self.simulator.tolerance}"])
-            writer.writerow([f"# Data size: {data_size}"])
-            writer.writerow(
-                [f"# Store every nth point: {self.simulator.store_every_n}"]
-            )
-            writer.writerow([f"# Run time (s): {self.simulator.run_time}"])
-            masses_str = " ".join(map(str, self.simulator.m))
-            writer.writerow([f"# masses: {masses_str}"])
-
-        progress_bar = Progress_bar()
-        with progress_bar:
-            with open(file_path, "a", newline="") as file:
-                writer = csv.writer(file)
-                for count in progress_bar.track(range(data_size)):
-                    row = np.insert(
-                        self.simulator.sol_state[count],
-                        0,
-                        energy[count],
-                    )
-                    row = np.insert(row, 0, self.simulator.sol_dt[count])
-                    row = np.insert(row, 0, self.simulator.sol_time[count])
-                    writer.writerow(row.tolist())
-        print(f"Storing completed. Please check {file_path}")
+        common.save_results(
+            file_path=file_path,
+            system_name=system_name,
+            integrator_name=integrator_name,
+            objects_count=self.simulator.objects_count,
+            tf=self.simulator.tf,
+            dt=self.simulator.dt,
+            tolerance=self.simulator.tolerance,
+            data_size=data_size,
+            store_every_n=self.simulator.store_every_n,
+            run_time=self.simulator.run_time,
+            masses=self.simulator.m,
+            sol_state=self.simulator.sol_state,
+            sol_time=self.simulator.sol_time,
+            sol_dt=self.simulator.sol_dt,
+            energy=energy,
+            no_progress_bar=no_progress_bar,
+        )
 
     @property
     def integration_mode(self) -> str:

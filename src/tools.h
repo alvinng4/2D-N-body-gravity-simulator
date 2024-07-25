@@ -48,6 +48,24 @@ void compute_energy(
     int *restrict is_exit
 );
 
+/**
+ * \brief Compute the energy of the system at some step
+ * 
+ * \param objects_count Number of objects in the system
+ * \param x Array of positions of the objects
+ * \param v Array of velocities of the objects
+ * \param m Array of masses of the objects
+ * \param G Gravitational Constant
+ * 
+ * \return Total energy of the system
+ */
+real compute_energy_one_step(
+    int objects_count,
+    const double *restrict x,
+    const double *restrict v,
+    const double *restrict m,
+    real G
+);
 
 /**
  * \brief Compute the linear momentum in the newtonian system

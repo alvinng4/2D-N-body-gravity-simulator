@@ -9,6 +9,7 @@
  */
 
 #include <stdint.h>
+#include <stdio.h>
 
 #ifdef WIN32DLL_EXPORTS
     #define WIN32DLL_API __declspec(dllexport)
@@ -92,5 +93,24 @@ real abs_max_vec(const real *restrict vec, int vec_length);
  */
 real vec_norm(const real *restrict vec, int vec_length);
 
+/**
+ * \brief Store the state of the system at a given time
+ * 
+ * \param file File pointer to the csv file
+ * \param time time
+ * \param dt Time step
+ * \param x Array of position vectors of all objects
+ * \param v Array of velocity vectors of all objects
+ */
+void write_to_csv_file(
+    FILE *restrict file,
+    double time,
+    double dt,
+    int objects_count,
+    const double *restrict x,
+    const double *restrict v,
+    const double *restrict m,
+    real G
+);
 
 #endif

@@ -135,8 +135,11 @@ If you choose to save the data, the numerical data will be stored in the followi
 ```
 Gravity-Simulator/gravity_sim/results
 ```
-The file will starts with the metadata which will always follows the same format.
-Missing information will be saved as `None`. Below is an example:
+The file will starts with the metadata which starts with `#`.
+Missing information will be saved as `None`.
+More rows may be added in the future.
+
+Below is an example:
 ```
 # Data saved on (YYYY-MM-DD): 2024-06-25
 # System Name: solar_system

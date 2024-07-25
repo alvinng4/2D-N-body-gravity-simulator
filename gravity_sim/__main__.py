@@ -11,17 +11,13 @@ from pathlib import Path
 import platform
 import re
 import sys
-import timeit
 
 import numpy as np
 
-from common import get_bool
-from common import get_int
-from common import get_float
+import common
 from gravitational_system import GravitationalSystem
 from simulator import Simulator
 import plotting
-from progress_bar import Progress_bar
 
 
 class GravitySimulatorCLI:
@@ -60,7 +56,7 @@ class GravitySimulatorCLI:
                         str(Path(__file__).parent / "c_lib.so")
                     )
             except:
-                if get_bool("Loading c_lib failed. Run with numpy?"):
+                if common.get_bool("Loading c_lib failed. Run with numpy?"):
                     self.is_c_lib = False
                 else:
                     print(
@@ -149,7 +145,7 @@ class GravitySimulatorCLI:
             + "3. Exit\n"
             + "Enter action (Number): "
         )
-        action = get_int(msg, larger_than=0, smaller_than=4)
+        action = common.get_int(msg, larger_than=0, smaller_than=4)
         print()
 
         match action:
@@ -180,7 +176,7 @@ class GravitySimulatorCLI:
         )
 
         while True:
-            action = get_int(msg, larger_than=0, smaller_than=14)
+            action = common.get_int(msg, larger_than=0, smaller_than=14)
             print()
 
             match action:
@@ -224,7 +220,7 @@ class GravitySimulatorCLI:
         while True:
             self._get_user_simulation_input()
             self._print_user_simulation_input()
-            if get_bool("Proceed?"):
+            if common.get_bool("Proceed?"):
                 print("")
                 break
 
@@ -304,7 +300,7 @@ class GravitySimulatorCLI:
             self.system = system_name
             custom_sys.name = system_name
 
-            objects_count = get_int("Number of objects: ", larger_than=0)
+            objects_count = common.get_int("Number of objects: ", larger_than=0)
             print()
 
             print("Note: The default unit is M_sun, AU and day, G=0.00029591220828411.")
@@ -323,7 +319,9 @@ class GravitySimulatorCLI:
 
             masses = []
             for i in range(objects_count):
-                masses.append(get_float(f"Please enter the mass for object {i + 1}: "))
+                masses.append(
+                    common.get_float(f"Please enter the mass for object {i + 1}: ")
+                )
 
             x = np.zeros(objects_count * 3)
             for i in range(objects_count):
@@ -335,7 +333,7 @@ class GravitySimulatorCLI:
                             variable = "y"
                         case 2:
                             variable = "z"
-                    x[i * 3 + j] = get_float(
+                    x[i * 3 + j] = common.get_float(
                         f"Please enter {variable} for object {i + 1}: "
                     )
 
@@ -349,7 +347,7 @@ class GravitySimulatorCLI:
                             variable = "y"
                         case 2:
                             variable = "z"
-                    v[i * 3 + j] = get_float(
+                    v[i * 3 + j] = common.get_float(
                         f"Please enter v{variable} for object {i + 1}: "
                     )
 
@@ -364,7 +362,9 @@ class GravitySimulatorCLI:
         # --------------------Recommended settings for systems--------------------
         elif self.system in GravitationalSystem.DEFAULT_SYSTEMS:
             print("")
-            if get_bool("Do you want to use the recommended settings for this system?"):
+            if common.get_bool(
+                "Do you want to use the recommended settings for this system?"
+            ):
                 print("")
                 self.integrator = "ias15"
                 (
@@ -481,10 +481,10 @@ class GravitySimulatorCLI:
                         break
 
         elif self.integrator in ["rkf45", "dopri", "dverk", "rkf78", "ias15"]:
-            self.tolerance = get_float("Enter tolerance: ", larger_than=0)
+            self.tolerance = common.get_float("Enter tolerance: ", larger_than=0)
 
         # --------------------Input store_every_n--------------------
-        self.store_every_n = get_int("Store every nth point (int): ", 0)
+        self.store_every_n = common.get_int("Store every nth point (int): ", 0)
         print()
 
         # Exit
@@ -536,7 +536,7 @@ class GravitySimulatorCLI:
         # --------------------Get user input--------------------
         while True:
             print()
-            desired_trim_size = get_int(
+            desired_trim_size = common.get_int(
                 'Enter desired data size (Enter "cancel" to cancel): ',
                 larger_than=1,
                 smaller_than=self.data_size,
@@ -550,7 +550,9 @@ class GravitySimulatorCLI:
             else:
                 divide_factor = math.ceil(self.data_size / desired_trim_size)
                 trim_size = math.floor(self.data_size / divide_factor) + 1
-                if get_bool(f"The trimmed data size would be {trim_size}. Continue?"):
+                if common.get_bool(
+                    f"The trimmed data size would be {trim_size}. Continue?"
+                ):
                     is_trim_data = True
                     print()
                     break
@@ -609,7 +611,7 @@ class GravitySimulatorCLI:
         Format: time, G, dt, total energy, x1, y1, z1, x2, y2, z2, ... vx1, vy1, vz1, vx2, vy2, vz2, ...
         """
         if not self.computed_energy:
-            if get_bool(
+            if common.get_bool(
                 "WARNING: Energy has not been computed. The energy data will be stored as zeros. Proceed?"
             ):
                 self.simulator.energy = np.zeros(self.data_size)
@@ -628,13 +630,13 @@ class GravitySimulatorCLI:
         file_size /= 1000 * 1000  # Convert to MB
 
         if 1 < file_size < 1000:
-            if not get_bool(
+            if not common.get_bool(
                 f"File size is estimated to be {file_size:.1f} MB. Continue?"
             ):
                 print()
                 return None
         elif 1000 <= file_size:
-            if not get_bool(
+            if not common.get_bool(
                 f"File size is estimated to be {(file_size / 1000):.1f} GB. Continue?"
             ):
                 print()
@@ -655,51 +657,32 @@ class GravitySimulatorCLI:
             )
         )
 
-        # Storing metadata
-        with open(file_path, "w", newline="") as file:
-            writer = csv.writer(file, quoting=csv.QUOTE_NONE)
-            writer.writerow(
-                [
-                    f"# Data saved on (YYYY-MM-DD): {str(datetime.datetime.now().strftime('%Y-%m-%d'))}"
+        try:
+            integrator_name = (
+                GravitySimulatorCLI.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
+                    self.simulator.integrator
                 ]
             )
-            writer.writerow([f"# System Name: {self.gravitational_system}"])
+        except KeyError:
+            integrator_name = None
 
-            try:
-                integrator_name = (
-                    GravitySimulatorCLI.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
-                        self.simulator.integrator
-                    ]
-                )
-            except KeyError:
-                integrator_name = None
-
-            writer.writerow([f"# Integrator: {integrator_name}"])
-            writer.writerow([f"# Number of objects: {self.simulator.objects_count}"])
-            writer.writerow([f"# Simulation time (days): {self.simulator.tf}"])
-            writer.writerow([f"# dt (days): {self.simulator.dt}"])
-            writer.writerow([f"# Tolerance: {self.simulator.tolerance}"])
-            writer.writerow([f"# Data size: {self.data_size}"])
-            writer.writerow([f"# Store every nth point: {self.store_every_n}"])
-            writer.writerow([f"# Run time (s): {self.simulator.run_time}"])
-            masses_str = " ".join(map(str, self.simulator.m))
-            writer.writerow([f"# masses: {masses_str}"])
-
-        progress_bar = Progress_bar()
-        with progress_bar:
-            with open(file_path, "a", newline="") as file:
-                writer = csv.writer(file)
-                for count in progress_bar.track(range(self.data_size)):
-                    row = np.insert(
-                        self.simulator.sol_state[count],
-                        0,
-                        self.simulator.energy[count],
-                    )
-                    row = np.insert(row, 0, self.simulator.sol_dt[count])
-                    row = np.insert(row, 0, self.simulator.sol_time[count])
-                    writer.writerow(row.tolist())
-        print(f"Storing completed. Please check {file_path}")
-
+        common.save_results(
+            file_path,
+            self.gravitational_system,
+            integrator_name,
+            self.simulator.objects_count,
+            self.tf,
+            self.simulator.dt,
+            self.simulator.tolerance,
+            self.data_size,
+            self.store_every_n,
+            self.simulator.run_time,
+            self.simulator.m,
+            self.simulator.sol_state,
+            self.simulator.sol_time,
+            self.simulator.sol_dt,
+            self.simulator.energy,
+        )
         print("")
 
     def _read_simulation_data(self):
@@ -914,7 +897,7 @@ class GravitySimulatorCLI:
                         else:
                             self.tf_unit = "years"
 
-                        if get_bool(f"Unit for tf is {self.tf_unit}. Proceed?"):
+                        if common.get_bool(f"Unit for tf is {self.tf_unit}. Proceed?"):
                             print()
                             break
 
@@ -977,10 +960,10 @@ class GravitySimulatorCLI:
 
     def _animation_get_user_input(self, dim: int):
         while True:
-            fps = get_float("Enter FPS: ", larger_than=0)
+            fps = common.get_float("Enter FPS: ", larger_than=0)
 
             while True:
-                desired_time = get_float(
+                desired_time = common.get_float(
                     "Enter desired time length for the gif (in seconds): ",
                     larger_than=0,
                 )
@@ -1003,16 +986,16 @@ class GravitySimulatorCLI:
             file_name = input(
                 "Enter file name without extension (carefully, the program cannot check the validity of the filename): "
             )
-            dpi = get_float(
+            dpi = common.get_float(
                 "Enter dots per inch (dpi) (recommended value is 200): ",
                 larger_than=0,
             )
-            traj_len = get_int(
+            traj_len = common.get_int(
                 "Enter the number of points for the trail (Enter -1 for full trajectory): ",
                 larger_than=-2,
                 smaller_than=self.data_size,
             )
-            is_dynamic_axes = get_bool("Use dynamic axes limit?")
+            is_dynamic_axes = common.get_bool("Use dynamic axes limit?")
 
             print()
 
@@ -1026,13 +1009,13 @@ class GravitySimulatorCLI:
             print(f"Dynamic axes limits: {is_dynamic_axes}")
 
             is_cancel = False
-            if get_bool("Proceed?"):
+            if common.get_bool("Proceed?"):
                 print()
                 break
             else:
                 print()
 
-            if get_bool("Return to menu?"):
+            if common.get_bool("Return to menu?"):
                 is_cancel = True
                 print()
                 break

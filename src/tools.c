@@ -63,6 +63,44 @@ WIN32DLL_API void compute_energy(
     }
 }
 
+WIN32DLL_API real compute_energy_one_step(
+    int objects_count, 
+    const double *restrict x,
+    const double *restrict v, 
+    const double *restrict m, 
+    real G
+)
+{
+    real temp_vec[3];
+    real energy = 0.0;
+
+    for (int i = 0; i < objects_count; i++)
+    {
+        // KE
+        energy += (
+            0.5 * m[i] 
+            * pow(vec_norm(&v[i * 3], 3), 2)
+        );
+
+        // PE
+        for (int j = i + 1; j < objects_count; j++)
+        {
+            for (int k = 0; k < 3; k++)
+            {
+                temp_vec[k] = (
+                    x[i * 3 + k]
+                    - x[j * 3 + k]
+                );
+            }
+            energy -= (
+                G * m[i] * m[j]
+                / vec_norm(temp_vec, 3)
+            );
+        }
+    }
+    
+    return energy;
+}
 
 WIN32DLL_API void compute_linear_momentum(
     int objects_count, 

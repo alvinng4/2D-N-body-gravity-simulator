@@ -55,7 +55,9 @@ class RKEmbedded:
         abs_tolerance,
         rel_tolerance,
         acceleration_func,
-        no_progress_bar=False,
+        flush: bool = False,
+        flush_path: str = "",
+        no_progress_bar: bool = False,
     ):
         class Solutions(ctypes.Structure):
             _fields_ = [
@@ -83,6 +85,7 @@ class RKEmbedded:
 
         queue = Queue()
         solution = Solutions()
+        flush_path = flush_path.encode("utf-8")
 
         rk_embedded_thread = threading.Thread(
             target=rk_embedded_wrapper,
@@ -102,6 +105,8 @@ class RKEmbedded:
                 acceleration_func,
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
+                ctypes.c_bool(flush),
+                flush_path,
                 ctypes.byref(solution),
                 ctypes.byref(self.is_exit_ctypes_bool),
             ),
@@ -135,29 +140,38 @@ class RKEmbedded:
             t.value = tf
             progress_bar_thread.join()
 
-        # Convert C arrays to numpy arrays
-        return_sol_state = np.ctypeslib.as_array(
-            solution.sol_state,
-            shape=(store_count.value + 1, objects_count * 6),
-        ).copy()
+        if not flush:
+            # Convert C arrays to numpy arrays
+            return_sol_state = np.ctypeslib.as_array(
+                solution.sol_state,
+                shape=(store_count.value + 1, objects_count * 6),
+            ).copy()
 
-        return_sol_time = np.ctypeslib.as_array(
-            solution.sol_time, shape=(store_count.value + 1,)
-        ).copy()
-        return_sol_dt = np.ctypeslib.as_array(
-            solution.sol_dt, shape=(store_count.value + 1,)
-        ).copy()
+            return_sol_time = np.ctypeslib.as_array(
+                solution.sol_time, shape=(store_count.value + 1,)
+            ).copy()
+            return_sol_dt = np.ctypeslib.as_array(
+                solution.sol_dt, shape=(store_count.value + 1,)
+            ).copy()
 
-        # Free memory
-        self.c_lib.free_memory_real(solution.sol_state)
-        self.c_lib.free_memory_real(solution.sol_time)
-        self.c_lib.free_memory_real(solution.sol_dt)
+            # Free memory
+            self.c_lib.free_memory_real(solution.sol_state)
+            self.c_lib.free_memory_real(solution.sol_time)
+            self.c_lib.free_memory_real(solution.sol_dt)
 
-        return (
-            return_sol_state,
-            return_sol_time,
-            return_sol_dt,
-        )
+            return (
+                return_sol_state,
+                return_sol_time,
+                return_sol_dt,
+                store_count.value,
+            )
+        else:
+            return (
+                None,
+                None,
+                None,
+                store_count.value,
+            )
 
     def simulation_numpy(
         self,
@@ -170,8 +184,13 @@ class RKEmbedded:
         tf,
         abs_tolerance,
         rel_tolerance,
-        no_progress_bar=False,
+        flush: bool = False,
+        flush_path: str = "",
+        no_progress_bar: bool = False,
     ):
+        if flush:
+            raise NotImplementedError("Flush is not implemented for numpy")
+
         (
             self.power,
             self.power_test,
