@@ -3,12 +3,12 @@ N-body gravity simulator Library
 """
 
 import ctypes
-import csv
 import datetime
 import math
 from pathlib import Path
 import platform
 import sys
+import time
 import typing
 import warnings
 
@@ -61,8 +61,8 @@ class GravitySimulator:
                 + "To use C library, try to compile the C files provided in the src folders."
             )
 
-        self.simulator = Simulator(self.c_lib)
-        self.launch_simulation = self.simulator.launch_simulation
+        self.is_exit = ctypes.c_bool(False)
+        self.simulator = Simulator(c_lib = self.c_lib, is_exit_ctypes_bool = self.is_exit)
         self.compute_energy = self.simulator.compute_energy
         self.compute_angular_momentum = self.simulator.compute_angular_momentum
 
@@ -90,6 +90,40 @@ class GravitySimulator:
         self, years: typing.Union[float, np.ndarray]
     ) -> typing.Union[float, np.ndarray]:
         return years * self.DAYS_PER_YEAR
+
+    def launch_simulation(
+        self,
+        gravitational_system,
+        integrator: str,
+        tf: float,
+        dt: float = None,
+        tolerance: float = None,
+        store_every_n: int = 1,
+        acceleration: str = "pairwise",
+        flush: bool = False,
+        flush_results_path: str = None,
+        no_progress_bar: bool = False,
+        no_print: bool = False,
+    ) -> None:
+        try:
+            self.simulator.launch_simulation(
+                gravitational_system,
+                integrator,
+                tf,
+                dt,
+                tolerance,
+                store_every_n,
+                acceleration,
+                flush,
+                flush_results_path,
+                no_progress_bar,
+                no_print,
+            )
+        except KeyboardInterrupt:
+            self.is_exit.value = True   # Exit simulation in c_lib
+            time.sleep(1.0)
+            self.is_exit.value = False  # Reset exit flag
+            
 
     def plot_2d_trajectory(
         self,

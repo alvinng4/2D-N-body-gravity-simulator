@@ -85,7 +85,7 @@ def main():
 
     file_path = Path(__file__).parent / "gravity_sim" / "results"
     file_path.mkdir(parents=True, exist_ok=True)
-    data_path = file_path / "astroid_belt_sim.csv"
+    data_path = file_path / "asteroid_belt_sim.csv"
 
     print("Simulating asteroid belt...")
     grav_sim.launch_simulation(
@@ -211,7 +211,7 @@ def main():
         frames.append(PIL.Image.open(file_path / f"frames_{i:04d}.png"))
 
     frames[0].save(
-        file_path / "astroid_belt.gif",
+        file_path / "asteroid_belt.gif",
         save_all=True,
         append_images=frames[1:],
         loop=0,
@@ -222,7 +222,7 @@ def main():
         (file_path / f"frames_{i:04d}.png").unlink()
     data_path.unlink()
 
-    print(f"Output completed! Please check {file_path / 'astroid_belt.gif'}")
+    print(f"Output completed! Please check {file_path / 'asteroid_belt.gif'}")
     print()
 
 
