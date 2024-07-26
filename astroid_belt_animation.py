@@ -15,6 +15,9 @@ import matplotlib.pyplot as plt
 
 import gravity_sim
 
+N = 50000
+FPS = 30
+DPI = 100
 
 def main():
     grav_sim = gravity_sim.GravitySimulator()
@@ -22,19 +25,19 @@ def main():
     system.load("solar_system")
     system.remove(name="Mercury")
     system.remove(name="Venus")
+    system.remove(name="Neptune")
+    system.remove(name="Uranus")
     colors = [
         "orange",
         "skyblue",
         "red",
         "darkgoldenrod",
         "gold",
-        "paleturquoise",
-        "blue",
     ]
-    marker_sizes = [6.0, 1.0, 1.0, 2.0, 1.5, 4.0, 3.5, 3.0, 3.0]
+    marker_sizes = [6.0, 2.0, 1.5, 4.0, 3.5]
 
-    # system.remove(name="Neptune")
-    # system.remove(name="Uranus")
+
+    # Adding a star to the system
     # x, v = from_orbital_elements_to_cartesian(
     #     mp=1.0,
     #     ms=1.0,
@@ -48,12 +51,10 @@ def main():
     # )
     # m = 1.0
     # system.add(x, v, m, objects_name="Added Star")
-    # colors = ["orange", "skyblue", "red", "darkgoldenrod", "gold", "orange"]
-    # marker_sizes = [6.0, 2.0, 1.5, 4.0, 3.5, 6.0]
+    colors.append("orange")
+    marker_sizes.append(6.0)
 
     massive_objects_count = system.objects_count
-
-    N = 50000
 
     rng = np.random.default_rng()
     a = rng.uniform(2.1, 3.2, size=N)  # Semi-major axis in AU
@@ -87,17 +88,17 @@ def main():
     data_path = file_path / "astroid_belt_sim.csv"
 
     print("Simulating asteroid belt...")
-    grav_sim.launch_simulation(
-        system,
-        "rk4",
-        grav_sim.years_to_days(5.0),
-        dt=grav_sim.years_to_days(0.001),
-        store_every_n=10,
-        acceleration="massless",
-        flush=True,
-        flush_results_path=str(data_path),
-        no_print=True,
-    )
+    # grav_sim.launch_simulation(
+    #     system,
+    #     "rk4",
+    #     grav_sim.years_to_days(5.0),
+    #     dt=grav_sim.years_to_days(0.001),
+    #     store_every_n=10,
+    #     acceleration="massless",
+    #     flush=True,
+    #     flush_results_path=str(data_path),
+    #     no_print=True,
+    # )
 
     # Draw frames
     print()
@@ -118,6 +119,7 @@ def main():
     # in this case. Therefore, we save each frames as images and
     # combine them as gif instead.
     save_count = 0
+    new_field_lim = sys.maxsize
     while True:
         try:
             csv.field_size_limit(new_field_lim)
@@ -194,7 +196,7 @@ def main():
             ax.set_aspect("equal")
 
             # Capture the frame
-            plt.savefig(file_path / f"frames_{save_count:04d}.png", dpi=300)
+            plt.savefig(file_path / f"frames_{save_count:04d}.png", dpi=DPI)
             save_count += 1
 
             # Clear the plot to prepare for the next frame
@@ -213,7 +215,7 @@ def main():
         save_all=True,
         append_images=frames[1:],
         loop=0,
-        duration=34,
+        duration=(1000 // FPS),
     )
 
     for i in range(save_count):
