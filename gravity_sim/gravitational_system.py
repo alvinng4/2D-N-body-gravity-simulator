@@ -173,8 +173,8 @@ class GravitationalSystem:
         "custom",
     ]
 
-    def __init__(self) -> None:
-        self.name = None
+    def __init__(self, name: str = None) -> None:
+        self.name = name
         self.objects_names = []
         self.x = None
         self.v = None

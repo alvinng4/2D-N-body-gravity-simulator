@@ -62,24 +62,24 @@ class GravitySimulator:
             )
 
         self.is_exit = ctypes.c_bool(False)
-        self.simulator = Simulator(c_lib = self.c_lib, is_exit_ctypes_bool = self.is_exit)
+        self.simulator = Simulator(c_lib=self.c_lib, is_exit_ctypes_bool=self.is_exit)
         self.compute_energy = self.simulator.compute_energy
         self.compute_angular_momentum = self.simulator.compute_angular_momentum
 
-    def create_system(self, system: str = None):
+    def create_system(self, system_name: str = None):
         """
         Create a gravitational system
 
         Parameters
         ----------
-        system : str (optional)
+        system_name : str (optional)
             Name of the system
 
         Returns
         -------
         GravitationalSystem object
         """
-        return GravitationalSystem()
+        return GravitationalSystem(name=system_name)
 
     def days_to_years(
         self, days: typing.Union[float, np.ndarray]
@@ -120,10 +120,10 @@ class GravitySimulator:
                 no_print,
             )
         except KeyboardInterrupt:
-            self.is_exit.value = True   # Exit simulation in c_lib
-            time.sleep(1.0)
-            self.is_exit.value = False  # Reset exit flag
-            
+            if not no_print:
+                print("KeyboardInterrupt detected. Exiting simulation...")
+            self.is_exit.value = True  # Exit simulation in c_lib
+            sys.exit(0)
 
     def plot_2d_trajectory(
         self,
@@ -476,10 +476,15 @@ class GravitySimulator:
             if objects_names is None:
                 system.add(self.simulator.x, self.simulator.v, self.simulator.m)
             else:
-                system.add(self.simulator.x, self.simulator.v, self.simulator.m, objects_name=objects_names[i])
+                system.add(
+                    self.simulator.x,
+                    self.simulator.v,
+                    self.simulator.m,
+                    objects_name=objects_names[i],
+                )
 
         return system
-    
+
     def save_results(
         self,
         system_name: str = None,

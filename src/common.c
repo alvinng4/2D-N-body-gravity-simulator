@@ -119,6 +119,7 @@ WIN32DLL_API void acceleration_with_massless(
         }
     }
 
+    // Acceleration calculation for massless objects
     for (int i = 0; i < massive_idx; i++)
     {
         for (int j = 0; j < massless_idx; j++)
