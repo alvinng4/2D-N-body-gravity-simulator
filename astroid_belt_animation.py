@@ -17,7 +17,7 @@ import gravity_sim
 
 N = 50000
 FPS = 30
-DPI = 100
+DPI = 300
 
 def main():
     grav_sim = gravity_sim.GravitySimulator()
