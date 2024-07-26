@@ -88,17 +88,17 @@ def main():
     data_path = file_path / "astroid_belt_sim.csv"
 
     print("Simulating asteroid belt...")
-    # grav_sim.launch_simulation(
-    #     system,
-    #     "rk4",
-    #     grav_sim.years_to_days(5.0),
-    #     dt=grav_sim.years_to_days(0.001),
-    #     store_every_n=10,
-    #     acceleration="massless",
-    #     flush=True,
-    #     flush_results_path=str(data_path),
-    #     no_print=True,
-    # )
+    grav_sim.launch_simulation(
+        system,
+        "rk4",
+        grav_sim.years_to_days(5.0),
+        dt=grav_sim.years_to_days(0.001),
+        store_every_n=10,
+        acceleration="massless",
+        flush=True,
+        flush_results_path=str(data_path),
+        no_print=True,
+    )
 
     # Draw frames
     print()
