@@ -23,6 +23,8 @@ DPI = 300
 def main():
     grav_sim = GravitySimulator()
     system = grav_sim.create_system()
+    grav_sim.set_current_system(system)
+
     system.load("solar_system")
     system.remove(name="Mercury")
     system.remove(name="Venus")
@@ -36,6 +38,8 @@ def main():
         "gold",
     ]
     marker_sizes = [6.0, 2.0, 1.5, 4.0, 3.5]
+
+    #################################################
 
     # Adding a star to the system
     # x, v = from_orbital_elements_to_cartesian(
@@ -51,35 +55,32 @@ def main():
     # )
     # m = 1.0
     # system.add(x, v, m, objects_name="Added Star")
-    colors.append("orange")
-    marker_sizes.append(6.0)
+    # colors.append("orange")
+    # marker_sizes.append(6.0)
+    
+    #################################################
 
     massive_objects_count = system.objects_count
 
     rng = np.random.default_rng()
-    a = rng.uniform(2.1, 3.2, size=N)  # Semi-major axis in AU
-    ecc = rng.uniform(0.0, 0.2, size=N)  # Eccentricity
-    inc = rng.uniform(-0.5, 0.5, size=N)  # Inclination in radians
-    raan = rng.uniform(
-        0, 360, size=N
-    )  # Right ascension of the ascending node in degrees
-    argp = rng.uniform(0, 360, size=N)  # Argument of perigee in degrees
-    nu = rng.uniform(0, 360, size=N)  # True anomaly in degrees
+    a = rng.uniform(2.1, 3.2, size=N)
+    ecc = np.abs(rng.normal(loc=0.0, scale=0.2, size=N))
+    inc = np.abs(rng.normal(loc=0.0, scale=0.3, size=N))
+    argument_of_periapsis = rng.uniform(0, 2 * np.pi, size=N)
+    long_asc_node = rng.uniform(0, 2 * np.pi, size=N)
+    true_anomaly = rng.uniform(0, 2 * np.pi, size=N)
 
     for i in range(N):
-        x, v = from_orbital_elements_to_cartesian(
-            mp=1.0,
-            ms=0.0,
-            semimajor_axis=a[i],
+        system.add_keplerian(
+            semi_major_axis=a[i],
             eccentricity=ecc[i],
-            true_anomaly=np.radians(nu[i]),
-            inclination=np.radians(inc[i]),
-            argument_of_periapsis=np.radians(argp[i]),
-            longitude_of_ascending_node=np.radians(raan[i]),
-            G=system.G,
+            inclination=inc[i],
+            argument_of_periapsis=argument_of_periapsis[i],
+            longitude_of_ascending_node=long_asc_node[i],
+            true_anomaly=true_anomaly[i],
+            m=0.0,
+            primary_object_name="Sun",   
         )
-
-        system.add(x, v, 0.0)
 
     system.center_of_mass_correction()
 
@@ -223,87 +224,6 @@ def main():
 
     print(f"Output completed! Please check {file_path / 'asteroid_belt.gif'}")
     print()
-
-
-def from_orbital_elements_to_cartesian(
-    mp,
-    ms,
-    semimajor_axis,
-    eccentricity,
-    true_anomaly,
-    inclination,
-    argument_of_periapsis,
-    longitude_of_ascending_node,
-    G,
-):
-    """
-
-    Function that returns position and velocities computed from the input orbital
-    elements. Angles in radians, inclination between 0 and 180
-
-    Reference
-    ---------
-    https://github.com/MovingPlanetsAround/ABIE
-    """
-
-    cos_true_anomaly = np.cos(true_anomaly)
-    sin_true_anomaly = np.sin(true_anomaly)
-
-    cos_inclination = np.cos(inclination)
-    sin_inclination = np.sin(inclination)
-
-    cos_arg_per = np.cos(argument_of_periapsis)
-    sin_arg_per = np.sin(argument_of_periapsis)
-
-    cos_long_asc_nodes = np.cos(longitude_of_ascending_node)
-    sin_long_asc_nodes = np.sin(longitude_of_ascending_node)
-
-    ### e_vec is a unit vector directed towards periapsis ###
-    e_vec_x = (
-        cos_long_asc_nodes * cos_arg_per
-        - sin_long_asc_nodes * sin_arg_per * cos_inclination
-    )
-    e_vec_y = (
-        sin_long_asc_nodes * cos_arg_per
-        + cos_long_asc_nodes * sin_arg_per * cos_inclination
-    )
-    e_vec_z = sin_arg_per * sin_inclination
-    e_vec = np.array([e_vec_x, e_vec_y, e_vec_z])
-
-    ### q is a unit vector perpendicular to e_vec and the orbital angular momentum vector ###
-    q_vec_x = (
-        -cos_long_asc_nodes * sin_arg_per
-        - sin_long_asc_nodes * cos_arg_per * cos_inclination
-    )
-    q_vec_y = (
-        -sin_long_asc_nodes * sin_arg_per
-        + cos_long_asc_nodes * cos_arg_per * cos_inclination
-    )
-    q_vec_z = cos_arg_per * sin_inclination
-    q_vec = np.array([q_vec_x, q_vec_y, q_vec_z])
-
-    #    print 'alpha',alphax**2+alphay**2+alphaz**2 # For debugging; should be 1
-    #    print 'beta',betax**2+betay**2+betaz**2 # For debugging; should be 1
-
-    ### Relative position and velocity ###
-    separation = (
-        semimajor_axis
-        * (1.0 - eccentricity**2)
-        / (1.0 + eccentricity * cos_true_anomaly)
-    )  # Compute the relative separation
-    position_vector = (
-        separation * cos_true_anomaly * e_vec + separation * sin_true_anomaly * q_vec
-    )
-    velocity_tilde = np.sqrt(
-        G * (mp + ms) / (semimajor_axis * (1.0 - eccentricity**2))
-    )  # Common factor
-    velocity_vector = (
-        -1.0 * velocity_tilde * sin_true_anomaly * e_vec
-        + velocity_tilde * (eccentricity + cos_true_anomaly) * q_vec
-    )
-
-    return position_vector, velocity_vector
-
 
 if __name__ == "__main__":
     main()

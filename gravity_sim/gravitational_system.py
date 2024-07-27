@@ -11,6 +11,8 @@ import warnings
 
 import numpy as np
 
+import common
+
 
 class GravitationalSystem:
     """
@@ -193,7 +195,7 @@ class GravitationalSystem:
         x: typing.Union[list, np.ndarray],
         v: typing.Union[list, np.ndarray],
         m: float,
-        objects_name: str = None,
+        object_name: str = None,
     ) -> None:
         """
         Add a celestial body to the system
@@ -217,7 +219,62 @@ class GravitationalSystem:
             self.m = np.append(self.m, m)
 
         self.objects_count = self.m.size
-        self.objects_names.append(objects_name)
+        self.objects_names.append(object_name)
+
+    def add_keplerian(
+        self,
+        semi_major_axis: float,
+        eccentricity: float,
+        inclination: float,
+        argument_of_periapsis: float,
+        longitude_of_ascending_node: float,
+        true_anomaly: float,
+        m: float,
+        primary_object_name: str,
+        object_name: str = None,
+    ):
+        """
+        Add a celestial body to the system using Keplerian elements
+
+        Warning: This method use the G value from the system. Make sure
+                 to set the correct G value before using this method.
+
+        Parameters
+        ----------
+        semi_major_axis : float
+            Semi-major axis
+        eccentricity : float
+            Eccentricity
+        inclination : float
+            Inclination
+        argument_of_periapsis : float
+            Argument of periapsis
+        longitude_of_ascending_node : float
+            Longitude of ascending node
+        true_anomaly : float
+            True anomaly
+        m : float
+            Mass
+        primary_object : float
+            Name of the primary object
+        object_name : str
+            Name of the new object
+        """
+        primary_object_idx = self.objects_names.index(primary_object_name)
+
+        primary_object_x = self.x[primary_object_idx]
+        primary_object_v = self.v[primary_object_idx]
+        x, v = common.keplerian_to_cartesian(
+            semi_major_axis=semi_major_axis,
+            eccentricity=eccentricity,
+            inclination=inclination,
+            argument_of_periapsis=argument_of_periapsis,
+            longitude_of_ascending_node=longitude_of_ascending_node,
+            true_anomaly=true_anomaly,
+            total_mass=(self.m[primary_object_idx] + m),
+            G=self.G,
+        )
+        self.add(x + primary_object_x, v + primary_object_v, m, object_name)
 
     def remove(self, index: int = None, name: str = None) -> None:
         """

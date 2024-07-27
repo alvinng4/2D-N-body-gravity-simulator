@@ -374,7 +374,7 @@ class GravitySimulator:
                 angular_momentum = self.simulator.angular_momentum
             except AttributeError:
                 self.compute_angular_momentum()
-                angular_momentum = self.simulator.angular_m
+                angular_momentum = self.simulator.angular_momentum
         if sol_time is None:
             sol_time = self.simulator.sol_time
 
@@ -426,7 +426,7 @@ class GravitySimulator:
                 + 3,
             ]
             m = self.simulator.m[i]
-            new_system.add(x, v, m, objects_name=self.current_system.objects_names[i])
+            new_system.add(x, v, m, object_name=self.current_system.objects_names[i])
 
         return new_system
 
@@ -446,7 +446,7 @@ class GravitySimulator:
                 self.simulator.x,
                 self.simulator.v,
                 self.simulator.m,
-                objects_name=self.current_system.objects_names[i],
+                object_name=self.current_system.objects_names[i],
             )
 
         return new_system

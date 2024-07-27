@@ -523,3 +523,76 @@ def read_results(
         m,
         store_count,
     )
+
+
+def keplerian_to_cartesian(
+    semi_major_axis: float,
+    eccentricity: float,
+    inclination: float,
+    argument_of_periapsis: float,
+    longitude_of_ascending_node: float,
+    true_anomaly: float,
+    total_mass: float,
+    G: float,
+):
+    """
+    Convert keplerian elements to cartesian coordinates
+
+    Reference
+    ---------
+    Moving Planets Around: An Introduction to N-Body
+    Simulations Applied to Exoplanetary Systems, Chapter 2
+    """
+
+    cos_inc = np.cos(inclination)
+    sin_inc = np.sin(inclination)
+
+    cos_arg_periapsis = np.cos(argument_of_periapsis)
+    sin_arg_periapsis = np.sin(argument_of_periapsis)
+
+    cos_long_asc_node = np.cos(longitude_of_ascending_node)
+    sin_long_asc_node = np.sin(longitude_of_ascending_node)
+
+    cos_true_anomaly = np.cos(true_anomaly)
+    sin_true_anomaly = np.sin(true_anomaly)
+
+    # ecc_unit_vec is the unit vector pointing towards periapsis
+    ecc_unit_vec = np.zeros(3)
+    ecc_unit_vec[0] = (
+        cos_long_asc_node * cos_arg_periapsis
+        - sin_long_asc_node * sin_arg_periapsis * cos_inc
+    )
+    ecc_unit_vec[1] = (
+        sin_long_asc_node * cos_arg_periapsis
+        + cos_long_asc_node * sin_arg_periapsis * cos_inc
+    )
+    ecc_unit_vec[2] = sin_arg_periapsis * sin_inc
+
+    # q_unit_vec is the unit vector that is perpendicular to ecc_unit_vec and orbital angular momentum vector
+    q_unit_vec = np.zeros(3)
+    q_unit_vec[0] = (
+        -cos_long_asc_node * sin_arg_periapsis
+        - sin_long_asc_node * cos_arg_periapsis * cos_inc
+    )
+    q_unit_vec[1] = (
+        -sin_long_asc_node * sin_arg_periapsis
+        + cos_long_asc_node * cos_arg_periapsis * cos_inc
+    )
+    q_unit_vec[2] = cos_arg_periapsis * sin_inc
+
+    # Calculate the position vector
+    x = (
+        semi_major_axis
+        * (1.0 - eccentricity**2)
+        / (1.0 + eccentricity * cos_true_anomaly)
+        * (cos_true_anomaly * ecc_unit_vec + sin_true_anomaly * q_unit_vec)
+    )
+    v = np.sqrt(G * total_mass / (semi_major_axis * (1.0 - eccentricity**2))) * (
+        -sin_true_anomaly * ecc_unit_vec
+        + (eccentricity + cos_true_anomaly) * q_unit_vec
+    )
+
+    if np.isnan(x).any() or np.isnan(v).any():
+        raise ValueError("Invalid values. Please check the input values.")
+
+    return x, v
