@@ -423,12 +423,6 @@ class Simulator:
         """
         Compute the total linear momentum using the sol_state array
         """
-        # Check if self.m has data
-        if len(self.m) == 0:
-            print("Error: Mass data is missing. Returning to menu.")
-            print()
-            return 1
-
         print("Computing linear momentum...")
         npts = len(self.sol_state)
         self.linear_momentum = np.zeros(npts)
@@ -483,18 +477,10 @@ class Simulator:
         print(f"Run time: {(stop - start):.3f} s")
         print("")
 
-        return 0
-
     def compute_angular_momentum(self):
         """
         Compute the total angular momentum using the sol_state array
         """
-        # Check if self.m has data
-        if len(self.m) == 0:
-            print("Error: Mass data is missing. Returning to menu.")
-            print()
-            return 1
-
         print("Computing angular momentum...")
         npts = len(self.sol_state)
         self.angular_momentum = np.zeros(npts)
@@ -547,8 +533,6 @@ class Simulator:
         stop = timeit.default_timer()
         print(f"Run time: {(stop - start):.3f} s")
         print("")
-
-        return 0
 
     @staticmethod
     def combine_metadata_with_flushed_data(

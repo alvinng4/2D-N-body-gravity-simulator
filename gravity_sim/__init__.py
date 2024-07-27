@@ -135,14 +135,14 @@ class GravitySimulator:
 
     def plot_2d_trajectory(
         self,
-        colors=None,
-        labels=None,
-        legend=False,
-        xlabel="$x$ (AU)",
-        ylabel="$y$ (AU)",
-        marker="o",
-        markersize=6,
-    ):
+        colors: list = None,
+        labels: list = None,
+        legend: bool = False,
+        xlabel: str = "$x$ (AU)",
+        ylabel: str = "$y$ (AU)",
+        marker: str = "o",
+        markersize: typing.Union[int, float] = 6.0,
+    ) -> None:
         plotting.plot_2d_trajectory(
             self.simulator.objects_count,
             self.simulator.sol_state,
@@ -157,14 +157,14 @@ class GravitySimulator:
 
     def plot_3d_trajectory(
         self,
-        colors=None,
-        labels=None,
-        legend=False,
-        xlabel="$x$ (AU)",
-        ylabel="$y$ (AU)",
-        zlabel="$z$ (AU)",
-        marker="o",
-        markersize=6,
+        colors: list = None,
+        labels: list = None,
+        legend: bool = False,
+        xlabel: str = "$x$ (AU)",
+        ylabel: str = "$y$ (AU)",
+        zlabel: str = "$z$ (AU)",
+        marker: str = "o",
+        markersize: typing.Union[int, float] = 6.0,
     ):
         plotting.plot_3d_trajectory(
             self.simulator.objects_count,
@@ -181,11 +181,11 @@ class GravitySimulator:
 
     def animate_2d_traj_gif(
         self,
-        fps: int = 30,
+        fps: typing.Union[int, float] = 30,
         animation_length: float = None,
         plot_every_nth_point: int = None,
-        dpi=200,
-        is_dynamic_axes=False,
+        dpi: typing.Union[int, float] = 200,
+        is_dynamic_axes: bool = False,
         axes_lim=None,
         is_maintain_fixed_dt=True,
         traj_len=-1,

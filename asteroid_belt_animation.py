@@ -51,8 +51,8 @@ def main():
     #     longitude_of_ascending_node=0.07,
     #     true_anomaly=0.35,
     #     m=1.0,
-    #     primary_object_name="Sun", 
-    #     object_name="Added Star",  
+    #     primary_object_name="Sun",
+    #     object_name="Added Star",
     # )
     # colors.append("orange")
     # marker_sizes.append(6.0)
@@ -66,12 +66,12 @@ def main():
     #     longitude_of_ascending_node=4.0,
     #     true_anomaly=4.0,
     #     m=1.0,
-    #     primary_object_name="Sun", 
-    #     object_name="Added Star",  
+    #     primary_object_name="Sun",
+    #     object_name="Added Star",
     # )
     # colors.append("orange")
     # marker_sizes.append(6.0)
-    
+
     #################################################
 
     massive_objects_count = system.objects_count
@@ -93,7 +93,7 @@ def main():
             longitude_of_ascending_node=long_asc_node[i],
             true_anomaly=true_anomaly[i],
             m=0.0,
-            primary_object_name="Sun",   
+            primary_object_name="Sun",
         )
 
     system.center_of_mass_correction()
@@ -238,6 +238,7 @@ def main():
 
     print(f"Output completed! Please check {file_path / 'asteroid_belt.gif'}")
     print()
+
 
 if __name__ == "__main__":
     main()
