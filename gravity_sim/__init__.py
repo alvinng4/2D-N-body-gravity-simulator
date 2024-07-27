@@ -1,5 +1,5 @@
 """
-N-body gravity simulator Library
+N-body gravity simulator API
 """
 
 import ctypes
@@ -8,7 +8,6 @@ import math
 from pathlib import Path
 import platform
 import sys
-import time
 import typing
 import warnings
 
@@ -20,7 +19,6 @@ import common
 from gravitational_system import GravitationalSystem
 from simulator import Simulator
 import plotting
-from progress_bar import Progress_bar
 
 
 class GravitySimulator:
@@ -81,6 +79,17 @@ class GravitySimulator:
         """
         return GravitationalSystem(name=system_name)
 
+    def set_current_system(self, system: GravitationalSystem) -> None:
+        """
+        Set the current gravitational system
+
+        Parameters
+        ----------
+        system : GravitationalSystem object
+            GravitationalSystem object
+        """
+        self.current_system = system
+
     def days_to_years(
         self, days: typing.Union[float, np.ndarray]
     ) -> typing.Union[float, np.ndarray]:
@@ -93,7 +102,6 @@ class GravitySimulator:
 
     def launch_simulation(
         self,
-        gravitational_system,
         integrator: str,
         tf: float,
         dt: float = None,
@@ -107,7 +115,7 @@ class GravitySimulator:
     ) -> None:
         try:
             self.simulator.launch_simulation(
-                gravitational_system,
+                self.current_system,
                 integrator,
                 tf,
                 dt,
@@ -190,7 +198,6 @@ class GravitySimulator:
         markersize=6,
         file_name=None,
         file_path=None,
-        sol_time=None,
     ):
         if animation_length is not None and animation_length <= 0.0:
             raise ValueError("gif_time must be greater than 0.")
@@ -274,7 +281,6 @@ class GravitySimulator:
         markersize=6,
         file_name=None,
         file_path=None,
-        sol_time=None,
     ) -> None:
         if animation_length is None and plot_every_nth_point is None:
             animation_length = 10.0
@@ -345,7 +351,11 @@ class GravitySimulator:
         ylabel="$|(E(t)-E_0)/E_0|$",
     ):
         if energy is None:
-            energy = self.simulator.energy
+            try:
+                energy = self.simulator.energy
+            except AttributeError:
+                self.compute_energy()
+                energy = self.simulator.energy
         if sol_time is None:
             sol_time = self.simulator.sol_time
 
@@ -360,7 +370,11 @@ class GravitySimulator:
         ylabel: str = "$|(L(t)-L_0)/L_0|$",
     ):
         if angular_momentum is None:
-            angular_momentum = self.simulator.angular_momentum
+            try:
+                angular_momentum = self.simulator.angular_momentum
+            except AttributeError:
+                self.compute_angular_momentum()
+                angular_momentum = self.simulator.angular_m
         if sol_time is None:
             sol_time = self.simulator.sol_time
 
@@ -385,9 +399,7 @@ class GravitySimulator:
 
         plotting.plot_dt(sol_dt, sol_time, title, xlabel, ylabel, yscale, marker_size)
 
-    def sol_state_to_system(
-        self, index: int = -1, system_name: str = None, objects_names: list = None
-    ) -> GravitationalSystem:
+    def sol_state_to_system(self, index: int = -1) -> GravitationalSystem:
         """
         Convert the latest state of the solution to a new GravitationalSystem object
 
@@ -395,29 +407,13 @@ class GravitySimulator:
         ----------
         index : int (optional)
             Index of the solution state. Default is the latest state.
-        system_name : str (optional)
-            Name of the system.
-        objects_names : list (optional)
-            List of names of the objects in the system.
 
         Returns
         -------
         GravitationalSystem object
         """
-        system = GravitationalSystem()
-        system.name = system_name
-
-        if objects_names is not None:
-            if len(objects_names) < self.simulator.objects_count:
-                temp = [
-                    None
-                    for _ in range(self.simulator.objects_count - len(objects_names))
-                ]
-                objects_names += temp
-            elif len(objects_names) > self.simulator.objects_count:
-                warnings.warn(
-                    "Number of names provided is greater than number of objects. Ignoring extra names."
-                )
+        new_system = GravitationalSystem()
+        new_system.name = self.current_system.name
 
         for i in range(self.simulator.objects_count):
             x = self.simulator.sol_state[index, (i * 3) : (i * 3) + 3]
@@ -430,64 +426,33 @@ class GravitySimulator:
                 + 3,
             ]
             m = self.simulator.m[i]
+            new_system.add(x, v, m, objects_name=self.current_system.objects_names[i])
 
-            if objects_names is None:
-                system.add(x, v, m)
-            else:
-                system.add(x, v, m, objects_name=objects_names[i])
+        return new_system
 
-        return system
-
-    def simulator_to_system(
-        self, index: int = -1, system_name: str = None, objects_names: list = None
-    ) -> GravitationalSystem:
+    def simulator_to_system(self) -> GravitationalSystem:
         """
         Convert the current state of the simulator to a new GravitationalSystem object
-
-        Parameters
-        ----------
-        index : int (optional)
-            Index of the solution state. Default is the latest state.
-        system_name : str (optional)
-            Name of the system.
-        objects_names : list (optional)
-            List of names of the objects in the system.
 
         Returns
         -------
         GravitationalSystem object
         """
-        system = GravitationalSystem()
-        system.name = system_name
-
-        if objects_names is not None:
-            if len(objects_names) < self.simulator.objects_count:
-                temp = [
-                    None
-                    for _ in range(self.simulator.objects_count - len(objects_names))
-                ]
-                objects_names += temp
-            elif len(objects_names) > self.simulator.objects_count:
-                warnings.warn(
-                    "Number of names provided is greater than number of objects. Ignoring extra names."
-                )
+        new_system = GravitationalSystem()
+        new_system.name = self.current_system.name
 
         for i in range(self.simulator.objects_count):
-            if objects_names is None:
-                system.add(self.simulator.x, self.simulator.v, self.simulator.m)
-            else:
-                system.add(
-                    self.simulator.x,
-                    self.simulator.v,
-                    self.simulator.m,
-                    objects_name=objects_names[i],
-                )
+            new_system.add(
+                self.simulator.x,
+                self.simulator.v,
+                self.simulator.m,
+                objects_name=self.current_system.objects_names[i],
+            )
 
-        return system
+        return new_system
 
     def save_results(
         self,
-        system_name: str = None,
         file_path: str = None,
         computed_energy: bool = False,
         store_energy_as_zeros: bool = False,
@@ -529,9 +494,10 @@ class GravitySimulator:
 
         common.save_results(
             file_path=file_path,
-            system_name=system_name,
+            system_name=self.current_system.name,
             integrator_name=integrator_name,
             objects_count=self.simulator.objects_count,
+            G=self.simulator.G,
             tf=self.simulator.tf,
             dt=self.simulator.dt,
             tolerance=self.simulator.tolerance,
@@ -543,6 +509,64 @@ class GravitySimulator:
             sol_time=self.simulator.sol_time,
             sol_dt=self.simulator.sol_dt,
             energy=energy,
+            no_progress_bar=no_progress_bar,
+        )
+
+    def read_results(
+        self,
+        file_path: str,
+        start: int = 0,
+        end: int = -1,
+        step: int = 1,
+        memory_buffer_size: int = 50000,
+        no_print: bool = False,
+        no_progress_bar: bool = False,
+    ) -> None:
+        """
+        Read the results from a csv file,
+        and load the data to the simulator
+
+        Parameters
+        ----------
+        file_path : str
+            Path to the csv file
+        start : int (optional)
+            Start index of the data to read
+        end : int (optional)
+            End index of the data to read
+        step : int (optional)
+            Step size to read the data
+        memory_buffer_size : int (optional)
+            Memory buffer size for storing data
+        no_print : bool (optional)
+            Disable print statements
+        no_progress_bar : bool (optional)
+            Disable progress bar
+        """
+
+        (
+            self.simulator.sol_state,
+            self.simulator.sol_time,
+            self.simulator.sol_dt,
+            self.simulator.energy,
+            self.simulator.system_name,
+            self.simulator.integrator,
+            self.simulator.objects_count,
+            self.simulator.G,
+            self.simulator.tf,
+            self.simulator.dt,
+            self.simulator.tolerance,
+            self.store_every_n,
+            self.simulator.run_time,
+            self.simulator.m,
+            self.data_size,
+        ) = common.read_results(
+            file_path=file_path,
+            start=start,
+            end=end,
+            step=step,
+            memory_buffer_size=memory_buffer_size,
+            no_print=no_print,
             no_progress_bar=no_progress_bar,
         )
 

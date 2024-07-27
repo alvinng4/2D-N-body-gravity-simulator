@@ -16,7 +16,7 @@ Checkout the interactive simulator at https://www.github.com/alvinng4/OrbitSim
 * [Quick Start](#quick-start)
     - [Python version](#python-version)
     - [Installation](#installation)
-* [Importing as library](#importing-as-library)
+* [GravitySimulator API](#gravitysimulator-api)
 * [Running the program](#running-the-program)
     - [C library / Numpy (Optional)](#c-library--numpy-optional-1)
 * [Available systems](#available-systems-1)
@@ -48,30 +48,29 @@ Install the required packages by
 pip install .
 ```
 
-## Importing as library
+## GravitySimulator API
 
-You may import the `gravity_sim` library to perform gravity simulation.
+You may import the GravitySimulator API from `gravity_sim` to perform gravity simulation.
 See `tutorial.ipynb` or `asteroid_belt_animation.py` for some example uses.
 ```
-import gravity_sim
+from gravity_sim immport GravitySimulator
 
-grav_sim = gravity_sim.GravitySimulator()
+grav_sim = GravitySimulator()
 
 system = grav_sim.create_system()
 system.load("solar_system")
 
-grav_sim.simulator.launch_simulation(
-    system,
+grav_sim.launch_simulation(
     integrator="ias15",
     tf=grav_sim.years_to_days(1000.0),
     tolerance=1e-9,
     store_every_n=50,
 )
 
-grav_sim.save_results(system.name)
+grav_sim.save_results()
 ```
 
-## Running the program
+## Running the program in terminal
 
 Once you have downloaded the source files, navigate to the source directory in terminal and run
 ```
@@ -141,16 +140,17 @@ More rows may be added in the future.
 
 Below is an example:
 ```
-# Data saved on (YYYY-MM-DD): 2024-06-25
+# Data saved on (YYYY-MM-DD): 2024-07-27
 # System Name: solar_system
 # Integrator: IAS15
 # Number of objects: 9
+# Gravitational constant: 0.00029591220828411956
 # Simulation time (days): 73048.4378
 # dt (days): None
 # Tolerance: 1e-09
 # Data size: 64596
 # Store every nth point: 1
-# Run time (s): 1.478802832774818
+# Run time (s): 1.4667500000214204
 # masses: 1.0 1.6601208254589484e-07 2.447838287796944e-06 3.0034896154649684e-06 3.2271560829322774e-07 0.0009547919099414248 0.00028588567002459455 4.36624961322212e-05 5.151383772654274e-05
 ```
 Then, the actual data will be saved in the default unit (solar masses, AU and days), and follow this format:

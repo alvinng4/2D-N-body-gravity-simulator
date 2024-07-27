@@ -668,9 +668,10 @@ class GravitySimulatorCLI:
 
         common.save_results(
             file_path,
-            self.gravitational_system,
+            self.simulator.system_name,
             integrator_name,
             self.simulator.objects_count,
+            self.simulator.G,
             self.simulator.tf,
             self.simulator.dt,
             self.simulator.tolerance,
@@ -707,9 +708,10 @@ class GravitySimulatorCLI:
             self.simulator.sol_time,
             self.simulator.sol_dt,
             self.simulator.energy,
-            self.gravitational_system.name,
+            self.simulator.system_name,
             self.simulator.integrator,
             self.simulator.objects_count,
+            self.simulator.G,
             self.simulator.tf,
             self.simulator.dt,
             self.simulator.tolerance,
@@ -718,7 +720,10 @@ class GravitySimulatorCLI:
             self.simulator.m,
             self.data_size,
         ) = common.read_results(file_path=read_file_path)
-
+        self.gravitational_system.name = self.simulator.system_name
+        self.gravitational_system.objects_names = [
+            None for _ in range(self.simulator.objects_count)
+        ]
         while True:
             self.tf_unit = input("Enter tf unit for plotting (d/yr): ")
             if matches := re.search(r"(day|year|d|y)", self.tf_unit, re.IGNORECASE):

@@ -1,5 +1,6 @@
 import csv
 import datetime
+from pathlib import Path
 import re
 import warnings
 
@@ -169,6 +170,7 @@ def save_results(
     system_name: str,
     integrator_name: str,
     objects_count: int,
+    G: float,
     tf: float,
     dt: float,
     tolerance: float,
@@ -195,6 +197,7 @@ def save_results(
         writer.writerow([f"# System Name: {system_name}"])
         writer.writerow([f"# Integrator: {integrator_name}"])
         writer.writerow([f"# Number of objects: {objects_count}"])
+        writer.writerow([f"# Gravitational constant: {G}"])
         writer.writerow([f"# Simulation time (days): {tf}"])
         writer.writerow([f"# dt (days): {dt}"])
         writer.writerow([f"# Tolerance: {tolerance}"])
@@ -245,6 +248,60 @@ def read_results(
     no_print: bool = False,
     no_progress_bar: bool = False,
 ):
+    """
+    Read the results from a csv file
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the csv file
+    start : int (optional)
+        Start index of the data to read
+    end : int (optional)
+        End index of the data to read
+    step : int (optional)
+        Step size to read the data
+    memory_buffer_size : int (optional)
+        Memory buffer size for storing data
+    no_print : bool (optional)
+        Disable print statements
+    no_progress_bar : bool (optional)
+        Disable progress bar
+
+    Returns
+    -------
+    sol_state : np.ndarray
+        Solution state
+    sol_time : np.ndarray
+        Solution time
+    sol_dt : np.ndarray
+        Solution dt
+    energy : np.ndarray
+        Total energy of each states
+    system_name : str
+        Name of the system
+    integrator : str
+        Name of the integrator
+    objects_count : int
+        Number of objects
+    G : float
+        Gravitational constant
+    tf : float
+        Simulation time
+    dt : float
+        Time step size
+    tolerance : float
+        Tolerance for adaptive step size integrators
+    store_every_n : int
+        Store every nth point
+    run_time : float
+        Run time of the simulation
+    m : np.ndarray
+        Masses of the objects
+    store_count : int
+        New data size
+    """
+
     if start < 0 or end < -1 or step < 1:
         raise ValueError("Invalid start, end or step values.")
 
@@ -254,7 +311,7 @@ def read_results(
     tolerance = None
     store_every_n = None
 
-    if not file_path.is_file():
+    if not Path(file_path).is_file():
         raise FileNotFoundError(f"File {file_path} not found.")
 
     progress_bar = Progress_bar()
@@ -293,6 +350,12 @@ def read_results(
             try:
                 objects_count = int(row[0].replace("# Number of objects: ", ""))
                 has_proper_metadata[0] = True
+            except ValueError:
+                pass
+
+        elif row[0].startswith("# Gravitational constant: "):
+            try:
+                G = float(row[0].replace("# Gravitational constant: ", ""))
             except ValueError:
                 pass
 
@@ -451,6 +514,7 @@ def read_results(
         system_name,
         integrator,
         objects_count,
+        G,
         tf,
         dt,
         tolerance,

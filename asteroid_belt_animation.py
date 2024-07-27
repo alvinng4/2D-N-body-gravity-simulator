@@ -13,7 +13,7 @@ import numpy as np
 import PIL
 import matplotlib.pyplot as plt
 
-import gravity_sim
+from gravity_sim import GravitySimulator
 
 N = 50000
 FPS = 30
@@ -21,7 +21,7 @@ DPI = 300
 
 
 def main():
-    grav_sim = gravity_sim.GravitySimulator()
+    grav_sim = GravitySimulator()
     system = grav_sim.create_system()
     system.load("solar_system")
     system.remove(name="Mercury")
@@ -89,7 +89,6 @@ def main():
 
     print("Simulating asteroid belt...")
     grav_sim.launch_simulation(
-        system,
         "rk4",
         grav_sim.years_to_days(5.0),
         dt=grav_sim.years_to_days(0.001),

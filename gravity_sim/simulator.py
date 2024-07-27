@@ -52,6 +52,7 @@ class Simulator:
         else:
             self.is_exit_ctypes_bool = is_exit_ctypes_bool
 
+        self.store_every_n = None
         self.run_time = None
 
     def launch_simulation(
@@ -94,6 +95,7 @@ class Simulator:
         no_print : bool, optional
             Disable print statements
         """
+        self.system_name = gravitational_system.name
         self.x = gravitational_system.x.copy()
         self.v = gravitational_system.v.copy()
         self.m = gravitational_system.m.copy()
