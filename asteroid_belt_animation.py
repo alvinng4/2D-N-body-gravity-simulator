@@ -40,21 +40,35 @@ def main():
     marker_sizes = [6.0, 2.0, 1.5, 4.0, 3.5]
 
     #################################################
-
     # Adding a star to the system
-    # x, v = from_orbital_elements_to_cartesian(
-    #     mp=1.0,
-    #     ms=1.0,
-    #     semimajor_axis=5.5,
+
+    # Star 1
+    # system.add_keplerian(
+    #     semi_major_axis=5.5,
     #     eccentricity=0.7,
-    #     true_anomaly=np.radians(20.0),
-    #     inclination=np.radians(0.4),
-    #     argument_of_periapsis=np.radians(4.0),
-    #     longitude_of_ascending_node=np.radians(4.0),
-    #     G=system.G,
+    #     inclination=0.05,
+    #     argument_of_periapsis=0.07,
+    #     longitude_of_ascending_node=0.07,
+    #     true_anomaly=0.35,
+    #     m=1.0,
+    #     primary_object_name="Sun", 
+    #     object_name="Added Star",  
     # )
-    # m = 1.0
-    # system.add(x, v, m, objects_name="Added Star")
+    # colors.append("orange")
+    # marker_sizes.append(6.0)
+
+    # Star 2
+    # system.add_keplerian(
+    #     semi_major_axis=5.0,
+    #     eccentricity=0.7,
+    #     inclination=0.4,
+    #     argument_of_periapsis=4.0,
+    #     longitude_of_ascending_node=4.0,
+    #     true_anomaly=4.0,
+    #     m=1.0,
+    #     primary_object_name="Sun", 
+    #     object_name="Added Star",  
+    # )
     # colors.append("orange")
     # marker_sizes.append(6.0)
     
@@ -64,7 +78,7 @@ def main():
 
     rng = np.random.default_rng()
     a = rng.uniform(2.1, 3.2, size=N)
-    ecc = np.abs(rng.normal(loc=0.0, scale=0.2, size=N))
+    ecc = np.abs(rng.normal(loc=0.0, scale=0.12, size=N))
     inc = np.abs(rng.normal(loc=0.0, scale=0.3, size=N))
     argument_of_periapsis = rng.uniform(0, 2 * np.pi, size=N)
     long_asc_node = rng.uniform(0, 2 * np.pi, size=N)
@@ -171,7 +185,7 @@ def main():
                 color="white",
                 marker=".",
                 s=0.1,
-                alpha=0.1,
+                alpha=0.2,
             )
 
             # Add legend

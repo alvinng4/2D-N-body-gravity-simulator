@@ -342,6 +342,7 @@ class Simulator:
                 store_every_n=store_every_n,
                 run_time=self.run_time,
                 masses=self.m,
+                no_print=no_print,
             )
             flush_path.unlink()
 
