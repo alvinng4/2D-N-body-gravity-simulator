@@ -1,10 +1,23 @@
 import csv
 import datetime
 import re
+import warnings
 
 import numpy as np
 
 from progress_bar import Progress_bar
+
+AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES = {
+    "euler": "Euler",
+    "euler_cromer": "Euler_Cromer",
+    "rk4": "RK4",
+    "leapfrog": "LeapFrog",
+    "rkf45": "RKF45",
+    "dopri": "DOPRI",
+    "dverk": "DVERK",
+    "rkf78": "RKF78",
+    "ias15": "IAS15",
+}
 
 
 def get_bool(msg: str) -> bool:
@@ -221,3 +234,228 @@ def save_results(
 
     if not no_print:
         print(f"Storing completed. Please check {file_path}")
+
+
+def read_results(
+    file_path: str,
+    start: int = 0,
+    end: int = -1,
+    step: int = 1,
+    memory_buffer_size: int = 50000,
+    no_print: bool = False,
+    no_progress_bar: bool = False,
+):
+    if start < 0 or end < -1 or step < 1:
+        raise ValueError("Invalid start, end or step values.")
+
+    system_name = None
+    integrator = None
+    dt = None
+    tolerance = None
+    store_every_n = None
+
+    if not file_path.is_file():
+        raise FileNotFoundError(f"File {file_path} not found.")
+
+    progress_bar = Progress_bar()
+
+    # Read metadata
+    metadata = []
+
+    # to check if objects_count, simulation time and data size can be obtained properly
+    has_proper_metadata = [False, False, False]
+
+    with open(file_path, "r") as file:
+        reader = csv.reader(file)
+        for row in reader:
+            if row[0].startswith("#"):
+                metadata.append(row)
+            else:
+                break
+
+    for row in metadata:
+        if row[0].startswith("# System Name: "):
+            system_name = row[0].replace("# System Name: ", "")
+
+        elif row[0].startswith("# Integrator: "):
+            integrator = row[0].replace("# Integrator: ", "")
+
+            try:
+                integrator = list(AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES.keys())[
+                    list(AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES.values()).index(
+                        integrator
+                    )
+                ]
+            except KeyError:
+                pass
+
+        elif row[0].startswith("# Number of objects: "):
+            try:
+                objects_count = int(row[0].replace("# Number of objects: ", ""))
+                has_proper_metadata[0] = True
+            except ValueError:
+                pass
+
+        elif row[0].startswith("# Simulation time (days): "):
+            try:
+                tf = float(row[0].replace("# Simulation time (days): ", ""))
+                has_proper_metadata[1] = True
+            except ValueError:
+                pass
+
+        elif row[0].startswith("# dt (days): "):
+            try:
+                dt = float(row[0].replace("# dt (days): ", ""))
+            except ValueError:
+                pass
+
+        elif row[0].startswith("# Tolerance: "):
+            try:
+                tolerance = float(row[0].replace("# Tolerance: ", ""))
+            except ValueError:
+                pass
+
+        elif row[0].startswith("# Data size: "):
+            try:
+                data_size = int(row[0].replace("# Data size: ", ""))
+                has_proper_metadata[2] = True
+            except ValueError:
+                pass
+
+        elif row[0].startswith("# Store every nth point: "):
+            try:
+                store_every_n = int(row[0].replace("# Store every nth point: ", ""))
+            except ValueError:
+                pass
+
+        elif row[0].startswith("# Run time (s): "):
+            try:
+                run_time = float(row[0].strip("# Run time (s): "))
+            except ValueError:
+                pass
+
+        elif row[0].startswith("# masses: "):
+            try:
+                masses_str = row[0].strip("# masses: ").strip()
+                m = np.array(masses_str.split(" "), dtype=float)
+            except ValueError:
+                pass
+
+    if not has_proper_metadata[2]:
+        if not no_print:
+            print(
+                "Original data size in metadata is not found. Disabling progress bar."
+            )
+        no_progress_bar = True
+
+    # Read data
+    with open(file_path, "r") as file:
+        reader = csv.reader(file)
+
+        for row in reader:
+            if row[0].startswith("#"):
+                continue
+
+            # Get object_count
+            if not has_proper_metadata[0]:
+                objects_count = (len(row) - 3) // (3 * 2)
+
+            break
+
+        file.seek(0)
+        with progress_bar:
+            if not no_progress_bar:
+                task = progress_bar.add_task("", total=data_size)
+
+            # Allocate memory
+            sol_time = np.zeros(memory_buffer_size)
+            sol_dt = np.zeros(memory_buffer_size)
+            energy = np.zeros(memory_buffer_size)
+            sol_state = np.zeros((memory_buffer_size, objects_count * 3 * 2))
+
+            if not no_print:
+                print()
+                print("Reading data...")
+
+            count = 0
+            store_count = 0
+            file.seek(0)
+            for row in reader:
+                if row[0].startswith("#"):
+                    continue
+
+                if count < start:
+                    count += 1
+                    continue
+
+                if end != -1 and (count - start) >= end:
+                    break
+
+                if (count - start) % step != 0:
+                    count += 1
+                    continue
+
+                sol_time[store_count] = row[0]
+                sol_dt[store_count] = row[1]
+                energy[store_count] = row[2]
+                for j in range(objects_count):
+                    sol_state[store_count][j * 3 + 0] = row[3 + j * 3 + 0]
+                    sol_state[store_count][j * 3 + 1] = row[3 + j * 3 + 1]
+                    sol_state[store_count][j * 3 + 2] = row[3 + j * 3 + 2]
+                    sol_state[store_count][objects_count * 3 + j * 3 + 0] = row[
+                        3 + objects_count * 3 + j * 3 + 0
+                    ]
+                    sol_state[store_count][objects_count * 3 + j * 3 + 1] = row[
+                        3 + objects_count * 3 + j * 3 + 1
+                    ]
+                    sol_state[store_count][objects_count * 3 + j * 3 + 2] = row[
+                        3 + objects_count * 3 + j * 3 + 2
+                    ]
+
+                count += 1
+                store_count += 1
+                if not no_progress_bar:
+                    progress_bar.update(task, completed=store_count)
+
+                # Extending memory buffer
+                if store_count % memory_buffer_size == 0:
+                    sol_time = np.concatenate((sol_time, np.zeros(memory_buffer_size)))
+                    sol_dt = np.concatenate((sol_dt, np.zeros(memory_buffer_size)))
+                    energy = np.concatenate((energy, np.zeros(memory_buffer_size)))
+                    sol_state = np.concatenate(
+                        (
+                            sol_state,
+                            np.zeros((memory_buffer_size, objects_count * 3 * 2)),
+                        )
+                    )
+
+            sol_time = sol_time[:store_count]
+            sol_dt = sol_dt[:store_count]
+            energy = energy[:store_count]
+            sol_state = sol_state[:store_count]
+            if len(sol_time) > 0:
+                tf = sol_time[-1]
+            else:
+                warnings.warn("No data is found.")
+
+        if not no_print:
+            print("Reading completed.\n")
+            print(f"Read data size: {store_count}")
+            print()
+
+    return (
+        sol_state,
+        sol_time,
+        sol_dt,
+        energy,
+        system_name,
+        integrator,
+        objects_count,
+        tf,
+        dt,
+        tolerance,
+        store_every_n,
+        run_time,
+        m,
+        store_count,
+    )

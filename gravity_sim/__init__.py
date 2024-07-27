@@ -552,7 +552,18 @@ class GravitySimulator:
 
     @integration_mode.setter
     def integration_mode(self, value: str) -> None:
-        self.simulator.integration_mode = value
+        match value:
+            case "c_lib":
+                if self.c_lib is not None:
+                    self.simulator.integration_mode = value
+                else:
+                    raise ValueError("C library is not available.")
+
+            case "numpy":
+                self.simulator.integration_mode = value
+
+            case _:
+                raise ValueError('integration_mode must be either "c_lib" or "numpy".')
 
     @property
     def objects_count(self) -> int:

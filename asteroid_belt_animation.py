@@ -19,6 +19,7 @@ N = 50000
 FPS = 30
 DPI = 300
 
+
 def main():
     grav_sim = gravity_sim.GravitySimulator()
     system = grav_sim.create_system()
@@ -35,7 +36,6 @@ def main():
         "gold",
     ]
     marker_sizes = [6.0, 2.0, 1.5, 4.0, 3.5]
-
 
     # Adding a star to the system
     # x, v = from_orbital_elements_to_cartesian(

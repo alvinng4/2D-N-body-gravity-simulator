@@ -671,7 +671,7 @@ class GravitySimulatorCLI:
             self.gravitational_system,
             integrator_name,
             self.simulator.objects_count,
-            self.tf,
+            self.simulator.tf,
             self.simulator.dt,
             self.simulator.tolerance,
             self.data_size,
@@ -686,11 +686,7 @@ class GravitySimulatorCLI:
         print("")
 
     def _read_simulation_data(self):
-        self.gravitational_system = None
-        self.simulator.integrator = None
-        self.simulator.dt = None
-        self.simulator.tolerance = None
-        self.store_every_n = None
+        self.gravitational_system = GravitationalSystem()
         read_folder_path = Path(__file__).parent / "results"
 
         while True:
@@ -706,206 +702,37 @@ class GravitySimulatorCLI:
             else:
                 print("File not found! Please try again.")
 
-        # Read data
-        start = timeit.default_timer()
-        progress_bar = Progress_bar()
+        (
+            self.simulator.sol_state,
+            self.simulator.sol_time,
+            self.simulator.sol_dt,
+            self.simulator.energy,
+            self.gravitational_system.name,
+            self.simulator.integrator,
+            self.simulator.objects_count,
+            self.simulator.tf,
+            self.simulator.dt,
+            self.simulator.tolerance,
+            self.store_every_n,
+            self.simulator.run_time,
+            self.simulator.m,
+            self.data_size,
+        ) = common.read_results(file_path=read_file_path)
 
-        # Read metadata
-        has_proper_metadata = [
-            False,
-            False,
-            False,
-        ]  # to check if objects_count, simulation time and data size can be obtained properly
-        with open(read_file_path, "r") as file:
-            reader = csv.reader(row for row in file if row.startswith("#"))
+        while True:
+            self.tf_unit = input("Enter tf unit for plotting (d/yr): ")
+            if matches := re.search(r"(day|year|d|y)", self.tf_unit, re.IGNORECASE):
+                if matches.group(1) not in ["year", "y"]:
+                    self.tf_unit = "days"
+                else:
+                    self.tf_unit = "years"
 
-            for row in reader:
-                if row[0].startswith("# System Name: "):
-                    self.gravitational_system = row[0].replace("# System Name: ", "")
-
-                if row[0].startswith("# Integrator: "):
-                    integrator = row[0].replace("# Integrator: ", "")
-
-                    try:
-                        self.simulator.integrator = list(
-                            GravitySimulatorCLI.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES.keys()
-                        )[
-                            list(
-                                GravitySimulatorCLI.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES.values()
-                            ).index(integrator)
-                        ]
-                    except KeyError:
-                        pass
-
-                if row[0].startswith("# Number of objects: "):
-                    try:
-                        self.simulator.objects_count = int(
-                            row[0].replace("# Number of objects: ", "")
-                        )
-                        has_proper_metadata[0] = True
-                    except ValueError:
-                        pass
-
-                if row[0].startswith("# Simulation time (days): "):
-                    try:
-                        self.simulator.tf = float(
-                            row[0].replace("# Simulation time (days): ", "")
-                        )
-                        has_proper_metadata[1] = True
-                    except ValueError:
-                        pass
-
-                if row[0].startswith("# dt (seconds): "):
-                    try:
-                        self.simulator.dt = float(
-                            row[0].replace("# dt (seconds): ", "")
-                        )
-                    except ValueError:
-                        pass
-
-                if row[0].startswith("# Tolerance: "):
-                    try:
-                        self.simulator.tolerance = float(
-                            row[0].replace("# Tolerance: ", "")
-                        )
-                    except ValueError:
-                        pass
-
-                if row[0].startswith("# Data size: "):
-                    try:
-                        self.simulator.data_size = int(
-                            row[0].replace("# Data size: ", "")
-                        )
-                        has_proper_metadata[2] = True
-                    except ValueError:
-                        pass
-
-                if row[0].startswith("# Store every nth point: "):
-                    try:
-                        self.store_every_n = int(
-                            row[0].replace("# Store every nth point: ", "")
-                        )
-                    except ValueError:
-                        pass
-
-                if row[0].startswith("# Run time (s): "):
-                    try:
-                        self.simulator.run_time = float(
-                            row[0].strip("# Run time (s): ")
-                        )
-                    except ValueError:
-                        pass
-
-                if row[0].startswith("# masses: "):
-                    try:
-                        masses_str = row[0].strip("# masses: ").strip()
-                        self.simulator.m = np.array(masses_str.split(" "), dtype=float)
-                    except ValueError:
-                        pass
-
-        try:
-            with open(read_file_path, "r") as file:
-                reader = csv.reader(row for row in file if not row.startswith("#"))
-
-                # Get object_count and file size
-                if not has_proper_metadata[0]:
-                    self.simulator.objects_count = round(
-                        (len(next(reader)) - 3) / (3 * 2)
-                    )
-
-                if not has_proper_metadata[2]:
-                    self.simulator.data_size = sum(1 for _ in file) + 1
-
-                with progress_bar:
-                    task = progress_bar.add_task("", total=self.simulator.data_size)
-
-                    # Allocate memory
-                    self.simulator.sol_time = np.zeros(50000)
-                    self.simulator.sol_dt = np.zeros(50000)
-                    self.simulator.energy = np.zeros(50000)
-                    self.simulator.sol_state = np.zeros(
-                        (50000, self.simulator.objects_count * 3 * 2)
-                    )
-
+                if common.get_bool(f"Unit for tf is {self.tf_unit}. Proceed?"):
                     print()
-                    print("Reading data...")
+                    break
 
-                    i = 0
-                    file.seek(0)
-                    for row in reader:
-                        self.simulator.sol_time[i] = row[0]
-                        self.simulator.sol_dt[i] = row[1]
-                        self.simulator.energy[i] = row[2]
-                        for j in range(self.simulator.objects_count):
-                            self.simulator.sol_state[i][j * 3 + 0] = row[3 + j * 3 + 0]
-                            self.simulator.sol_state[i][j * 3 + 1] = row[3 + j * 3 + 1]
-                            self.simulator.sol_state[i][j * 3 + 2] = row[3 + j * 3 + 2]
-                            self.simulator.sol_state[i][
-                                self.simulator.objects_count * 3 + j * 3 + 0
-                            ] = row[3 + self.simulator.objects_count * 3 + j * 3 + 0]
-                            self.simulator.sol_state[i][
-                                self.simulator.objects_count * 3 + j * 3 + 1
-                            ] = row[3 + self.simulator.objects_count * 3 + j * 3 + 1]
-                            self.simulator.sol_state[i][
-                                self.simulator.objects_count * 3 + j * 3 + 2
-                            ] = row[3 + self.simulator.objects_count * 3 + j * 3 + 2]
-
-                        i += 1
-                        progress_bar.update(task, completed=i)
-
-                        # Extending memory buffer
-                        if i % 50000 == 0:
-                            self.simulator.sol_time = np.concatenate(
-                                (self.simulator.sol_time, np.zeros(50000))
-                            )
-                            self.simulator.sol_dt = np.concatenate(
-                                (self.simulator.sol_dt, np.zeros(50000))
-                            )
-                            self.simulator.energy = np.concatenate(
-                                (self.simulator.energy, np.zeros(50000))
-                            )
-                            self.simulator.sol_state = np.concatenate(
-                                (
-                                    self.simulator.sol_state,
-                                    np.zeros(
-                                        (50000, self.simulator.objects_count * 3 * 2)
-                                    ),
-                                )
-                            )
-
-                    self.simulator.sol_time = self.simulator.sol_time[:i]
-                    self.simulator.sol_dt = self.simulator.sol_dt[:i]
-                    self.simulator.energy = self.simulator.energy[:i]
-                    self.simulator.sol_state = self.simulator.sol_state[:i]
-
-                if not has_proper_metadata[1]:
-                    self.simulator.tf = self.simulator.sol_time[-1]
-
-                stop = timeit.default_timer()
-                print("Reading completed.\n")
-                print(f"Run time: {(stop - start):.3f} s")
-                print(f"Data size: {self.simulator.data_size}")
-                print("")
-
-                while True:
-                    self.tf_unit = input("Enter tf unit for plotting (d/yr): ")
-                    if matches := re.search(
-                        r"(day|year|d|y)", self.tf_unit, re.IGNORECASE
-                    ):
-                        if matches.group(1) not in ["year", "y"]:
-                            self.tf_unit = "days"
-                        else:
-                            self.tf_unit = "years"
-
-                        if common.get_bool(f"Unit for tf is {self.tf_unit}. Proceed?"):
-                            print()
-                            break
-
-                    print("Invalid input. Please try again.")
-                    print()
-
-        except FileNotFoundError:
-            sys.exit("Error: file is not found. Exiting the program")
+            print("Invalid input. Please try again.")
+            print()
 
     def _plot_2d_trajectory_wrapper(self):
         print("Plotting 2D trajectory (xy plane)...(Please check the window)")
