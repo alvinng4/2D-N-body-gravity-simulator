@@ -220,7 +220,9 @@ class WHFast:
 
                 # Store solution
                 if (count + 1) % self.store_every_n == 0:
-                    WHFast.jacobi_to_cartesian(objects_count, jacobi, x, v, m, eta)
+                    temp_jacobi = jacobi.copy()
+                    WHFast.whfast_kick(temp_jacobi, a, -0.5 * dt)
+                    WHFast.jacobi_to_cartesian(objects_count, temp_jacobi, x, v, m, eta)
                     self.sol_state[store_count + 1] = np.concatenate(
                         (
                             np.reshape(x, objects_count * 3),
@@ -230,7 +232,8 @@ class WHFast:
                     store_count += 1
 
                 if (count + 2) == npts:
-                    WHFast.jacobi_to_cartesian(objects_count, jacobi, x, v, m, eta)
+                    temp_jacobi = jacobi.copy()
+                    WHFast.whfast_kick(temp_jacobi, a, -0.5 * dt)
                     self.sol_state[-1] = np.concatenate(
                         (
                             np.reshape(x, objects_count * 3),
@@ -256,9 +259,7 @@ class WHFast:
     def whfast_drift(objects_count, jacobi, m, eta, G, dt) -> None:
         for i in range(1, objects_count):
             gm = G * m[0] * eta[i] / eta[i - 1]
-            jacobi[i, :3], jacobi[i, 3:] = WHFast.propagate_kepler(
-                jacobi[i, :3], jacobi[i, 3:], gm, dt
-            )
+            WHFast.propagate_kepler(jacobi[i], gm, dt)
 
     @staticmethod
     def whfast_acceleration(objects_count, jacobi, x, a, m, eta, G) -> None:
@@ -276,13 +277,14 @@ class WHFast:
         a : np.ndarray
             Array to store the acceleration
         m : np.ndarray
-            Array of mass
+            Array of masses of the objects
         eta : np.ndarray
             Array of mass where eta[i] is the total mass from
             the 0-th to the i-th object
         G : float
             Gravitational constant
         """
+        # fmt: off
         # Empty acceleration array
         a.fill(0.0)
 
@@ -290,19 +292,24 @@ class WHFast:
         for i in range(1, objects_count):
             x_0i = x[i] - x[0]
             a[i] = (
-                m[0]
-                * eta[i]
-                / eta[i - 1]
+                m[0] * eta[i] / eta[i - 1]
                 * (
                     jacobi[i, :3] / np.linalg.norm(jacobi[i, :3]) ** 3
                     - x_0i / np.linalg.norm(x_0i) ** 3
                 )
             )
 
+            aux.fill(0.0)
             for j in range(1, i):
                 x_ji = x[i] - x[j]
                 aux += m[j] * x_ji / np.linalg.norm(x_ji) ** 3
             a[i] -= eta[i] / eta[i - 1] * aux
+
+            aux.fill(0.0)
+            for j in range(i + 1, objects_count):
+                x_ij = x[j] - x[i]
+                aux += m[j] * x_ij / np.linalg.norm(x_ij) ** 3
+            a[i] += aux
 
             aux.fill(0.0)
             for j in range(0, i):
@@ -312,6 +319,7 @@ class WHFast:
             a[i] -= aux / eta[i - 1]
 
         a *= G
+        # fmt: on
 
     @staticmethod
     def cartesian_to_jacobi(
@@ -335,6 +343,8 @@ class WHFast:
             The Cartesian position array
         v : np.ndarray
             The Cartesian velocity array
+        m : np.ndarray
+            Array of masses of the objects
         eta : np.ndarray
             Array of mass where eta[i] is the total mass from
             the 0-th to the i-th object
@@ -346,8 +356,8 @@ class WHFast:
             jacobi[i, :3] = x[i] - x_cm / eta[i - 1]
             jacobi[i, 3:] = v[i] - v_cm / eta[i - 1]
 
-            x_cm = x_cm * (1 + m[i] / eta[i - 1]) + m[i] * jacobi[i, 0:3]
-            v_cm = v_cm * (1 + m[i] / eta[i - 1]) + m[i] * jacobi[i, 3:6]
+            x_cm = x_cm * (1 + m[i] / eta[i - 1]) + m[i] * jacobi[i, :3]
+            v_cm = v_cm * (1 + m[i] / eta[i - 1]) + m[i] * jacobi[i, 3:]
 
         jacobi[0, :3] = x_cm / eta[-1]
         jacobi[0, 3:] = v_cm / eta[-1]
@@ -374,6 +384,8 @@ class WHFast:
             The array to store the Cartesian position
         v : np.ndarray
             The array to store the Cartesian velocity
+        m : np.ndarray
+            Array of masses of the objects
         eta : np.ndarray
             Array of mass where eta[i] is the total mass from
             the 0-th to the i-th object
@@ -440,7 +452,7 @@ class WHFast:
         ########################################################
         # Analytical expressions for the Stumpff functions
         if z > 0:
-            c3 = (math.sqrt(z) - math.sin(math.sqrt(z))) / (z**1.5)
+            c3 = (math.sqrt(z) - math.sin(math.sqrt(z))) / (z ** 1.5)
             c2 = (1.0 - math.cos(math.sqrt(z))) / z
             c1 = math.sin(math.sqrt(z)) / math.sqrt(z)
             c0 = math.cos(math.sqrt(z))
@@ -462,17 +474,15 @@ class WHFast:
 
     @staticmethod
     def propagate_kepler(
-        x: np.ndarray, v: np.ndarray, gm: float, dt: float
+        jacobi_i: np.ndarray, gm: float, dt: float
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Propagate the position and velocity vectors using Kepler's equation.
 
         Parameters
         ----------
-        x : np.ndarray
-            Initial position vector to be modified
-        v : np.ndarray
-            Initial velocity vector to be modified
+        jacobi : np.ndarray
+            State vector in Jacobi coordinates
         gm : float
             Gravitational parameter
         dt : float
@@ -485,7 +495,9 @@ class WHFast:
         """
         # Internal tolerance for solving Kepler's equation
         tol = 1e-12
-
+        
+        x = jacobi_i[:3].copy()
+        v = jacobi_i[3:].copy()
         x_norm = np.linalg.norm(x)
         v_norm = np.linalg.norm(v)
 
@@ -536,7 +548,5 @@ class WHFast:
         dg = 1.0 - gm / r * (s * s) * c2
 
         # Compute position and velocity vectors
-        x_1 = f * x + g * v
-        v_1 = df * x + dg * v
-
-        return x_1, v_1
+        jacobi_i[:3] = f * x + g * v
+        jacobi_i[3:] = df * x + dg * v
