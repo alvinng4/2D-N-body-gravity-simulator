@@ -32,6 +32,7 @@ class GravitySimulatorCLI:
         "dverk": "DVERK",
         "rkf78": "RKF78",
         "ias15": "IAS15",
+        "whfast": "WHFast",
     }
 
     def __init__(self):
@@ -394,7 +395,7 @@ class GravitySimulatorCLI:
             for i in range(len(Simulator.AVAILABLE_INTEGRATORS)):
                 temp_str += "|" + Simulator.AVAILABLE_INTEGRATORS[i]
             if matches := re.search(
-                rf"^\s*([1-9]{temp_str})\s*$",
+                rf"^\s*([1-9][0-9]*|{temp_str})\s*$",
                 self.integrator,
                 re.IGNORECASE,
             ):
@@ -450,7 +451,7 @@ class GravitySimulatorCLI:
                     break
 
         # --------------------Input dt--------------------
-        if self.integrator in ["euler", "euler_cromer", "rk4", "leapfrog"]:
+        if self.integrator in self.simulator.FIXED_STEP_SIZE_INTEGRATORS:
             while True:
                 self.dt = input("Enter dt (d/yr): ")
                 if matches := re.search(
@@ -480,7 +481,7 @@ class GravitySimulatorCLI:
                         self.dt *= self.DAYS_PER_YEAR
                         break
 
-        elif self.integrator in ["rkf45", "dopri", "dverk", "rkf78", "ias15"]:
+        elif self.integrator in self.simulator.ADAPTIVE_STEP_SIZE_INTEGRATORS:
             self.tolerance = common.get_float("Enter tolerance: ", larger_than=0)
 
         # --------------------Input store_every_n--------------------
@@ -499,17 +500,17 @@ class GravitySimulatorCLI:
             print(f"tf: {self.tf / self.DAYS_PER_YEAR:g} years")
         else:
             print(f"tf: {self.tf} days")
-        if self.integrator in ["euler", "euler_cromer", "rk4", "leapfrog"]:
+        if self.integrator in self.simulator.FIXED_STEP_SIZE_INTEGRATORS:
             if self.dt_unit == "years":
                 print(f"dt: {self.dt / self.DAYS_PER_YEAR} years")
             else:
                 print(f"dt: {self.dt} days")
-        elif self.integrator in ["rkf45", "dopri", "dverk", "rkf78", "ias15"]:
+        elif self.integrator in self.simulator.ADAPTIVE_STEP_SIZE_INTEGRATORS:
             print(f"Tolerance: {self.tolerance}")
         print(f"Use c_lib: {self.is_c_lib}")
         print(f"Store every nth point: {self.store_every_n}")
 
-        if self.integrator in ["euler", "euler_cromer", "rk4", "leapfrog"]:
+        if self.integrator in self.simulator.FIXED_STEP_SIZE_INTEGRATORS:
             npts = int(np.floor((self.tf / self.dt))) + 1  # + 1 for t0
 
             store_npts = npts

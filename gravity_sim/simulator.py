@@ -14,6 +14,7 @@ from progress_bar import progress_bar_c_lib_fixed_step_size
 from integrator_simple import SimpleIntegrator
 from integrator_rk_embedded import RKEmbedded
 from integrator_ias15 import IAS15
+from integrator_whfast import WHFast
 
 
 class Simulator:
@@ -27,6 +28,7 @@ class Simulator:
         "dverk",
         "rkf78",
         "ias15",
+        "whfast",
     ]
     AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES = {
         "euler": "Euler",
@@ -38,7 +40,10 @@ class Simulator:
         "dverk": "DVERK",
         "rkf78": "RKF78",
         "ias15": "IAS15",
+        "whfast": "WHFast",
     }
+    FIXED_STEP_SIZE_INTEGRATORS = ["euler", "euler_cromer", "rk4", "leapfrog", "whfast"]
+    ADAPTIVE_STEP_SIZE_INTEGRATORS = ["rkf45", "dopri", "dverk", "rkf78", "ias15"]
 
     def __init__(self, c_lib=None, is_exit_ctypes_bool=None):
         self.c_lib = c_lib
@@ -220,6 +225,8 @@ class Simulator:
                         str(flush_path),
                         no_progress_bar,
                     )
+                case "whfast":
+                    raise NotImplementedError
 
         else:
             match self.integrator:
@@ -294,6 +301,29 @@ class Simulator:
                         self.G,
                         self.tf,
                         self.tolerance,
+                        flush,
+                        str(flush_path),
+                        no_progress_bar,
+                    )
+                case "whfast":
+                    integrator = WHFast(
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                    ) = integrator.simulation_numpy(
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.dt,
+                        self.tf,
                         flush,
                         str(flush_path),
                         no_progress_bar,

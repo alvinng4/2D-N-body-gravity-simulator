@@ -18,6 +18,7 @@ AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES = {
     "dverk": "DVERK",
     "rkf78": "RKF78",
     "ias15": "IAS15",
+    "whfast": "WHFast",
 }
 
 

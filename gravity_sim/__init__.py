@@ -35,6 +35,7 @@ class GravitySimulator:
         "dverk": "DVERK",
         "rkf78": "RKF78",
         "ias15": "IAS15",
+        "whfast": "WHFast",
     }
 
     def __init__(self):
