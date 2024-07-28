@@ -3,6 +3,11 @@ Newtonian N-body gravity simulator accelerated with C library
 * Nine integrators including RKF7(8) and IAS15 are implemented
 * WHFast and Barnes-Hut algorithm will be implemented in the future
 
+This is a student project developed for learning purpose,
+and is designed to be lightweight and easy to use. 
+Other packages such as REBOUND are recommended for better 
+accuracy and efficiency.
+
 <img src="./examples/solar_plus_3d.gif" alt="Image" width="300">
 <img src="./examples/asteroid_belt_added_star_2.gif" alt="Image" width="300">
 <img src="./examples/rel_energy.png" alt="Image" width="300">

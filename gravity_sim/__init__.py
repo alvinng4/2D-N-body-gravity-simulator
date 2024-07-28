@@ -350,13 +350,11 @@ class GravitySimulator:
         title="Relative energy error against time",
         xlabel=f"Time",
         ylabel="$|(E(t)-E_0)/E_0|$",
+        computed_energy: bool = False,
     ):
-        if energy is None:
-            try:
-                energy = self.simulator.energy
-            except AttributeError:
-                self.compute_energy()
-                energy = self.simulator.energy
+        if not computed_energy:
+            self.compute_energy()
+        energy = self.simulator.energy
         if sol_time is None:
             sol_time = self.simulator.sol_time
 
@@ -369,13 +367,11 @@ class GravitySimulator:
         title: str = "Relative angular momentum error against time",
         xlabel: str = "Time",
         ylabel: str = "$|(L(t)-L_0)/L_0|$",
+        computed_angular_momentum: bool = False,
     ):
-        if angular_momentum is None:
-            try:
-                angular_momentum = self.simulator.angular_momentum
-            except AttributeError:
-                self.compute_angular_momentum()
-                angular_momentum = self.simulator.angular_momentum
+        if not computed_angular_momentum:
+            self.compute_angular_momentum()
+        angular_momentum = self.simulator.angular_momentum
         if sol_time is None:
             sol_time = self.simulator.sol_time
 
