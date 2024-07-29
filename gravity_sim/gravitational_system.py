@@ -670,3 +670,25 @@ class GravitationalSystem:
             marker,
             markersize,
         )
+
+    def sort_by_distance(
+        self, primary_object_name: str = None, primary_object_idx: int = None
+    ):
+        """
+        Sort objects by distance from the origin
+        """
+        if primary_object_name is not None and primary_object_idx is not None:
+            warnings.warn(
+                "Both primary_object_name and primary_object_idx are provided. "
+                + "primary_object_idx will be used."
+            )
+        elif primary_object_name is not None:
+            primary_object_idx = self.objects_names.index(primary_object_name)
+
+        x_diff = self.x - self.x[primary_object_idx]
+        distances = np.linalg.norm(x_diff, axis=1)
+        sorted_indices = np.argsort(distances)
+        self.x = self.x[sorted_indices]
+        self.v = self.v[sorted_indices]
+        self.m = self.m[sorted_indices]
+        self.objects_names = [self.objects_names[i] for i in sorted_indices]

@@ -97,15 +97,10 @@ python gravity_sim [-n|--numpy]
 | 3d_helix | An upward helix consists of three stars |
 | sun_earth_moon | The Sun, Earth, and Moon system |
 | figure-8 | A "figure-8" orbit involving three stars  |
-| pyth-3-body* | Three stars arranged in a triangle with length ratios of 3, 4, and 5 |
+| pyth-3-body | Three stars arranged in a triangle with length ratios of 3, 4, and 5. It is a highly chaotic orbit with close encounters that can be used to test the difference between fixed and variable step size integrators. |
 | solar_system | Solar System with the Sun and the planets |
 | solar_system_plus | solar_system with the inclusion of Pluto, Ceres, and Vesta  |
 | custom | Customize your own system |
-
-> [!TIP]\
-> Pythagorean three body orbit is a highly chaotic orbit with close encounters, which is useful to test the difference
-between fixed and variable step size integrators.
-For RK4, the largest dt to produce desired result is 2e-8 days.
 
 ## Customizing system
 If you want to setup your own system, choose the "custom" option.
@@ -167,7 +162,7 @@ Even if the metadata is corrupted or missing, the program can still read the dat
 
 ## Compensated summation
 
-A method known as compensated summation [1], [4] is implemented in this project:
+A method known as compensated summation [1], [4] is implemented for all integrators EXCEPT WHFast:
 
 When we advance our system by $\text{d}t$, we have 
 
@@ -176,6 +171,9 @@ $x_{n+1} = x_n + \delta x$
 Since $\delta x$ is very small compared to $x_n$, many digits of precision will be lost.
 By compensated summation, we keep track of the losing digits using another variable, which
 allows us to effectively eliminates round off error with very little cost.
+
+However, for WHFast, the improvement is little but takes 10% longer run time.
+Therefore, it is excluded from this method.
 
 ## Available integrators 
 ### Fixed step size methods
@@ -204,8 +202,14 @@ Recommended tolerance*: 1e-9
 
 *For reference only
 
+### WHFast
+WHFast is a fast symplectic method with fixed step size. Similar to LeapFrog, it conserves energy over long integration period.
+
+> [!WARNING]\
+> When using WHFast, the order of adding objects matters. Since WHFast use Jacobi coordinate, we must first add the inner object. For convenience, you may also add the objects first, then call `system.sort_by_distance(primary_object_name)` or `system.sort_by_distance(primary_object_index)`
+
 ## Feedback and Bugs
-If you find any bugs or want to leave some feedback, please feel free to let me know by sending an email to alvinng324@gmail.com or open an issue.
+If you find any bugs or want to leave some feedback, please feel free to let me know by opening an issue or sending an email to alvinng324@gmail.com.
 
 ## Data Sources
 The solar system positions and velocities data at 1/Jan/2024 are collected from the Horizons System [2].
