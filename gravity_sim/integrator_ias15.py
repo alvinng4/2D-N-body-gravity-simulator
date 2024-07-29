@@ -42,7 +42,7 @@ class IAS15:
         G: float,
         tf: float,
         tolerance: float,
-        acceleration: str,
+        acceleration_method: str,
         flush: bool = False,
         flush_path: str = "",
         no_progress_bar: bool = False,
@@ -50,6 +50,10 @@ class IAS15:
         """
         Recommended tolerance: 1e-9
         """
+        if acceleration_method not in ["pairwise", "massless", "barnes_hut"]:
+            raise ValueError("Invalid acceleration method")
+        if acceleration_method == "barnes_hut":
+            raise NotImplementedError
 
         class Solutions(ctypes.Structure):
             _fields_ = [
@@ -59,13 +63,6 @@ class IAS15:
             ]
 
         self.c_lib.ias15.restype = ctypes.c_int
-
-        if acceleration == "pairwise":
-            acceleration_func = self.c_lib.acceleration_pairwise
-        elif acceleration == "massless":
-            acceleration_func = self.c_lib.acceleration_with_massless
-        elif acceleration == "barnes_hut":
-            raise NotImplementedError
 
         t = ctypes.c_double(0.0)
         store_count = ctypes.c_int(1)  # 1 for t0
@@ -84,8 +81,6 @@ class IAS15:
 
         queue = Queue()
         solution = Solutions()
-        flush_path = flush_path.encode("utf-8")
-
         ias15_thread = threading.Thread(
             target=ias15_wrapper,
             args=(
@@ -99,11 +94,11 @@ class IAS15:
                 ctypes.byref(t),
                 ctypes.c_double(tf),
                 ctypes.c_double(tolerance),
-                acceleration_func,
+                acceleration_method.encode("utf-8"),
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
                 ctypes.c_bool(flush),
-                flush_path,
+                flush_path.encode("utf-8"),
                 ctypes.byref(solution),
                 ctypes.byref(self.is_exit_ctypes_bool),
             ),

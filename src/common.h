@@ -31,7 +31,7 @@ typedef struct Solutions
 
 
 /**
- * \brief Compute acceleration based on Newton's law of gravitational. 
+ * \brief Pairwise computation of acceleration based on Newton's law of gravitational. 
  * \param objects_count Number of objects in the system
  * \param x Array of position vectors of all objects
  * \param a Array of acceleration vectors of all objects.
@@ -43,6 +43,27 @@ typedef struct Solutions
  * \return None
  */
 void acceleration_pairwise(
+    int objects_count,
+    real *restrict x,
+    real *restrict a,
+    const real *restrict m,
+    real G
+);
+
+/**
+ * \brief Compute acceleration based on Newton's law of gravitational,
+ *        separating the calculation of massive and massless objects.
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors of all objects
+ * \param a Array of acceleration vectors of all objects.
+ *                   Values inside this array will be replaced
+ *                   by the computed acceleration.
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
+ * 
+ * \return None
+ */
+void acceleration_massless(
     int objects_count,
     real *restrict x,
     real *restrict a,

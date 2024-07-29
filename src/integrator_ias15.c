@@ -17,7 +17,7 @@
  * \param t Pointer to the current simulation time
  * \param tf Total time to be integrated
  * \param input_tolerance Tolerance of the integrator
- * \param acceleration Pointer to the acceleration function
+ * \param acceleration_method Method to calculate acceleration
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
  * \param flush Flag to indicate whether to store solution into data file directly
@@ -39,7 +39,7 @@ int ias15(
     double *restrict t,
     double tf, 
     double input_tolerance,
-    void (*acceleration)(int, real*, real*, const real*, real),
+    const char *restrict acceleration_method,
     int store_every_n,
     int *restrict store_count,
     const bool flush,
@@ -369,7 +369,7 @@ WIN32DLL_API int ias15(
     double *restrict t,
     double tf, 
     double input_tolerance,
-    void (*acceleration)(int, real*, real*, const real*, real),
+    const char *restrict acceleration_method,
     int store_every_n,
     int *restrict store_count,
     const bool flush,
@@ -378,6 +378,27 @@ WIN32DLL_API int ias15(
     bool *restrict is_exit
 )
 {   
+    void (*acceleration)(
+        int objects_count,
+        real *restrict x,
+        real *restrict a,
+        const real *restrict m,
+        real G
+    );
+    if (strcmp(acceleration_method, "pairwise") == 0)
+    {
+        acceleration = acceleration_pairwise;
+    }
+    else if (strcmp(acceleration_method, "massless") == 0)
+    {
+        acceleration = acceleration_massless;
+    }
+    else
+    {
+        printf("Error: acceleration method not recognized\n");
+        goto err_acc_method;
+    }
+    
     real *a = malloc(objects_count * 3 * sizeof(real));
     if (!a)
     {
@@ -671,6 +692,7 @@ err_aux_memory:
     free(aux_e);
 err_a:
     free(a);
+err_acc_method:
     if (*is_exit)
     {
         return 2;   // User sends KeyboardInterrupt in main thread

@@ -41,11 +41,16 @@ class SimpleIntegrator:
         G: float,
         dt: float,
         tf: float,
-        acceleration: str,
+        acceleration_method: str,
         flush: bool = False,
         flush_path: str = "",
         no_progress_bar: bool = False,
     ):
+        if acceleration_method not in ["pairwise", "massless", "barnes_hut"]:
+            raise ValueError("Invalid acceleration method")
+        if acceleration_method == "barnes_hut":
+            raise NotImplementedError
+
         class Solutions(ctypes.Structure):
             _fields_ = [
                 ("sol_state", ctypes.POINTER(ctypes.c_double)),
@@ -57,13 +62,6 @@ class SimpleIntegrator:
         self.c_lib.euler_cromer.restype = ctypes.c_int
         self.c_lib.rk4.restype = ctypes.c_int
         self.c_lib.leapfrog.restype = ctypes.c_int
-
-        if acceleration == "pairwise":
-            acceleration_func = self.c_lib.acceleration_pairwise
-        elif acceleration == "massless":
-            acceleration_func = self.c_lib.acceleration_with_massless
-        elif acceleration == "barnes_hut":
-            raise NotImplementedError
 
         npts = math.ceil(tf / dt)
         if self.store_every_n != 1:
@@ -88,8 +86,6 @@ class SimpleIntegrator:
 
         queue = Queue()
         solution = Solutions()
-        flush_path = flush_path.encode("utf-8")
-
         match integrator:
             case "euler":
                 simple_integrator_thread = threading.Thread(
@@ -103,13 +99,13 @@ class SimpleIntegrator:
                         m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                         ctypes.c_double(G),
                         ctypes.c_double(dt),
-                        acceleration_func,
+                        acceleration_method.encode("utf-8"),
                         ctypes.c_int64(npts),
                         ctypes.c_int(store_npts),
                         ctypes.c_int(self.store_every_n),
                         ctypes.byref(store_count),
                         ctypes.c_bool(flush),
-                        flush_path,
+                        flush_path.encode("utf-8"),
                         ctypes.byref(solution),
                         ctypes.byref(self.is_exit_ctypes_bool),
                     ),
@@ -126,13 +122,13 @@ class SimpleIntegrator:
                         m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                         ctypes.c_double(G),
                         ctypes.c_double(dt),
-                        acceleration_func,
+                        acceleration_method.encode("utf-8"),
                         ctypes.c_int64(npts),
                         ctypes.c_int(store_npts),
                         ctypes.c_int(self.store_every_n),
                         ctypes.byref(store_count),
                         ctypes.c_bool(flush),
-                        flush_path,
+                        flush_path.encode("utf-8"),
                         ctypes.byref(solution),
                         ctypes.byref(self.is_exit_ctypes_bool),
                     ),
@@ -149,13 +145,13 @@ class SimpleIntegrator:
                         m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                         ctypes.c_double(G),
                         ctypes.c_double(dt),
-                        acceleration_func,
+                        acceleration_method.encode("utf-8"),
                         ctypes.c_int64(npts),
                         ctypes.c_int(store_npts),
                         ctypes.c_int(self.store_every_n),
                         ctypes.byref(store_count),
                         ctypes.c_bool(flush),
-                        flush_path,
+                        flush_path.encode("utf-8"),
                         ctypes.byref(solution),
                         ctypes.byref(self.is_exit_ctypes_bool),
                     ),
@@ -172,13 +168,13 @@ class SimpleIntegrator:
                         m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                         ctypes.c_double(G),
                         ctypes.c_double(dt),
-                        acceleration_func,
+                        acceleration_method.encode("utf-8"),
                         ctypes.c_int64(npts),
                         ctypes.c_int(store_npts),
                         ctypes.c_int(self.store_every_n),
                         ctypes.byref(store_count),
                         ctypes.c_bool(flush),
-                        flush_path,
+                        flush_path.encode("utf-8"),
                         ctypes.byref(solution),
                         ctypes.byref(self.is_exit_ctypes_bool),
                     ),

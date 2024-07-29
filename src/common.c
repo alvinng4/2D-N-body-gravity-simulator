@@ -52,7 +52,7 @@ WIN32DLL_API void acceleration_pairwise(
     }
 }
 
-WIN32DLL_API void acceleration_with_massless(
+WIN32DLL_API void acceleration_massless(
     int objects_count,
     real *restrict x,
     real *restrict a,

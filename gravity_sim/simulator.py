@@ -66,7 +66,7 @@ class Simulator:
         dt: float = None,
         tolerance: float = None,
         store_every_n: int = 1,
-        acceleration: str = "pairwise",
+        acceleration_method: str = "pairwise",
         flush: bool = False,
         flush_results_path: str = None,
         no_progress_bar: bool = False,
@@ -87,7 +87,7 @@ class Simulator:
             Tolerance for adaptive time step integrators
         store_every_n : int, optional
             Store every nth time step
-        acceleration : str, optional
+        acceleration_method : str, optional
             Acceleration method -- "pairwise", "massless"
                 pairwise: Pairwise acceleration
                 massless: System with massless particles
@@ -125,7 +125,7 @@ class Simulator:
         else:
             flush_path = None
 
-        if (self.integration_mode == "numpy") and acceleration != "pairwise":
+        if (self.integration_mode == "numpy") and acceleration_method != "pairwise":
             warnings.warn(
                 "Only pairwise acceleration is available for numpy integrators. "
                 + 'Setting acceleration method to "pairwise".'
@@ -158,7 +158,7 @@ class Simulator:
                         self.G,
                         self.dt,
                         self.tf,
-                        acceleration,
+                        acceleration_method,
                         flush,
                         str(flush_path),
                         no_progress_bar,
@@ -187,7 +187,7 @@ class Simulator:
                         self.tf,
                         self.tolerance,
                         self.tolerance,
-                        acceleration,
+                        acceleration_method,
                         flush,
                         str(flush_path),
                         no_progress_bar,
@@ -210,7 +210,7 @@ class Simulator:
                         self.G,
                         self.tf,
                         self.tolerance,
-                        acceleration,
+                        acceleration_method,
                         flush,
                         str(flush_path),
                         no_progress_bar,

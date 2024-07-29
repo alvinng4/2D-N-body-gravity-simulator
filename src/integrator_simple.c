@@ -17,7 +17,7 @@
  * \param G Gravitational constant
  * \param dt Time step of the system
  * \param npts Number of time steps to be integrated
- * \param acceleration Pointer to the acceleration function
+ * \param acceleration_method Method to calculate acceleration
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
@@ -38,7 +38,7 @@ WIN32DLL_API int euler(
     real *restrict m,
     real G,
     double dt,
-    void (*acceleration)(int, real*, real*, const real*, real),
+    const char *restrict acceleration_method,
     int64 npts,
     int store_npts,
     int store_every_n,
@@ -49,6 +49,27 @@ WIN32DLL_API int euler(
     bool *restrict is_exit
 )
 {   
+    void (*acceleration)(
+        int objects_count,
+        real *restrict x,
+        real *restrict a,
+        const real *restrict m,
+        real G
+    );
+    if (strcmp(acceleration_method, "pairwise") == 0)
+    {
+        acceleration = acceleration_pairwise;
+    }
+    else if (strcmp(acceleration_method, "massless") == 0)
+    {
+        acceleration = acceleration_massless;
+    }
+    else
+    {
+        printf("Error: acceleration method not recognized\n");
+        goto err_acc_method;
+    }
+
     // Allocate memory for calculation
     real *restrict temp_x = malloc(objects_count * 3 * sizeof(real));
     real *restrict temp_v = malloc(objects_count * 3 * sizeof(real));
@@ -196,6 +217,7 @@ err_calc_memory:
     free(a);
     free(x_err_comp_sum);
     free(v_err_comp_sum);
+err_acc_method:
     if (*is_exit)
     {
         return 2;   // User sends KeyboardInterrupt in main thread
@@ -215,7 +237,7 @@ err_calc_memory:
  * \param m Array of masses for all objects
  * \param G Gravitational constant
  * \param dt Time step of the system
- * \param acceleration Pointer to the acceleration function
+ * \param acceleration_method Method to calculate acceleration
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
@@ -237,7 +259,7 @@ WIN32DLL_API int euler_cromer(
     real *restrict m,
     real G,
     double dt,
-    void (*acceleration)(int, real*, real*, const real*, real),
+    const char *restrict acceleration_method,
     int64 npts,
     int store_npts,
     int store_every_n,
@@ -248,6 +270,27 @@ WIN32DLL_API int euler_cromer(
     bool *restrict is_exit
 )
 {   
+    void (*acceleration)(
+        int objects_count,
+        real *restrict x,
+        real *restrict a,
+        const real *restrict m,
+        real G
+    );
+    if (strcmp(acceleration_method, "pairwise") == 0)
+    {
+        acceleration = acceleration_pairwise;
+    }
+    else if (strcmp(acceleration_method, "massless") == 0)
+    {
+        acceleration = acceleration_massless;
+    }
+    else
+    {
+        printf("Error: acceleration method not recognized\n");
+        goto err_acc_method;
+    }
+
     // Allocate memory for calculation
     real *restrict temp_x = malloc(objects_count * 3 * sizeof(real));
     real *restrict temp_v = malloc(objects_count * 3 * sizeof(real));
@@ -394,6 +437,7 @@ err_calc_memory:
     free(a);
     free(x_err_comp_sum);
     free(v_err_comp_sum);
+err_acc_method:
     if (*is_exit)
     {
         return 2;   // User sends KeyboardInterrupt in main thread
@@ -413,7 +457,7 @@ err_calc_memory:
  * \param m Array of masses for all objects
  * \param G Gravitational constant
  * \param dt Time step of the system
- * \param acceleration Pointer to the acceleration function
+ * \param acceleration_method Method to calculate acceleration
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
@@ -435,7 +479,7 @@ WIN32DLL_API int rk4(
     real *restrict m,
     real G,
     double dt,
-    void (*acceleration)(int, real*, real*, const real*, real),
+    const char *restrict acceleration_method,
     int64 npts,
     int store_npts,
     int store_every_n,
@@ -446,6 +490,27 @@ WIN32DLL_API int rk4(
     int *restrict is_exit
 )
 {
+    void (*acceleration)(
+        int objects_count,
+        real *restrict x,
+        real *restrict a,
+        const real *restrict m,
+        real G
+    );
+    if (strcmp(acceleration_method, "pairwise") == 0)
+    {
+        acceleration = acceleration_pairwise;
+    }
+    else if (strcmp(acceleration_method, "massless") == 0)
+    {
+        acceleration = acceleration_massless;
+    }
+    else
+    {
+        printf("Error: acceleration method not recognized\n");
+        goto err_acc_method;
+    }
+
     // Allocate memory for calculation
     real *restrict temp_x = malloc(objects_count * 3 * sizeof(real));
     real *restrict temp_v = malloc(objects_count * 3 * sizeof(real));
@@ -651,6 +716,7 @@ err_calc_memory:
     free(xk4);
     free(x_err_comp_sum);
     free(v_err_comp_sum);   
+err_acc_method:
     if (*is_exit)
     {
         return 2;   // User sends KeyboardInterrupt in main thread
@@ -670,7 +736,7 @@ err_calc_memory:
  * \param m Array of masses for all objects
  * \param G Gravitational constant
  * \param dt Time step of the system
- * \param acceleration Pointer to the acceleration function
+ * \param acceleration_method Method to calculate acceleration
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
@@ -692,7 +758,7 @@ WIN32DLL_API int leapfrog(
     real *restrict m,
     real G,
     double dt,
-    void (*acceleration)(int, real*, real*, const real*, real),
+    const char *restrict acceleration_method,
     int64 npts,
     int store_npts,
     int store_every_n,
@@ -703,6 +769,27 @@ WIN32DLL_API int leapfrog(
     int *restrict is_exit
 )
 {   
+    void (*acceleration)(
+        int objects_count,
+        real *restrict x,
+        real *restrict a,
+        const real *restrict m,
+        real G
+    );
+    if (strcmp(acceleration_method, "pairwise") == 0)
+    {
+        acceleration = acceleration_pairwise;
+    }
+    else if (strcmp(acceleration_method, "massless") == 0)
+    {
+        acceleration = acceleration_massless;
+    }
+    else
+    {
+        printf("Error: acceleration method not recognized\n");
+        goto err_acc_method;
+    }
+
     // Allocate memory for calculation
     real *restrict temp_x = malloc(objects_count * 3 * sizeof(real));
     real *restrict temp_v = malloc(objects_count * 3 * sizeof(real));
@@ -861,6 +948,7 @@ err_calc_memory:
     free(a_1);
     free(x_err_comp_sum);
     free(v_err_comp_sum);
+err_acc_method:
     if (*is_exit)
     {
         return 2;   // User sends KeyboardInterrupt in main thread

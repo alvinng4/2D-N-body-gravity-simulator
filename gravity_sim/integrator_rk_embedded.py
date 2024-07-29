@@ -58,11 +58,16 @@ class RKEmbedded:
         tf: float,
         abs_tolerance: float,
         rel_tolerance: float,
-        acceleration: str,
+        acceleration_method: str,
         flush: bool = False,
         flush_path: str = "",
         no_progress_bar: bool = False,
     ):
+        if acceleration_method not in ["pairwise", "massless", "barnes_hut"]:
+            raise ValueError("Invalid acceleration method")
+        if acceleration_method == "barnes_hut":
+            raise NotImplementedError
+
         class Solutions(ctypes.Structure):
             _fields_ = [
                 ("sol_state", ctypes.POINTER(ctypes.c_double)),
@@ -71,13 +76,6 @@ class RKEmbedded:
             ]
 
         self.c_lib.rk_embedded.restype = ctypes.c_int
-
-        if acceleration == "pairwise":
-            acceleration_func = self.c_lib.acceleration_pairwise
-        elif acceleration == "massless":
-            acceleration_func = self.c_lib.acceleration_with_massless
-        elif acceleration == "barnes_hut":
-            raise NotImplementedError
 
         t = ctypes.c_double(0.0)
         store_count = ctypes.c_int(1)  # 1 for t0
@@ -96,7 +94,6 @@ class RKEmbedded:
 
         queue = Queue()
         solution = Solutions()
-        flush_path = flush_path.encode("utf-8")
 
         rk_embedded_thread = threading.Thread(
             target=rk_embedded_wrapper,
@@ -113,11 +110,11 @@ class RKEmbedded:
                 ctypes.c_double(tf),
                 ctypes.c_double(abs_tolerance),
                 ctypes.c_double(rel_tolerance),
-                acceleration_func,
+                acceleration_method.encode("utf-8"),
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
                 ctypes.c_bool(flush),
-                flush_path,
+                flush_path.encode("utf-8"),
                 ctypes.byref(solution),
                 ctypes.byref(self.is_exit_ctypes_bool),
             ),

@@ -405,7 +405,7 @@ WIN32DLL_API real rk_embedded_initial_dt(
  * \param tf Total time to be integrated
  * \param input_abs_tolerance Absolute tolerance of the integrator
  * \param input_rel_tolerance Relative tolerance of the integrator
- * \param acceleration Pointer to the acceleration function
+ * \param acceleration_method Method to calculate acceleration
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
  * \param flush Flag to indicate whether to store solution into data file directly
@@ -429,7 +429,7 @@ WIN32DLL_API int rk_embedded(
     double tf, 
     double input_abs_tolerance,
     double input_rel_tolerance,
-    void (*acceleration)(int, real*, real*, const real*, real),
+    const char *restrict acceleration_method,
     int store_every_n,
     int *restrict store_count,
     const bool flush,
@@ -438,6 +438,27 @@ WIN32DLL_API int rk_embedded(
     bool *restrict is_exit
 )
 {   
+    void (*acceleration)(
+        int objects_count,
+        real *restrict x,
+        real *restrict a,
+        const real *restrict m,
+        real G
+    );
+    if (strcmp(acceleration_method, "pairwise") == 0)
+    {
+        acceleration = acceleration_pairwise;
+    }
+    else if (strcmp(acceleration_method, "massless") == 0)
+    {
+        acceleration = acceleration_massless;
+    }
+    else
+    {
+        printf("Error: acceleration method not recognized\n");
+        goto err_acc_method;
+    }
+
     // Initialization
     int power;
     int power_test;
@@ -863,6 +884,7 @@ err_rk_embedded_butcher_tableaus:
     free(coeff);
     free(weights);
     free(weights_test); 
+err_acc_method:
     if (*is_exit)
     {
         return 2;   // User sends KeyboardInterrupt in main thread
