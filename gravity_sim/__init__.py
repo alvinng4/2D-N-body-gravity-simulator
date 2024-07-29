@@ -64,6 +64,7 @@ class GravitySimulator:
         self.simulator = Simulator(c_lib=self.c_lib, is_exit_ctypes_bool=self.is_exit)
         self.compute_energy = self.simulator.compute_energy
         self.compute_angular_momentum = self.simulator.compute_angular_momentum
+        self.trim_data = common.trim_data
 
     def create_system(self, system_name: str = None):
         """

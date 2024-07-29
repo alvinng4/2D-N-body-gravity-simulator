@@ -123,8 +123,6 @@ class GravitySimulatorCLI:
                     self.computed_angular_momentum = False
                     self._read_simulation_data()
 
-                self.data_size = len(self.simulator.sol_time)
-
                 if self.tf_unit == "years":
                     self.sol_time_in_tf_unit = (
                         self.simulator.sol_time / self.DAYS_PER_YEAR
@@ -196,10 +194,10 @@ class GravitySimulatorCLI:
                 case 7:
                     self._plot_dt_wrapper()
                 case 8:
-                    print(f"There are {self.data_size} lines of data.")
+                    print(f"There are {self.simulator.data_size} lines of data.")
                     print()
                 case 9:
-                    print(f"There are {self.data_size} lines of data.")
+                    print(f"There are {self.simulator.data_size} lines of data.")
                     self.trim_data()
                 case 10:
                     if not self.computed_energy:
@@ -539,72 +537,39 @@ class GravitySimulatorCLI:
         while True:
             print()
             desired_trim_size = common.get_int(
-                'Enter desired data size (Enter "cancel" to cancel): ',
+                "Enter desired data size (Enter \"cancel\" to cancel): ",
                 larger_than=1,
-                smaller_than=self.data_size,
+                smaller_than=self.simulator.data_size,
                 allow_cancel=True,
             )
             if desired_trim_size is None:  # User entered "cancel"
-                is_trim_data = False
                 print()
-                break
+                return None
 
             else:
-                divide_factor = math.ceil(self.data_size / desired_trim_size)
-                trim_size = math.floor(self.data_size / divide_factor) + 1
+                store_every_n = math.ceil(self.simulator.data_size / desired_trim_size)
+                trim_size = self.simulator.data_size // store_every_n
                 if common.get_bool(
                     f"The trimmed data size would be {trim_size}. Continue?"
                 ):
-                    is_trim_data = True
                     print()
                     break
 
         # --------------------Trim data--------------------
+        data_size = self.simulator.data_size
+        self.simulator.sol_time = common.trim_data(store_every_n, data_size, self.simulator.sol_time)
+        self.simulator.sol_dt = common.trim_data(store_every_n, data_size, self.simulator.sol_dt)
+        self.simulator.sol_state = common.trim_data(store_every_n, data_size, self.simulator.sol_state)
+        if self.computed_energy:
+            self.simulator.energy = common.trim_data(store_every_n, data_size, self.simulator.energy)
 
-        # Note: trim size is calculated in the the user input section:
-        # divide_factor = math.ceil(self.data_size / desired_trim_size)
-        # trim_size = math.floor(self.data_size / divide_factor) + 1
+        print(f"Trimmed data size = {self.simulator.data_size}")
+        print()
 
-        if is_trim_data == True:
-            trimmed_sol_time = np.zeros(trim_size)
-            trimmed_sol_dt = np.zeros(trim_size)
-            trimmed_sol_state = np.zeros(
-                (trim_size, self.simulator.objects_count * 3 * 2)
-            )
-            if self.computed_energy == True:
-                trimmed_energy = np.zeros(trim_size)
-
-            j = 0
-            for i in range(self.data_size):
-                if i % divide_factor == 0:
-                    trimmed_sol_time[j] = self.simulator.sol_time[i]
-                    trimmed_sol_dt[j] = self.simulator.sol_dt[i]
-                    trimmed_sol_state[j] = self.simulator.sol_state[i]
-                    if self.computed_energy == True:
-                        trimmed_energy[j] = self.simulator.energy[i]
-                    j += 1
-
-            if trimmed_sol_time[-1] != self.simulator.sol_time[-1]:
-                trimmed_sol_time[-1] = self.simulator.sol_time[-1]
-                trimmed_sol_dt[-1] = self.simulator.sol_dt[-1]
-                trimmed_sol_state[-1] = self.simulator.sol_state[-1]
-                if self.computed_energy == True:
-                    trimmed_energy[-1] = self.simulator.energy[-1]
-
-            self.data_size = len(trimmed_sol_time)
-            print(f"Trimmed data size = {self.data_size}")
-            print()
-
-            self.simulator.sol_time = trimmed_sol_time
-            self.simulator.sol_dt = trimmed_sol_dt
-            self.simulator.sol_state = trimmed_sol_state
-            if self.computed_energy == True:
-                self.simulator.energy = trimmed_energy
-
-            if self.tf_unit == "years":
-                self.sol_time_in_tf_unit = self.simulator.sol_time / self.DAYS_PER_YEAR
-            else:
-                self.sol_time_in_tf_unit = self.simulator.sol_time
+        if self.tf_unit == "years":
+            self.sol_time_in_tf_unit = self.simulator.sol_time / self.DAYS_PER_YEAR
+        else:
+            self.sol_time_in_tf_unit = self.simulator.sol_time
 
     def _save_results(self):
         """
@@ -616,7 +581,7 @@ class GravitySimulatorCLI:
             if common.get_bool(
                 "WARNING: Energy has not been computed. The energy data will be stored as zeros. Proceed?"
             ):
-                self.simulator.energy = np.zeros(self.data_size)
+                self.simulator.energy = np.zeros(self.simulator.data_size)
             else:
                 print()
                 return None
@@ -627,7 +592,7 @@ class GravitySimulatorCLI:
             self.simulator.objects_count * 7
         )  # velocity * 3, position * 3, mass
         file_size = (
-            num_entries * self.data_size * 18
+            num_entries * self.simulator.data_size * 18
         )  # 18 is an approximated empirical value obtained from testing
         file_size /= 1000 * 1000  # Convert to MB
 
@@ -677,7 +642,7 @@ class GravitySimulatorCLI:
             self.simulator.tf,
             self.simulator.dt,
             self.simulator.tolerance,
-            self.data_size,
+            self.simulator.data_size,
             self.store_every_n,
             self.simulator.run_time,
             self.simulator.m,
@@ -720,7 +685,7 @@ class GravitySimulatorCLI:
             self.store_every_n,
             self.simulator.run_time,
             self.simulator.m,
-            self.data_size,
+            self.simulator.data_size,
         ) = common.read_results(file_path=read_file_path)
         self.gravitational_system.name = self.simulator.system_name
         self.gravitational_system.objects_names = [
@@ -801,19 +766,19 @@ class GravitySimulatorCLI:
                     "Enter desired time length for the gif (in seconds): ",
                     larger_than=0,
                 )
-                if desired_time <= self.data_size / fps:
+                if desired_time <= self.simulator.data_size / fps:
                     break
                 else:
                     print(
-                        f"For FPS = {fps:.1f}, the maximum length is {(self.data_size / fps):.1f} s!"
+                        f"For FPS = {fps:.1f}, the maximum length is {(self.simulator.data_size / fps):.1f} s!"
                     )
                     print()
 
             print()
 
-            plot_every_nth_point = math.floor(self.data_size / (desired_time * fps))
+            plot_every_nth_point = math.floor(self.simulator.data_size / (desired_time * fps))
             print(f"Plot every nth point: {plot_every_nth_point}")
-            frame_size = math.floor(self.data_size / plot_every_nth_point) + 1
+            frame_size = math.floor(self.simulator.data_size / plot_every_nth_point) + 1
             print(f"Estimated time length: {(frame_size / fps):.1f} s")
             print()
 
@@ -827,7 +792,7 @@ class GravitySimulatorCLI:
             traj_len = common.get_int(
                 "Enter the number of points for the trail (Enter -1 for full trajectory): ",
                 larger_than=-2,
-                smaller_than=self.data_size,
+                smaller_than=self.simulator.data_size,
             )
             is_dynamic_axes = common.get_bool("Use dynamic axes limit?")
 

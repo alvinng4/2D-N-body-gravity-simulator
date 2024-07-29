@@ -354,8 +354,6 @@ class Simulator:
             except KeyError:
                 integrator_name = None
 
-            self.data_size = store_count + 1
-
             self.combine_metadata_with_flushed_data(
                 results_file_path=str(file_path),
                 flushed_file_path=str(flush_path),
@@ -366,16 +364,13 @@ class Simulator:
                 tf=self.tf,
                 dt=dt,
                 tolerance=tolerance,
-                data_size=self.data_size,
+                data_size=store_count,
                 store_every_n=store_every_n,
                 run_time=self.run_time,
                 masses=self.m,
                 no_print=no_print,
             )
             flush_path.unlink()
-
-        else:
-            self.data_size = len(self.sol_time)
 
     def compute_energy(self):
         """
@@ -622,3 +617,8 @@ class Simulator:
                 raise ValueError(
                     'Invalid integration mode. Must be "numpy" or "c_lib".'
                 )
+
+    @property
+    def data_size(self) -> int:
+        return len(self.sol_time)
+    

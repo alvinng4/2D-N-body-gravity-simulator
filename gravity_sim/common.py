@@ -669,3 +669,36 @@ def keplerian_to_cartesian(
         raise ValueError("Invalid values. Please check the input values.")
 
     return x, v
+
+def trim_data(store_every_n: int, original_data_size: int, data: np.ndarray) -> np.ndarray:
+    """
+    Trim the data to store every nth point
+
+    Parameters
+    ----------
+    store_every_n : int
+        Store every nth point
+    original_data_size : int
+        Original data size
+    data : np.ndarray
+        Data to be trimmed
+
+    Returns
+    -------
+    trimmed_data : np.ndarray
+        Trimmed data
+    """
+    if store_every_n == 1:
+        return data.copy()
+    
+    input_data_shape = list(data.shape)
+    input_data_shape[0] = original_data_size // store_every_n
+    trimmed_data = np.zeros(tuple(input_data_shape))
+
+    store_count = 0
+    for i in range(original_data_size):
+        if i % store_every_n == 0:
+            trimmed_data[store_count] = data[i]
+            store_count += 1
+
+    return trimmed_data
