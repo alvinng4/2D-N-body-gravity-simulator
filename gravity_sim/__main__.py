@@ -509,7 +509,7 @@ class GravitySimulatorCLI:
         print(f"Store every nth point: {self.store_every_n}")
 
         if self.integrator in self.simulator.FIXED_STEP_SIZE_INTEGRATORS:
-            npts = math.ceil(self.tf / self.dt)
+            npts = int(self.tf // self.dt)
 
             store_npts = npts
             if self.store_every_n != 1:

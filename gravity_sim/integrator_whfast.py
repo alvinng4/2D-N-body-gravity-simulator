@@ -58,7 +58,7 @@ class WHFast:
 
         self.c_lib.whfast.restype = ctypes.c_int
 
-        npts = math.ceil(tf / dt)
+        npts = int(tf // dt)
         if self.store_every_n != 1:
             store_npts = npts // self.store_every_n
         else:
@@ -186,7 +186,7 @@ class WHFast:
         if flush:
             raise NotImplementedError("Flush is not implemented for numpy")
 
-        npts = math.ceil(tf / dt)
+        npts = int(tf // dt)
         if self.store_every_n != 1:
             store_npts = npts // self.store_every_n
         else:
@@ -201,7 +201,7 @@ class WHFast:
             )
         )
         self.sol_time = np.arange(
-            start=0.0, stop=(dt * npts), step=dt * self.store_every_n
+            start=0.0, stop=tf, step=dt * self.store_every_n
         )
         self.sol_dt = np.full(shape=(store_npts), fill_value=dt)
 
@@ -284,7 +284,7 @@ class WHFast:
         """
         # fmt: off
         # Empty acceleration array
-        a.fill(0.0)
+        a[0].fill(0.0)
 
         aux = np.zeros(3)
         for i in range(1, objects_count):
