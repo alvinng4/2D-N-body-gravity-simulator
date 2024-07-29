@@ -1,7 +1,7 @@
 # Gravity Simulator
 Newtonian N-body gravity simulator accelerated with C library
-* Nine integrators including RKF7(8) and IAS15 are implemented
-* WHFast and Barnes-Hut algorithm will be implemented in the future
+* Ten integrators including WHFast and IAS15 are implemented
+* Barnes-Hut algorithm and CUDA acceleration will be implemented in the future
 
 This is a student project developed for learning purpose,
 and is designed to be lightweight and easy to use. 

@@ -75,26 +75,26 @@ WIN32DLL_API void acceleration_massless(
 
     int *restrict massive_indices = calloc(objects_count, sizeof(int));
     int *restrict massless_indices = calloc(objects_count, sizeof(int));
-    int massive_idx = 0;
-    int massless_idx = 0;
+    int massive_objects_count = 0;
+    int massless_objects_count = 0;
     for (int i = 0; i < objects_count; i++)
     {
         if (m[i] != 0)
         {
-            massive_indices[massive_idx] = i;
-            massive_idx++;
+            massive_indices[massive_objects_count] = i;
+            massive_objects_count++;
         }
         else
         {
-            massless_indices[massless_idx] = i;
-            massless_idx++;
+            massless_indices[massless_objects_count] = i;
+            massless_objects_count++;
         }
     }
 
     // Pairwise acceleration calculation for massive objects
-    for (int i = 0; i < massive_idx; i++)
+    for (int i = 0; i < massive_objects_count; i++)
     {
-        for (int j = i + 1; j < massive_idx; j++)
+        for (int j = i + 1; j < massive_objects_count; j++)
         {
             int idx_i = massive_indices[i];
             int idx_j = massive_indices[j];
@@ -120,9 +120,9 @@ WIN32DLL_API void acceleration_massless(
     }
 
     // Acceleration calculation for massless objects
-    for (int i = 0; i < massive_idx; i++)
+    for (int i = 0; i < massive_objects_count; i++)
     {
-        for (int j = 0; j < massless_idx; j++)
+        for (int j = 0; j < massless_objects_count; j++)
         {
             int idx_i = massive_indices[i];
             int idx_j = massless_indices[j];

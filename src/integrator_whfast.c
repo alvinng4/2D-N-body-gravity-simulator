@@ -35,6 +35,16 @@ void whfast_acceleration_pairwise(
     real G
 );
 
+void whfast_acceleration_massless(
+    int objects_count,
+    real *restrict jacobi_x,
+    real *restrict x,
+    real *restrict a,
+    const real *restrict m,
+    const real *restrict eta,
+    real G
+);
+
 void cartesian_to_jacobi(
     int objects_count,
     real *restrict jacobi_x,
@@ -125,10 +135,10 @@ WIN32DLL_API int whfast(
     {
         whfast_acceleration = whfast_acceleration_pairwise;
     }
-    // else if (strcmp(acceleration_method, "massless") == 0)
-    // {
-    //     whfast_acceleration = whfast_acceleration_massless;
-    // }
+    else if (strcmp(acceleration_method, "massless") == 0)
+    {
+        whfast_acceleration = whfast_acceleration_massless;
+    }
     else
     {
         printf("Error: acceleration method not recognized\n");
@@ -431,6 +441,271 @@ void whfast_acceleration_pairwise(
         aux[1] = 0.0;
         aux[2] = 0.0;
     }
+}
+
+void whfast_acceleration_massless(
+    int objects_count,
+    real *restrict jacobi_x,
+    real *restrict x,
+    real *restrict a,
+    const real *restrict m,
+    const real *restrict eta,
+    real G
+)
+{
+    real aux[3];
+    real temp_vec[3];
+    real temp_vec_norm;
+    real temp_vec_norm_cube;
+    real temp_jacobi_norm;
+    real temp_jacobi_norm_cube;
+
+    int *restrict massive_indices = calloc(objects_count, sizeof(int));
+    int *restrict massless_indices = calloc(objects_count, sizeof(int));
+    int massive_objects_count = 0;
+    int massless_objects_count = 0;
+    for (int i = 0; i < objects_count; i++)
+    {
+        if (m[i] != 0)
+        {
+            massive_indices[massive_objects_count] = i;
+            massive_objects_count++;
+        }
+        else
+        {
+            massless_indices[massless_objects_count] = i;
+            massless_objects_count++;
+        }
+    }
+
+    int idx_i;
+    int idx_j;
+    int idx_k;
+
+    // Acceleration calculation for massive objects
+    for (int i = 1; i < massive_objects_count; i++)
+    {
+        idx_i = massive_indices[i];
+
+        // Calculate x_0i
+        temp_vec[0] = x[idx_i * 3 + 0] - x[0];
+        temp_vec[1] = x[idx_i * 3 + 1] - x[1];
+        temp_vec[2] = x[idx_i * 3 + 2] - x[2];
+
+        temp_vec_norm = vec_norm(temp_vec, 3);
+        temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+        temp_jacobi_norm = vec_norm(&jacobi_x[idx_i * 3], 3);
+        temp_jacobi_norm_cube = temp_jacobi_norm * temp_jacobi_norm * temp_jacobi_norm;
+        for (int j = 0; j < 3; j++)
+        {
+            a[idx_i * 3 + j] = G * m[0] * eta[idx_i] / eta[idx_i - 1]
+            * (
+                jacobi_x[idx_i * 3 + j] / temp_jacobi_norm_cube
+                - temp_vec[j] / temp_vec_norm_cube
+            );
+        }
+
+        for (int j = 1; j < i; j++)
+        {
+            idx_j = massive_indices[j];
+
+            // Calculate x_ji
+            temp_vec[0] = x[idx_i * 3 + 0] - x[idx_j * 3 + 0];
+            temp_vec[1] = x[idx_i * 3 + 1] - x[idx_j * 3 + 1];
+            temp_vec[2] = x[idx_i * 3 + 2] - x[idx_j * 3 + 2];
+
+            temp_vec_norm = vec_norm(temp_vec, 3);
+            temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+
+            aux[0] += G * m[idx_j] * temp_vec[0] / temp_vec_norm_cube;
+            aux[1] += G * m[idx_j] * temp_vec[1] / temp_vec_norm_cube;
+            aux[2] += G * m[idx_j] * temp_vec[2] / temp_vec_norm_cube;
+        }
+        a[idx_i * 3 + 0] -= aux[0] * eta[idx_i] / eta[idx_i - 1];
+        a[idx_i * 3 + 1] -= aux[1] * eta[idx_i] / eta[idx_i - 1];
+        a[idx_i * 3 + 2] -= aux[2] * eta[idx_i] / eta[idx_i - 1];
+
+        aux[0] = 0.0;
+        aux[1] = 0.0;
+        aux[2] = 0.0;
+
+        for (int j = i + 1; j < massive_objects_count; j++)
+        {
+            idx_j = massive_indices[j];
+
+            // Calculate x_ij
+            temp_vec[0] = x[idx_j * 3 + 0] - x[idx_i * 3 + 0];
+            temp_vec[1] = x[idx_j * 3 + 1] - x[idx_i * 3 + 1];
+            temp_vec[2] = x[idx_j * 3 + 2] - x[idx_i * 3 + 2];
+
+            temp_vec_norm = vec_norm(temp_vec, 3);
+            temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+
+            aux[0] += G * m[idx_j] * temp_vec[0] / temp_vec_norm_cube;
+            aux[1] += G * m[idx_j] * temp_vec[1] / temp_vec_norm_cube;
+            aux[2] += G * m[idx_j] * temp_vec[2] / temp_vec_norm_cube;
+        }
+        a[idx_i * 3 + 0] += aux[0];
+        a[idx_i * 3 + 1] += aux[1];
+        a[idx_i * 3 + 2] += aux[2];
+
+        aux[0] = 0.0;
+        aux[1] = 0.0;
+        aux[2] = 0.0;
+
+        for (int j = 0; j < i; j++)
+        {
+            idx_j = massive_indices[j];
+
+            for (int k = i + 1; k < massive_objects_count; k++)
+            {
+                idx_k = massive_indices[k];
+
+                // Calculate x_jk
+                temp_vec[0] = x[idx_k * 3 + 0] - x[idx_j * 3 + 0];
+                temp_vec[1] = x[idx_k * 3 + 1] - x[idx_j * 3 + 1];
+                temp_vec[2] = x[idx_k * 3 + 2] - x[idx_j * 3 + 2];
+
+                temp_vec_norm = vec_norm(temp_vec, 3);
+                temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+
+                aux[0] += G * m[idx_j] * m[idx_k] * temp_vec[0] / temp_vec_norm_cube;
+                aux[1] += G * m[idx_j] * m[idx_k] * temp_vec[1] / temp_vec_norm_cube;
+                aux[2] += G * m[idx_j] * m[idx_k] * temp_vec[2] / temp_vec_norm_cube;
+            }
+        }
+        a[idx_i * 3 + 0] -= aux[0] / eta[idx_i - 1];
+        a[idx_i * 3 + 1] -= aux[1] / eta[idx_i - 1];
+        a[idx_i * 3 + 2] -= aux[2] / eta[idx_i - 1];
+
+        aux[0] = 0.0;
+        aux[1] = 0.0;
+        aux[2] = 0.0;
+    }
+
+    // Acceleration calculation for massless objects
+    for (int i = 0; i < massless_objects_count; i++)
+    {
+        idx_i = massless_indices[i];
+        if (idx_i == 0)
+        {
+            continue;
+        }
+        
+        // Calculate x_0i
+        temp_vec[0] = x[idx_i * 3 + 0] - x[0];
+        temp_vec[1] = x[idx_i * 3 + 1] - x[1];
+        temp_vec[2] = x[idx_i * 3 + 2] - x[2];
+
+        temp_vec_norm = vec_norm(temp_vec, 3);
+        temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+        temp_jacobi_norm = vec_norm(&jacobi_x[idx_i * 3], 3);
+        temp_jacobi_norm_cube = temp_jacobi_norm * temp_jacobi_norm * temp_jacobi_norm;
+        for (int j = 0; j < 3; j++)
+        {
+            a[idx_i * 3 + j] = G * m[0] * eta[idx_i] / eta[idx_i - 1]
+            * (
+                jacobi_x[idx_i * 3 + j] / temp_jacobi_norm_cube
+                - temp_vec[j] / temp_vec_norm_cube
+            );
+        }
+
+        for (int j = 1; j < massive_objects_count; j++)
+        {
+            idx_j = massive_indices[j];
+            if (idx_j >= idx_i)
+            {
+                continue;
+            }
+
+            // Calculate x_ji
+            temp_vec[0] = x[idx_i * 3 + 0] - x[idx_j * 3 + 0];
+            temp_vec[1] = x[idx_i * 3 + 1] - x[idx_j * 3 + 1];
+            temp_vec[2] = x[idx_i * 3 + 2] - x[idx_j * 3 + 2];
+
+            temp_vec_norm = vec_norm(temp_vec, 3);
+            temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+
+            aux[0] += G * m[idx_j] * temp_vec[0] / temp_vec_norm_cube;
+            aux[1] += G * m[idx_j] * temp_vec[1] / temp_vec_norm_cube;
+            aux[2] += G * m[idx_j] * temp_vec[2] / temp_vec_norm_cube;
+        }
+        a[idx_i * 3 + 0] -= aux[0] * eta[idx_i] / eta[idx_i - 1];
+        a[idx_i * 3 + 1] -= aux[1] * eta[idx_i] / eta[idx_i - 1];
+        a[idx_i * 3 + 2] -= aux[2] * eta[idx_i] / eta[idx_i - 1];
+
+        aux[0] = 0.0;
+        aux[1] = 0.0;
+        aux[2] = 0.0;
+
+        for (int j = 1; j < massive_objects_count; j++)
+        {
+            idx_j = massive_indices[j];
+            if (idx_j <= idx_i)
+            {
+                continue;
+            }
+
+            // Calculate x_ij
+            temp_vec[0] = x[idx_j * 3 + 0] - x[idx_i * 3 + 0];
+            temp_vec[1] = x[idx_j * 3 + 1] - x[idx_i * 3 + 1];
+            temp_vec[2] = x[idx_j * 3 + 2] - x[idx_i * 3 + 2];
+
+            temp_vec_norm = vec_norm(temp_vec, 3);
+            temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+
+            aux[0] += G * m[idx_j] * temp_vec[0] / temp_vec_norm_cube;
+            aux[1] += G * m[idx_j] * temp_vec[1] / temp_vec_norm_cube;
+            aux[2] += G * m[idx_j] * temp_vec[2] / temp_vec_norm_cube;
+        }
+        a[idx_i * 3 + 0] += aux[0];
+        a[idx_i * 3 + 1] += aux[1];
+        a[idx_i * 3 + 2] += aux[2];
+
+        aux[0] = 0.0;
+        aux[1] = 0.0;
+        aux[2] = 0.0;
+
+        for (int j = 0; j < massive_objects_count; j++)
+        {
+            idx_j = massive_indices[j];
+            if (idx_j >= idx_i)
+            {
+                continue;
+            }
+
+            for (int k = j + 1; k < massive_objects_count; k++)
+            {
+                idx_k = massive_indices[k];
+                if (idx_k <= idx_i)
+                {
+                    continue;
+                }
+
+                // Calculate x_jk
+                temp_vec[0] = x[idx_k * 3 + 0] - x[idx_j * 3 + 0];
+                temp_vec[1] = x[idx_k * 3 + 1] - x[idx_j * 3 + 1];
+                temp_vec[2] = x[idx_k * 3 + 2] - x[idx_j * 3 + 2];
+
+                temp_vec_norm = vec_norm(temp_vec, 3);
+                temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+
+                aux[0] += G * m[idx_j] * m[idx_k] * temp_vec[0] / temp_vec_norm_cube;
+                aux[1] += G * m[idx_j] * m[idx_k] * temp_vec[1] / temp_vec_norm_cube;
+                aux[2] += G * m[idx_j] * m[idx_k] * temp_vec[2] / temp_vec_norm_cube;
+            }
+        }
+        a[idx_i * 3 + 0] -= aux[0] / eta[idx_i - 1];
+        a[idx_i * 3 + 1] -= aux[1] / eta[idx_i - 1];
+        a[idx_i * 3 + 2] -= aux[2] / eta[idx_i - 1];
+
+        aux[0] = 0.0;
+        aux[1] = 0.0;
+        aux[2] = 0.0;
+    }
+
+    free(massive_indices);
+    free(massless_indices);
 }
 
 void cartesian_to_jacobi(
