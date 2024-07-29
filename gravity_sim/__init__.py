@@ -557,7 +557,7 @@ class GravitySimulator:
             self.store_every_n,
             self.simulator.run_time,
             self.simulator.m,
-            self.data_size,
+            _,
         ) = common.read_results(
             file_path=file_path,
             start=start,
@@ -622,10 +622,6 @@ class GravitySimulator:
     @property
     def data_size(self) -> int:
         return self.simulator.data_size
-
-    @data_size.setter
-    def data_size(self, value: int) -> None:
-        self.simulator.data_size = value
 
     @property
     def energy(self) -> np.ndarray:
