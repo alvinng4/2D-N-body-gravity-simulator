@@ -141,19 +141,13 @@ WIN32DLL_API int whfast(
     real *restrict temp_jacobi_v = malloc(objects_count * 3 * sizeof(real));
     real *restrict a = malloc(objects_count * 3 * sizeof(real));
     real *restrict eta = malloc(objects_count * sizeof(real));
-    
-    // Allocate memory for compensated summation
-    real *restrict x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
-    real *restrict v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
 
     if (
         !jacobi_x ||
         !jacobi_v ||
         !temp_jacobi_v ||
         !a ||
-        !eta ||
-        !x_err_comp_sum ||
-        !v_err_comp_sum
+        !eta
     )
     {
         printf("Error: Failed to allocate memory for calculation\n");
@@ -256,8 +250,6 @@ WIN32DLL_API int whfast(
     free(temp_jacobi_v);
     free(a);
     free(eta);
-    free(x_err_comp_sum);
-    free(v_err_comp_sum);
 
     if (flush)
     {
@@ -291,8 +283,6 @@ err_calc_memory:
     free(temp_jacobi_v);
     free(a);
     free(eta);
-    free(x_err_comp_sum);
-    free(v_err_comp_sum);
 err_acc_method:
     if (*is_exit)
     {
@@ -382,18 +372,17 @@ void whfast_acceleration_pairwise(
             temp_vec_norm = vec_norm(temp_vec, 3);
             temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
 
-            for (int k = 0; k < 3; k++)
-            {
-                aux[k] += G * m[j] * temp_vec[k] / temp_vec_norm_cube;
-            } 
+            aux[0] += G * m[j] * temp_vec[0] / temp_vec_norm_cube;
+            aux[1] += G * m[j] * temp_vec[1] / temp_vec_norm_cube;
+            aux[2] += G * m[j] * temp_vec[2] / temp_vec_norm_cube;
         }
-        for (int j = 0; j < 3; j++)
-        {
-            a[i * 3 + j] -= aux[j] * eta[i] / eta[i - 1];
+        a[i * 3 + 0] -= aux[0] * eta[i] / eta[i - 1];
+        a[i * 3 + 1] -= aux[1] * eta[i] / eta[i - 1];
+        a[i * 3 + 2] -= aux[2] * eta[i] / eta[i - 1];
 
-            // Empty aux array
-            aux[j] = 0.0;
-        }
+        aux[0] = 0.0;
+        aux[1] = 0.0;
+        aux[2] = 0.0;
 
         for (int j = i + 1; j < objects_count; j++)
         {
@@ -405,18 +394,17 @@ void whfast_acceleration_pairwise(
             temp_vec_norm = vec_norm(temp_vec, 3);
             temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
 
-            for (int k = 0; k < 3; k++)
-            {
-                aux[k] += G * m[j] * temp_vec[k] / temp_vec_norm_cube;
-            }
+            aux[0] += G * m[j] * temp_vec[0] / temp_vec_norm_cube;
+            aux[1] += G * m[j] * temp_vec[1] / temp_vec_norm_cube;
+            aux[2] += G * m[j] * temp_vec[2] / temp_vec_norm_cube;
         }
-        for (int j = 0; j < 3; j++)
-        {
-            a[i * 3 + j] += aux[j];
+        a[i * 3 + 0] += aux[0];
+        a[i * 3 + 1] += aux[1];
+        a[i * 3 + 2] += aux[2];
 
-            // Empty aux array
-            aux[j] = 0.0;
-        }
+        aux[0] = 0.0;
+        aux[1] = 0.0;
+        aux[2] = 0.0;
 
         for (int j = 0; j < i; j++)
         {
@@ -430,19 +418,18 @@ void whfast_acceleration_pairwise(
                 temp_vec_norm = vec_norm(temp_vec, 3);
                 temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
 
-                for (int l = 0; l < 3; l++)
-                {
-                    aux[l] += G * m[j] * m[k] * temp_vec[l] / temp_vec_norm_cube;
-                }
+                aux[0] += G * m[j] * m[k] * temp_vec[0] / temp_vec_norm_cube;
+                aux[1] += G * m[j] * m[k] * temp_vec[1] / temp_vec_norm_cube;
+                aux[2] += G * m[j] * m[k] * temp_vec[2] / temp_vec_norm_cube;
             }
         }
-        for (int j = 0; j < 3; j++)
-        {
-            a[i * 3 + j] -= aux[j] / eta[i - 1];
+        a[i * 3 + 0] -= aux[0] / eta[i - 1];
+        a[i * 3 + 1] -= aux[1] / eta[i - 1];
+        a[i * 3 + 2] -= aux[2] / eta[i - 1];
 
-            // Empty aux array
-            aux[j] = 0.0;
-        }
+        aux[0] = 0.0;
+        aux[1] = 0.0;
+        aux[2] = 0.0;
     }
 }
 
@@ -479,11 +466,13 @@ void cartesian_to_jacobi(
         }
     }
 
-    for (int j = 0; j < 3; j++)
-    {
-        jacobi_x[j] = x_cm[j] / eta[objects_count - 1];
-        jacobi_v[j] = v_cm[j] / eta[objects_count - 1];
-    }
+    jacobi_x[0] = x_cm[0] / eta[objects_count - 1];
+    jacobi_x[1] = x_cm[1] / eta[objects_count - 1];
+    jacobi_x[2] = x_cm[2] / eta[objects_count - 1];
+
+    jacobi_v[0] = v_cm[0] / eta[objects_count - 1];
+    jacobi_v[1] = v_cm[1] / eta[objects_count - 1];
+    jacobi_v[2] = v_cm[2] / eta[objects_count - 1];
 }
 
 void jacobi_to_cartesian(
@@ -521,12 +510,14 @@ void jacobi_to_cartesian(
             v_cm[j] = eta[i - 1] * v_cm[j];
         }
     }
+    
+    x[0] = x_cm[0] / m[0];
+    x[1] = x_cm[1] / m[0];
+    x[2] = x_cm[2] / m[0];
 
-    for (int j = 0; j < 3; j++)
-    {
-        x[j] =  x_cm[j] / m[0];
-        v[j] =  v_cm[j] / m[0];
-    }
+    v[0] = v_cm[0] / m[0];
+    v[1] = v_cm[1] / m[0];
+    v[2] = v_cm[2] / m[0];
 }
 
 void stumpff_functions(
