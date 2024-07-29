@@ -130,14 +130,6 @@ class Simulator:
                 "Only pairwise acceleration is available for numpy integrators. "
                 + 'Setting acceleration method to "pairwise".'
             )
-            acceleration_func = self.c_lib.acceleration_pairwise
-        elif self.integration_mode == "c_lib":
-            if acceleration == "pairwise":
-                acceleration_func = self.c_lib.acceleration_pairwise
-            elif acceleration == "massless":
-                acceleration_func = self.c_lib.acceleration_with_massless
-            elif acceleration == "barnes_hut":
-                raise NotImplementedError
 
         if not no_print:
             print("Simulating the system...")
@@ -166,7 +158,7 @@ class Simulator:
                         self.G,
                         self.dt,
                         self.tf,
-                        acceleration_func,
+                        acceleration,
                         flush,
                         str(flush_path),
                         no_progress_bar,
@@ -195,7 +187,7 @@ class Simulator:
                         self.tf,
                         self.tolerance,
                         self.tolerance,
-                        acceleration_func,
+                        acceleration,
                         flush,
                         str(flush_path),
                         no_progress_bar,
@@ -218,7 +210,7 @@ class Simulator:
                         self.G,
                         self.tf,
                         self.tolerance,
-                        acceleration_func,
+                        acceleration,
                         flush,
                         str(flush_path),
                         no_progress_bar,
@@ -621,4 +613,3 @@ class Simulator:
     @property
     def data_size(self) -> int:
         return len(self.sol_time)
-    

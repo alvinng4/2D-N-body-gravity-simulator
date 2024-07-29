@@ -21,7 +21,12 @@ import common
 
 
 class WHFast:
-    def __init__(self, store_every_n=1, c_lib=None, is_exit_ctypes_bool=None):
+    def __init__(
+        self,
+        store_every_n: int = 1,
+        c_lib: ctypes.CDLL = None,
+        is_exit_ctypes_bool: ctypes.c_bool = None,
+    ) -> None:
         self.store_every_n = store_every_n
         self.c_lib = c_lib
 
@@ -32,14 +37,14 @@ class WHFast:
 
     def simulation_c_lib(
         self,
-        objects_count,
-        x,
-        v,
-        m,
-        G,
-        dt,
-        tf,
-        acceleration_func,
+        objects_count: int,
+        x: np.ndarray,
+        v: np.ndarray,
+        m: np.ndarray,
+        G: float,
+        dt: float,
+        tf: float,
+        acceleration: str,
         flush: bool = False,
         flush_path: str = "",
         no_progress_bar: bool = False,
@@ -89,7 +94,7 @@ class WHFast:
                 m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 ctypes.c_double(G),
                 ctypes.c_double(dt),
-                acceleration_func,
+                acceleration,
                 ctypes.c_int64(npts),
                 ctypes.c_int(store_npts),
                 ctypes.c_int(self.store_every_n),

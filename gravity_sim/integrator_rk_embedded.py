@@ -21,8 +21,12 @@ from common import acceleration
 
 class RKEmbedded:
     def __init__(
-        self, integrator, store_every_n=1, c_lib=None, is_exit_ctypes_bool=None
-    ):
+        self,
+        integrator: str,
+        store_every_n: int = 1,
+        c_lib: ctypes.CDLL = None,
+        is_exit_ctypes_bool: ctypes.c_bool = None,
+    ) -> None:
         self.store_every_n = store_every_n
         self.c_lib = c_lib
 
@@ -45,16 +49,16 @@ class RKEmbedded:
 
     def simulation_c_lib(
         self,
-        order,
-        objects_count,
-        x,
-        v,
-        m,
-        G,
-        tf,
-        abs_tolerance,
-        rel_tolerance,
-        acceleration_func,
+        order: int,
+        objects_count: int,
+        x: np.ndarray,
+        v: np.ndarray,
+        m: np.ndarray,
+        G: float,
+        tf: float,
+        abs_tolerance: float,
+        rel_tolerance: float,
+        acceleration: str,
         flush: bool = False,
         flush_path: str = "",
         no_progress_bar: bool = False,
@@ -67,6 +71,13 @@ class RKEmbedded:
             ]
 
         self.c_lib.rk_embedded.restype = ctypes.c_int
+
+        if acceleration == "pairwise":
+            acceleration_func = self.c_lib.acceleration_pairwise
+        elif acceleration == "massless":
+            acceleration_func = self.c_lib.acceleration_with_massless
+        elif acceleration == "barnes_hut":
+            raise NotImplementedError
 
         t = ctypes.c_double(0.0)
         store_count = ctypes.c_int(1)  # 1 for t0

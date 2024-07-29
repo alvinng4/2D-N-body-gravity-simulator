@@ -19,7 +19,12 @@ from common import acceleration
 
 
 class IAS15:
-    def __init__(self, store_every_n=1, c_lib=None, is_exit_ctypes_bool=None):
+    def __init__(
+        self,
+        store_every_n: int = 1,
+        c_lib: ctypes.CDLL = None,
+        is_exit_ctypes_bool: ctypes.c_bool = None,
+    ) -> None:
         self.store_every_n = store_every_n
         self.c_lib = c_lib
 
@@ -30,14 +35,14 @@ class IAS15:
 
     def simulation_c_lib(
         self,
-        objects_count,
-        x,
-        v,
-        m,
-        G,
-        tf,
-        tolerance,
-        acceleration_func,
+        objects_count: int,
+        x: np.ndarray,
+        v: np.ndarray,
+        m: np.ndarray,
+        G: float,
+        tf: float,
+        tolerance: float,
+        acceleration: str,
         flush: bool = False,
         flush_path: str = "",
         no_progress_bar: bool = False,
@@ -54,6 +59,13 @@ class IAS15:
             ]
 
         self.c_lib.ias15.restype = ctypes.c_int
+
+        if acceleration == "pairwise":
+            acceleration_func = self.c_lib.acceleration_pairwise
+        elif acceleration == "massless":
+            acceleration_func = self.c_lib.acceleration_with_massless
+        elif acceleration == "barnes_hut":
+            raise NotImplementedError
 
         t = ctypes.c_double(0.0)
         store_count = ctypes.c_int(1)  # 1 for t0

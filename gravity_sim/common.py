@@ -670,7 +670,10 @@ def keplerian_to_cartesian(
 
     return x, v
 
-def trim_data(store_every_n: int, original_data_size: int, data: np.ndarray) -> np.ndarray:
+
+def trim_data(
+    store_every_n: int, original_data_size: int, data: np.ndarray
+) -> np.ndarray:
     """
     Trim the data to store every nth point
 
@@ -687,10 +690,17 @@ def trim_data(store_every_n: int, original_data_size: int, data: np.ndarray) -> 
     -------
     trimmed_data : np.ndarray
         Trimmed data
+
+    Raises
+    ------
+    ValueError
+        If store_every_n is
+            1. less than or equal to 1
+            2. greater than or equal to the original data size
     """
-    if store_every_n == 1:
-        return data.copy()
-    
+    if (store_every_n <= 1) or (store_every_n >= original_data_size):
+        raise ValueError("store_every_n must be greater than 1")
+
     input_data_shape = list(data.shape)
     input_data_shape[0] = original_data_size // store_every_n
     trimmed_data = np.zeros(tuple(input_data_shape))

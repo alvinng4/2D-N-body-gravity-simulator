@@ -537,7 +537,7 @@ class GravitySimulatorCLI:
         while True:
             print()
             desired_trim_size = common.get_int(
-                "Enter desired data size (Enter \"cancel\" to cancel): ",
+                'Enter desired data size (Enter "cancel" to cancel): ',
                 larger_than=1,
                 smaller_than=self.simulator.data_size,
                 allow_cancel=True,
@@ -557,11 +557,19 @@ class GravitySimulatorCLI:
 
         # --------------------Trim data--------------------
         data_size = self.simulator.data_size
-        self.simulator.sol_time = common.trim_data(store_every_n, data_size, self.simulator.sol_time)
-        self.simulator.sol_dt = common.trim_data(store_every_n, data_size, self.simulator.sol_dt)
-        self.simulator.sol_state = common.trim_data(store_every_n, data_size, self.simulator.sol_state)
+        self.simulator.sol_time = common.trim_data(
+            store_every_n, data_size, self.simulator.sol_time
+        )
+        self.simulator.sol_dt = common.trim_data(
+            store_every_n, data_size, self.simulator.sol_dt
+        )
+        self.simulator.sol_state = common.trim_data(
+            store_every_n, data_size, self.simulator.sol_state
+        )
         if self.computed_energy:
-            self.simulator.energy = common.trim_data(store_every_n, data_size, self.simulator.energy)
+            self.simulator.energy = common.trim_data(
+                store_every_n, data_size, self.simulator.energy
+            )
 
         print(f"Trimmed data size = {self.simulator.data_size}")
         print()
@@ -776,7 +784,9 @@ class GravitySimulatorCLI:
 
             print()
 
-            plot_every_nth_point = math.floor(self.simulator.data_size / (desired_time * fps))
+            plot_every_nth_point = math.floor(
+                self.simulator.data_size / (desired_time * fps)
+            )
             print(f"Plot every nth point: {plot_every_nth_point}")
             frame_size = math.floor(self.simulator.data_size / plot_every_nth_point) + 1
             print(f"Estimated time length: {(frame_size / fps):.1f} s")
