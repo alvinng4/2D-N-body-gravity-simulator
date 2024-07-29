@@ -216,7 +216,30 @@ class Simulator:
                         no_progress_bar,
                     )
                 case "whfast":
-                    raise NotImplementedError
+                    integrator = WHFast(
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                        store_count,
+                    ) = integrator.simulation_c_lib(
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.dt,
+                        self.tf,
+                        acceleration_method,
+                        flush,
+                        str(flush_path),
+                        no_progress_bar,
+                    )
 
         else:
             match self.integrator:

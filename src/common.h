@@ -72,6 +72,68 @@ void acceleration_massless(
 );
 
 /**
+ * \brief Find the max absolute value in a 1D array
+ * 
+ * \param vec A 1D array
+ * \param vec_length Length of the 1D array
+ */
+real abs_max_vec(const real *restrict vec, int vec_length);
+
+/**
+ * \brief Find the norm of a 1D array
+ * 
+ * \param vec A 1D array
+ * \param vec_length Length of the 1D array
+ */
+real vec_norm(const real *restrict vec, int vec_length);
+
+/**
+ * \brief Compute the dot product of two 1D arrays
+ * 
+ * \param vec_1 A 1D array
+ * \param vec_2 A 1D array
+ * \param vec_length Length of the 1D arrays
+ */
+real vec_dot(
+    const real *restrict vec_1,
+    const real *restrict vec_2,
+    int vec_length
+);
+
+/**
+ * \brief Compute the cross product of two 1D arrays
+ * 
+ * \param vec_1 A 1D array
+ * \param vec_2 A 1D array
+ * \param result A 1D array to store the result
+ */
+void vec_cross(
+    const real *restrict vec_1,
+    const real *restrict vec_2,
+    real *restrict result
+);
+
+/**
+ * \brief Store the state of the system at a given time
+ * 
+ * \param file File pointer to the csv file
+ * \param time time
+ * \param dt Time step
+ * \param x Array of position vectors of all objects
+ * \param v Array of velocity vectors of all objects
+ */
+void write_to_csv_file(
+    FILE *restrict file,
+    double time,
+    double dt,
+    int objects_count,
+    const double *restrict x,
+    const double *restrict v,
+    const double *restrict m,
+    real G
+);
+
+/**
  * \brief Initialize default systems for gravity simulator.
  *        if the system name is recognized to be one of the 
  *        default system *x, *v and *m, *objects_count and 
@@ -96,42 +158,6 @@ int initialize_system(
     real **m,
     int *restrict objects_count,
     real *restrict G
-);
-
-/**
- * \brief Find the max absolute value in a 1D array
- * 
- * \param vec A 1D array
- * \param vec_length Length of the 1D array
- */
-real abs_max_vec(const real *restrict vec, int vec_length);
-
-/**
- * \brief Find the norm of a 1D array
- * 
- * \param vec A 1D array
- * \param vec_length Length of the 1D array
- */
-real vec_norm(const real *restrict vec, int vec_length);
-
-/**
- * \brief Store the state of the system at a given time
- * 
- * \param file File pointer to the csv file
- * \param time time
- * \param dt Time step
- * \param x Array of position vectors of all objects
- * \param v Array of velocity vectors of all objects
- */
-void write_to_csv_file(
-    FILE *restrict file,
-    double time,
-    double dt,
-    int objects_count,
-    const double *restrict x,
-    const double *restrict v,
-    const double *restrict m,
-    real G
 );
 
 #endif

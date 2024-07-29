@@ -277,9 +277,7 @@ class SimpleIntegrator:
                 np.reshape(v, objects_count * 3),
             )
         )
-        self.sol_time = np.arange(
-            start=0.0, stop=tf, step=dt * self.store_every_n
-        )
+        self.sol_time = np.arange(start=0.0, stop=tf, step=dt * self.store_every_n)
         self.sol_dt = np.full(shape=(store_npts), fill_value=dt)
 
         x_err_comp_sum = np.zeros((objects_count, 3))

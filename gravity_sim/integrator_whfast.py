@@ -81,12 +81,11 @@ class WHFast:
 
         queue = Queue()
         solution = Solutions()
-        flush_path = flush_path.encode("utf-8")
 
         whfast_thread = threading.Thread(
             target=whfast_wrapper,
             args=(
-                self.c_lib.euler,
+                self.c_lib.whfast,
                 queue,
                 ctypes.c_int(objects_count),
                 x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -94,13 +93,13 @@ class WHFast:
                 m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 ctypes.c_double(G),
                 ctypes.c_double(dt),
-                acceleration,
+                acceleration.encode("utf-8"),
                 ctypes.c_int64(npts),
                 ctypes.c_int(store_npts),
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
                 ctypes.c_bool(flush),
-                flush_path,
+                flush_path.encode("utf-8"),
                 ctypes.byref(solution),
                 ctypes.byref(self.is_exit_ctypes_bool),
             ),
@@ -200,9 +199,7 @@ class WHFast:
                 np.reshape(v, objects_count * 3),
             )
         )
-        self.sol_time = np.arange(
-            start=0.0, stop=tf, step=dt * self.store_every_n
-        )
+        self.sol_time = np.arange(start=0.0, stop=tf, step=dt * self.store_every_n)
         self.sol_dt = np.full(shape=(store_npts), fill_value=dt)
 
         x_err_comp_sum = np.zeros((objects_count, 3))
@@ -283,9 +280,6 @@ class WHFast:
             Gravitational constant
         """
         # fmt: off
-        # Empty acceleration array
-        a[0].fill(0.0)
-
         aux = np.zeros(3)
         for i in range(1, objects_count):
             x_0i = x[i] - x[0]
@@ -297,24 +291,24 @@ class WHFast:
                 )
             )
 
-            aux.fill(0.0)
             for j in range(1, i):
                 x_ji = x[i] - x[j]
                 aux += m[j] * x_ji / np.linalg.norm(x_ji) ** 3
-            a[i] -= eta[i] / eta[i - 1] * aux
-
+            a[i] -= aux * eta[i] / eta[i - 1]
             aux.fill(0.0)
+
             for j in range(i + 1, objects_count):
                 x_ij = x[j] - x[i]
                 aux += m[j] * x_ij / np.linalg.norm(x_ij) ** 3
             a[i] += aux
-
             aux.fill(0.0)
+
             for j in range(0, i):
                 for k in range(i + 1, objects_count):
                     x_jk = x[k] - x[j]
                     aux += m[j] * m[k] * x_jk / np.linalg.norm(x_jk) ** 3
             a[i] -= aux / eta[i - 1]
+            aux.fill(0.0)
 
         a *= G
         # fmt: on
@@ -354,8 +348,8 @@ class WHFast:
             jacobi[i, :3] = x[i] - x_cm / eta[i - 1]
             jacobi[i, 3:] = v[i] - v_cm / eta[i - 1]
 
-            x_cm = x_cm * (1 + m[i] / eta[i - 1]) + m[i] * jacobi[i, :3]
-            v_cm = v_cm * (1 + m[i] / eta[i - 1]) + m[i] * jacobi[i, 3:]
+            x_cm = x_cm * (1.0 + m[i] / eta[i - 1]) + m[i] * jacobi[i, :3]
+            v_cm = v_cm * (1.0 + m[i] / eta[i - 1]) + m[i] * jacobi[i, 3:]
 
         jacobi[0, :3] = x_cm / eta[-1]
         jacobi[0, 3:] = v_cm / eta[-1]
@@ -475,7 +469,7 @@ class WHFast:
 
         Parameters
         ----------
-        jacobi : np.ndarray
+        jacobi_i : np.ndarray
             State vector in Jacobi coordinates
         gm : float
             Gravitational parameter
@@ -501,37 +495,34 @@ class WHFast:
         # Initial value of the Keplerian energy:
         xi = v_norm * v_norm * 0.5 - gm / x_norm
 
-        semi_major_axis = -gm / (2 * xi)
-        alpha = 1 / semi_major_axis
+        semi_major_axis = -gm / (2.0 * xi)
+        alpha = 1.0 / semi_major_axis
 
-        sqrtgm = math.sqrt(gm)
+        sqrt_gm = math.sqrt(gm)
 
         if alpha > tol_energy + 1e-12:
             # Elliptic orbits:
-            chi_0 = sqrtgm * dt * alpha
+            chi_0 = sqrt_gm * dt * alpha
 
         elif alpha < tol_energy - 1e-12:
             # Hyperbolic orbits:
-            chi_0 = math.copysign(dt) * (
-                math.sqrt(-semi_major_axis)
-                * math.log(
-                    -2.0
-                    * gm
-                    * alpha
-                    * dt
-                    / (
-                        np.dot(x, v)
-                        + math.sqrt(-gm * semi_major_axis) * (1 - x_norm * alpha)
-                    )
+            chi_0 = math.sqrt(-semi_major_axis) * math.log(
+                -2.0
+                * gm
+                * alpha
+                * dt
+                / (
+                    np.dot(x, v)
+                    + math.sqrt(-gm * semi_major_axis) * (1.0 - x_norm * alpha)
                 )
-            )
+            )  # * math.copysign(dt) *
         else:
             # Parabolic orbits:
             vh = np.cross(x, v)
             p = np.linalg.norm(vh) ** 2 / gm
             s = 0.5 * math.atan(1.0 / (3.0 * math.sqrt(gm / p**3) * dt))
             w = math.atan(math.tan(s) ** (1.0 / 3.0))
-            chi_0 = math.sqrt(p) * 2 / math.tan(2 * w)
+            chi_0 = math.sqrt(p) * 2.0 / math.tan(2.0 * w)
 
         # Solve Kepler's equation
         for _ in range(500):
@@ -544,7 +535,7 @@ class WHFast:
             # Propagate radial distance:
             r = (
                 chi_0 * chi_0 * c2
-                + np.dot(x, v) / sqrtgm * chi_0 * (1 - psi * c3)
+                + np.dot(x, v) / sqrt_gm * chi_0 * (1 - psi * c3)
                 + x_norm * (1 - psi * c2)
             )
 
@@ -552,9 +543,9 @@ class WHFast:
             chi = (
                 chi_0
                 + (
-                    sqrtgm * dt
+                    sqrt_gm * dt
                     - chi_0**3 * c3
-                    - np.dot(x, v) / sqrtgm * chi_0**2 * c2
+                    - np.dot(x, v) / sqrt_gm * chi_0**2 * c2
                     - x_norm * chi_0 * (1 - psi * c3)
                 )
                 / r
@@ -573,11 +564,11 @@ class WHFast:
             )
 
         # Evaluate f and g functions, together with their derivatives
-        f = 1.0 - chi * chi / x_norm * c2
-        g = dt - chi * chi * chi / sqrtgm * c3
+        f = 1.0 - chi * chi * c2 / x_norm
+        g = dt - chi * chi * chi * c3 / sqrt_gm
 
-        df = sqrtgm / (r * x_norm) * chi * (psi * c3 - 1.0)
-        dg = 1.0 - chi * chi / r * c2
+        df = sqrt_gm * chi * (psi * c3 - 1.0) / (r * x_norm)
+        dg = 1.0 - chi * chi * c2 / r
 
         # Compute position and velocity vectors
         jacobi_i[:3] = f * x + g * v

@@ -145,6 +145,100 @@ WIN32DLL_API void acceleration_massless(
     free(massless_indices);
 }
 
+WIN32DLL_API real abs_max_vec(const real *restrict vec, int vec_length)
+{
+    real max = fabs(vec[0]);
+    for (int i = 1; i < vec_length; i++)
+    {
+        max = fmax(max, fabs(vec[i]));
+    }
+
+    return max;
+}
+
+WIN32DLL_API real vec_norm(const real *restrict vec, int vec_length)
+{   
+    real sum = 0.0;
+    if (vec_length == 3) 
+    {
+        sum = vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2];
+    }
+    else
+    {
+        for (int i = 0; i < vec_length; i++) 
+        {
+            sum += vec[i] * vec[i];
+        }
+    }
+
+    return sqrt(sum);
+}
+
+WIN32DLL_API real vec_dot(
+    const real *restrict vec_1,
+    const real *restrict vec_2,
+    int vec_length
+)
+{
+    real sum = 0.0;
+    if (vec_length == 3)
+    {
+        sum = vec_1[0] * vec_2[0] + vec_1[1] * vec_2[1] + vec_1[2] * vec_2[2];
+    }
+    else
+    {
+        for (int i = 0; i < vec_length; i++)
+        {
+            sum += vec_1[i] * vec_2[i];
+        }
+    }
+
+    return sum;
+}
+
+WIN32DLL_API void vec_cross(
+    const real *restrict vec_1,
+    const real *restrict vec_2,
+    real *restrict result
+)
+{
+    result[0] = vec_1[1] * vec_2[2] - vec_1[2] * vec_2[1];
+    result[1] = vec_1[2] * vec_2[0] - vec_1[0] * vec_2[2];
+    result[2] = vec_1[0] * vec_2[1] - vec_1[1] * vec_2[0];
+}
+
+WIN32DLL_API void write_to_csv_file(
+    FILE *restrict file,
+    double time,
+    double dt,
+    int objects_count,
+    const double *restrict x,
+    const double *restrict v,
+    const double *restrict m,
+    real G
+)
+{
+    fprintf(file, "%.17g", time);
+    fprintf(file, ",%.17g", dt);
+    fprintf(file, ",%.17g", compute_energy_one_step(objects_count, x, v, m, G));
+    for (int i = 0; i < objects_count; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            fprintf(file, ",%.17g", x[i * 3 + j]);
+        }
+    }
+    for (int i = 0; i < objects_count; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            fprintf(file, ",%.17g", v[i * 3 + j]);
+        }
+    }
+    fprintf(file, "\n");
+    fflush(file);
+}
+
 WIN32DLL_API int initialize_system(
     const char *restrict system,
     real **x,
@@ -633,64 +727,4 @@ err_memory:
     free(v);
     free(m);
     return 2;
-}
-
-WIN32DLL_API real abs_max_vec(const real *restrict vec, int vec_length)
-{
-    real max = fabs(vec[0]);
-    for (int i = 1; i < vec_length; i++)
-    {
-        max = fmax(max, fabs(vec[i]));
-    }
-
-    return max;
-}
-
-WIN32DLL_API real vec_norm(const real *restrict vec, int vec_length)
-{   
-    real sum = 0.0;
-    if (vec_length == 3) 
-    {
-        sum = vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2];
-    }
-    else
-    {
-        for (int i = 0; i < vec_length; i++) 
-        {
-            sum += vec[i] * vec[i];
-        }
-    }
-    return sqrt(sum);
-}
-
-WIN32DLL_API void write_to_csv_file(
-    FILE *restrict file,
-    double time,
-    double dt,
-    int objects_count,
-    const double *restrict x,
-    const double *restrict v,
-    const double *restrict m,
-    real G
-)
-{
-    fprintf(file, "%.17g", time);
-    fprintf(file, ",%.17g", dt);
-    fprintf(file, ",%.17g", compute_energy_one_step(objects_count, x, v, m, G));
-    for (int i = 0; i < objects_count; i++)
-    {
-        for (int j = 0; j < 3; j++)
-        {
-            fprintf(file, ",%.17g", x[i * 3 + j]);
-        }
-    }
-    for (int i = 0; i < objects_count; i++)
-    {
-        for (int j = 0; j < 3; j++)
-        {
-            fprintf(file, ",%.17g", v[i * 3 + j]);
-        }
-    }
-    fprintf(file, "\n");
-    fflush(file);
 }
