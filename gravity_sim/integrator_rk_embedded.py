@@ -7,6 +7,7 @@ Simulations Applied to Exoplanetary Systems, Chapter 6
 """
 
 import ctypes
+import math
 import sys
 import threading
 import time
@@ -14,9 +15,8 @@ from queue import Queue
 
 import numpy as np
 
+import common
 from common import acceleration
-from progress_bar import progress_bar_c_lib_adaptive_step_size
-from progress_bar import Progress_bar_with_data_size
 
 
 class RKEmbedded:
@@ -69,11 +69,11 @@ class RKEmbedded:
         self.c_lib.rk_embedded.restype = ctypes.c_int
 
         t = ctypes.c_double(0.0)
-        store_count = ctypes.c_int(0)
+        store_count = ctypes.c_int(1)  # 1 for t0
 
         if not no_progress_bar:
             progress_bar_thread = threading.Thread(
-                target=progress_bar_c_lib_adaptive_step_size,
+                target=common.progress_bar_c_lib_adaptive_step_size,
                 args=(tf, t, store_count, self.is_exit_ctypes_bool),
             )
             progress_bar_thread.start()
@@ -117,7 +117,7 @@ class RKEmbedded:
         # This is added since the main thread is not catching
         # exceptions on Windows
         while rk_embedded_thread.is_alive():
-            time.sleep(0.1)
+            time.sleep(0.05)
 
         rk_embedded_thread.join()
         return_code = queue.get()
@@ -144,14 +144,14 @@ class RKEmbedded:
             # Convert C arrays to numpy arrays
             return_sol_state = np.ctypeslib.as_array(
                 solution.sol_state,
-                shape=(store_count.value + 1, objects_count * 6),
+                shape=(store_count.value, objects_count * 6),
             ).copy()
 
             return_sol_time = np.ctypeslib.as_array(
-                solution.sol_time, shape=(store_count.value + 1,)
+                solution.sol_time, shape=(store_count.value,)
             ).copy()
             return_sol_dt = np.ctypeslib.as_array(
-                solution.sol_dt, shape=(store_count.value + 1,)
+                solution.sol_dt, shape=(store_count.value,)
             ).copy()
 
             # Free memory
@@ -212,7 +212,7 @@ class RKEmbedded:
             rel_tolerance,
         )
 
-        progress_bar = Progress_bar_with_data_size()
+        progress_bar = common.Progress_bar_with_data_size()
         with progress_bar:
             return self.simulation(
                 progress_bar,
@@ -277,10 +277,10 @@ class RKEmbedded:
         xk = np.zeros((stages, objects_count, 3))
 
         # Allocate for dense output:
-        npts = 100000
-        sol_state = np.zeros((npts, objects_count * 2 * 3))
-        sol_time = np.zeros(npts)
-        sol_dt = np.zeros(npts)
+        buffer_size = 50000
+        sol_state = np.zeros((buffer_size, objects_count * 2 * 3))
+        sol_time = np.zeros(buffer_size)
+        sol_dt = np.zeros(buffer_size)
 
         # Initial values
         sol_state[0] = np.concatenate(
@@ -296,12 +296,12 @@ class RKEmbedded:
         temp_v_err_comp_sum = np.zeros((objects_count, 3))
 
         # Launch integration:
-        count = 0
-        store_count = 0
+        count = 1  # 1 for t0
+        store_count = 1  # 1 for t0
         if not no_progress_bar:
-            task = progress_bar.add_task("", total=tf, store_count=store_count + 1)
+            task = progress_bar.add_task("", total=tf, store_count=store_count)
 
-        while True:
+        while t < tf:
             # Calculate xk and vk
             vk[0] = acceleration(objects_count, x, m, G)
             xk[0] = np.copy(v)
@@ -355,30 +355,18 @@ class RKEmbedded:
             sum = np.sum(
                 np.square(error_estimation_delta_x / tolerance_scale_x)
             ) + np.sum(np.square(error_estimation_delta_v / tolerance_scale_v))
-            error = (sum / (objects_count * 3 * 2)) ** 0.5
+            error = math.sqrt(sum / (objects_count * 3 * 2))
 
-            if error <= 1 or dt == tf * 1e-12:
+            if error <= 1 or dt <= tf * 1e-12:
                 t += dt
                 x = x_1
                 v = v_1
-                count += 1
 
                 x_err_comp_sum = temp_x_err_comp_sum
                 v_err_comp_sum = temp_v_err_comp_sum
 
                 # Store step:
-                if (count + 1) % store_every_n == 0:
-                    sol_state[store_count + 1] = np.concatenate(
-                        (
-                            np.reshape(x, objects_count * 3),
-                            np.reshape(v, objects_count * 3),
-                        )
-                    )
-                    sol_time[store_count + 1] = t
-                    sol_dt[store_count + 1] = dt
-                    store_count += 1
-
-                if t == tf:
+                if (count % store_every_n) == 0:
                     sol_state[store_count] = np.concatenate(
                         (
                             np.reshape(x, objects_count * 3),
@@ -387,17 +375,25 @@ class RKEmbedded:
                     )
                     sol_time[store_count] = t
                     sol_dt[store_count] = dt
+                    store_count += 1
 
-                if not no_progress_bar:
-                    progress_bar.update(task, completed=t, store_count=store_count + 1)
+                    if not no_progress_bar:
+                        progress_bar.update(task, completed=t, store_count=store_count)
 
-                # Check buffer size and extend if needed :
-                if (store_count + 1) == len(sol_state):
-                    sol_state = np.concatenate(
-                        (sol_state, np.zeros((npts, objects_count * 2 * 3)))
-                    )
-                    sol_time = np.concatenate((sol_time, np.zeros(npts)))
-                    sol_dt = np.concatenate((sol_dt, np.zeros(npts)))
+                    # Check buffer size and extend if needed:
+                    if (store_count == buffer_size) and (t < tf):
+                        new_buffer_size = buffer_size * 2
+                        sol_state = np.pad(
+                            sol_state, ((0, new_buffer_size - buffer_size), (0, 0))
+                        )
+                        sol_time = np.pad(sol_time, (0, new_buffer_size - buffer_size))
+                        sol_dt = np.pad(sol_dt, (0, new_buffer_size - buffer_size))
+                        buffer_size = new_buffer_size
+
+                count += 1
+
+            if error < 1e-10:
+                error = 1e-10  # Prevent error from being too small
 
             dt_new = dt * safety_fac / error ** (1.0 / (1.0 + min_power))
             # Prevent dt to be too small or too large relative to the last time step
@@ -415,14 +411,13 @@ class RKEmbedded:
             if t + dt > tf:
                 dt = tf - t
 
-            if t >= tf:
-                if not no_progress_bar:
-                    progress_bar.update(task, completed=tf, store_count=store_count + 1)
-                return (
-                    sol_state[0 : store_count + 1],
-                    sol_time[0 : store_count + 1],
-                    sol_dt[0 : store_count + 1],
-                )
+        if not no_progress_bar:
+            progress_bar.update(task, completed=tf, store_count=store_count)
+        return (
+            sol_state[0:store_count],
+            sol_time[0:store_count],
+            sol_dt[0:store_count],
+        )
 
     @staticmethod
     def rk_embedded_initial_dt_numpy(

@@ -14,9 +14,8 @@ from queue import Queue
 
 import numpy as np
 
+import common
 from common import acceleration
-from progress_bar import progress_bar_c_lib_adaptive_step_size
-from progress_bar import Progress_bar_with_data_size
 
 
 class IAS15:
@@ -57,11 +56,11 @@ class IAS15:
         self.c_lib.ias15.restype = ctypes.c_int
 
         t = ctypes.c_double(0.0)
-        store_count = ctypes.c_int(0)
+        store_count = ctypes.c_int(1)  # 1 for t0
 
         if not no_progress_bar:
             progress_bar_thread = threading.Thread(
-                target=progress_bar_c_lib_adaptive_step_size,
+                target=common.progress_bar_c_lib_adaptive_step_size,
                 args=(tf, t, store_count, self.is_exit_ctypes_bool),
             )
             progress_bar_thread.start()
@@ -103,7 +102,7 @@ class IAS15:
         # This is added since the main thread is not catching
         # exceptions on Windows
         while ias15_thread.is_alive():
-            time.sleep(0.1)
+            time.sleep(0.05)
 
         ias15_thread.join()
         return_code = queue.get()
@@ -130,14 +129,14 @@ class IAS15:
             # Convert C arrays to numpy arrays
             return_sol_state = np.ctypeslib.as_array(
                 solution.sol_state,
-                shape=(store_count.value + 1, objects_count * 6),
+                shape=(store_count.value, objects_count * 6),
             ).copy()
 
             return_sol_time = np.ctypeslib.as_array(
-                solution.sol_time, shape=(store_count.value + 1,)
+                solution.sol_time, shape=(store_count.value,)
             ).copy()
             return_sol_dt = np.ctypeslib.as_array(
-                solution.sol_dt, shape=(store_count.value + 1,)
+                solution.sol_dt, shape=(store_count.value,)
             ).copy()
 
             # Free memory
@@ -184,10 +183,10 @@ class IAS15:
         exponent = 1.0 / 7.0
 
         # Allocate for dense output:
-        npts = 50000
-        sol_state = np.zeros((npts, objects_count * 2 * 3))
-        sol_time = np.zeros(npts)
-        sol_dt = np.zeros(npts)
+        buffer_size = 50000
+        sol_state = np.zeros((buffer_size, objects_count * 6))
+        sol_time = np.zeros(buffer_size)
+        sol_dt = np.zeros(buffer_size)
 
         # Initial values
         sol_state[0] = np.concatenate(
@@ -219,24 +218,24 @@ class IAS15:
         dt = self.ias15_initial_dt(objects_count, 15, x, v, a, m, G)
 
         ias15_refine_flag = 0
-        count = 0
-        store_count = 0
-        progress_bar = Progress_bar_with_data_size()
+        count = 1  # 1 for t0
+        store_count = 1  # 1 for t0
+        progress_bar = common.Progress_bar_with_data_size()
         with progress_bar:
             if not no_progress_bar:
-                task = progress_bar.add_task("", total=tf, store_count=store_count + 1)
-            while True:
+                task = progress_bar.add_task("", total=tf, store_count=store_count)
+            while t < tf:
                 (
                     x,
                     v,
                     a,
                     t,
                     dt,
+                    dt_old,
                     aux_g,
                     aux_b,
                     aux_e,
                     aux_b0,
-                    ias15_integrate_flag,
                     ias15_refine_flag,
                     x_err_comp_sum,
                     v_err_comp_sum,
@@ -267,24 +266,7 @@ class IAS15:
                     v_err_comp_sum,
                 )
 
-                # Update step
-                if not no_progress_bar:
-                    progress_bar.update(task, completed=t, store_count=store_count + 1)
-                count += 1
-
-                # Store step
-                if (count + 1) % self.store_every_n == 0:
-                    sol_state[store_count + 1] = np.concatenate(
-                        (
-                            np.reshape(x, objects_count * 3),
-                            np.reshape(v, objects_count * 3),
-                        )
-                    )
-                    sol_time[store_count + 1] = t
-                    sol_dt[store_count + 1] = dt
-                    store_count += 1
-
-                if t == tf:
+                if count % self.store_every_n == 0:
                     sol_state[store_count] = np.concatenate(
                         (
                             np.reshape(x, objects_count * 3),
@@ -292,26 +274,31 @@ class IAS15:
                         )
                     )
                     sol_time[store_count] = t
-                    sol_dt[store_count] = dt
+                    sol_dt[store_count] = dt_old
+                    store_count += 1
 
-                # Detect end of integration
-                if ias15_integrate_flag == 2:
-                    break
+                    # Update step
+                    if not no_progress_bar:
+                        progress_bar.update(task, completed=t, store_count=store_count)
 
-                # Check buffer size and extend if needed :
-                if (store_count + 1) == len(sol_state):
-                    sol_state = np.concatenate(
-                        (sol_state, np.zeros((npts, objects_count * 2 * 3)))
-                    )
-                    sol_time = np.concatenate((sol_time, np.zeros(npts)))
-                    sol_dt = np.concatenate((sol_dt, np.zeros(npts)))
+                    # Check buffer size and extend if needed:
+                    if (store_count == buffer_size) and (t < tf):
+                        new_buffer_size = buffer_size * 2
+                        sol_state = np.pad(
+                            sol_state, ((0, new_buffer_size - buffer_size), (0, 0))
+                        )
+                        sol_time = np.pad(sol_time, (0, new_buffer_size - buffer_size))
+                        sol_dt = np.pad(sol_dt, (0, new_buffer_size - buffer_size))
+                        buffer_size = new_buffer_size
+
+                count += 1
 
             if not no_progress_bar:
-                progress_bar.update(task, completed=tf, store_count=store_count + 1)
+                progress_bar.update(task, completed=tf, store_count=store_count)
             return (
-                sol_state[0 : store_count + 1],
-                sol_time[0 : store_count + 1],
-                sol_dt[0 : store_count + 1],
+                sol_state[0:store_count],
+                sol_time[0:store_count],
+                sol_dt[0:store_count],
             )
 
     def ias15_step(
@@ -385,14 +372,15 @@ class IAS15:
             error_b7 = np.max(np.abs(aux_b[-1])) / np.max(np.abs(a))
             error = (error_b7 / tolerance) ** exponent
 
-            # Step-size for the next step
-            if error != 0:
-                dt_new = dt / error
-            else:
-                dt_new = dt
+            # Step size of the next step for refine aux b
+            dt_old = dt
+            if error < 1e-10:
+                error = 1e-10  # Prevent error from being too small
+
+            dt_new = dt / error
 
             # Accept the step
-            if error <= 1 or dt == tf * 1e-12:
+            if error <= 1 or dt <= tf * 1e-12:
                 # Report accepted step
                 ias15_integrate_flag = 1
                 t += dt
@@ -402,12 +390,8 @@ class IAS15:
                 x_err_comp_sum = temp_x_err_comp_sum.copy()
                 v_err_comp_sum = temp_v_err_comp_sum.copy()
 
-                if t >= tf:
-                    ias15_integrate_flag = 2
-                    break
-
-            # Step size for the next iteration
-            if (dt_new / dt) > (1.0 / safety_fac):
+            # Actual step size for the next step
+            if (dt_new) > (dt / safety_fac):
                 dt = dt / safety_fac
             elif dt_new < dt * safety_fac:
                 dt = dt * safety_fac
@@ -430,11 +414,11 @@ class IAS15:
             a,
             t,
             dt,
+            dt_old,
             aux_g,
             aux_b,
             aux_e,
             aux_b0,
-            ias15_integrate_flag,
             ias15_refine_flag,
             x_err_comp_sum,
             v_err_comp_sum,

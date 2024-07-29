@@ -17,7 +17,7 @@
     #define WIN32DLL_API 
 #endif
 
-#define NPTS 50000
+#define BUFFER_SIZE 50000
 
 typedef int64_t int64;
 typedef double real;

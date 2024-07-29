@@ -17,9 +17,7 @@ import warnings
 
 import numpy as np
 
-from common import acceleration
-from progress_bar import progress_bar_c_lib_fixed_step_size
-from progress_bar import Progress_bar_with_data_size
+import common
 
 
 class WHFast:
@@ -55,17 +53,18 @@ class WHFast:
 
         self.c_lib.whfast.restype = ctypes.c_int
 
-        npts = int(np.floor((tf / dt))) + 1  # + 1 for t0
+        npts = math.ceil(tf / dt)
         if self.store_every_n != 1:
-            store_npts = math.floor((npts - 1) / self.store_every_n) + 1  # + 1 for t0
+            store_npts = npts // self.store_every_n
         else:
             store_npts = npts
+        store_npts += 1  # + 1 for t0
 
-        store_count = ctypes.c_int(0)
+        store_count = ctypes.c_int(1)  # 1 for t0
 
         if not no_progress_bar:
             progress_bar_thread = threading.Thread(
-                target=progress_bar_c_lib_fixed_step_size,
+                target=common.progress_bar_c_lib_fixed_step_size,
                 args=(store_npts, store_count, self.is_exit_ctypes_bool),
             )
             progress_bar_thread.start()
@@ -108,7 +107,7 @@ class WHFast:
         # This is added since the main thread is not catching
         # exceptions on Windows
         while whfast_thread.is_alive():
-            time.sleep(0.1)
+            time.sleep(0.05)
 
         whfast_thread.join()
         return_code = queue.get()
@@ -128,8 +127,8 @@ class WHFast:
 
         # Close the progress_bar_thread
         if not no_progress_bar:
-            if store_count.value < (store_npts - 1):
-                store_count.value = store_npts - 1
+            if store_count.value < store_npts:
+                store_count.value = store_npts
             progress_bar_thread.join()
 
         if not flush:
@@ -182,20 +181,24 @@ class WHFast:
         if flush:
             raise NotImplementedError("Flush is not implemented for numpy")
 
-        npts = int(np.floor((tf / dt))) + 1  # + 1 for t0
+        npts = math.ceil(tf / dt)
         if self.store_every_n != 1:
-            store_npts = math.floor((npts - 1) / self.store_every_n) + 1  # + 1 for t0
+            store_npts = npts // self.store_every_n
         else:
             store_npts = npts
-        self.sol_state = np.zeros((store_npts, objects_count * 3 * 2))
+        store_npts += 1  # + 1 for t0
+
+        self.sol_state = np.zeros((store_npts, objects_count * 6))
         self.sol_state[0] = np.concatenate(
             (
                 np.reshape(x, objects_count * 3),
                 np.reshape(v, objects_count * 3),
             )
         )
-        self.sol_time = np.linspace(0, dt * (npts - 1), store_npts)
-        self.sol_dt = np.full(shape=(store_npts), fill_value=f"{dt}", dtype=float)
+        self.sol_time = np.arange(
+            start=0.0, stop=(dt * npts), step=dt * self.store_every_n
+        )
+        self.sol_dt = np.full(shape=(store_npts), fill_value=dt)
 
         x_err_comp_sum = np.zeros((objects_count, 3))
         v_err_comp_sum = np.zeros((objects_count, 3))
@@ -207,24 +210,26 @@ class WHFast:
         WHFast.whfast_acceleration(objects_count, jacobi, x, a, m, eta, G)
         WHFast.whfast_kick(jacobi, a, 0.5 * dt)
 
-        progress_bar = Progress_bar_with_data_size()
-        store_count = 0
+        progress_bar = common.Progress_bar_with_data_size()
+        store_count = 1  # 1 for t0
         with progress_bar:
             if not no_progress_bar:
-                task = progress_bar.add_task("", total=store_npts, store_count=1)
+                task = progress_bar.add_task(
+                    "", total=store_npts, store_count=store_count
+                )
 
-            for count in range(npts - 1):
+            for count in range(1, npts + 1):
                 WHFast.whfast_drift(objects_count, jacobi, m, eta, G, dt)
                 WHFast.jacobi_to_cartesian(objects_count, jacobi, x, v, m, eta)
                 WHFast.whfast_acceleration(objects_count, jacobi, x, a, m, eta, G)
                 WHFast.whfast_kick(jacobi, a, dt)
 
                 # Store solution
-                if (count + 1) % self.store_every_n == 0:
+                if count % self.store_every_n == 0:
                     temp_jacobi = jacobi.copy()
                     WHFast.whfast_kick(temp_jacobi, a, -0.5 * dt)
                     WHFast.jacobi_to_cartesian(objects_count, temp_jacobi, x, v, m, eta)
-                    self.sol_state[store_count + 1] = np.concatenate(
+                    self.sol_state[store_count] = np.concatenate(
                         (
                             np.reshape(x, objects_count * 3),
                             np.reshape(v, objects_count * 3),
@@ -232,24 +237,10 @@ class WHFast:
                     )
                     store_count += 1
 
-                if (count + 2) == npts:
-                    temp_jacobi = jacobi.copy()
-                    WHFast.whfast_kick(temp_jacobi, a, -0.5 * dt)
-                    WHFast.jacobi_to_cartesian(objects_count, temp_jacobi, x, v, m, eta)
-                    self.sol_state[-1] = np.concatenate(
-                        (
-                            np.reshape(x, objects_count * 3),
-                            np.reshape(v, objects_count * 3),
-                        )
-                    )
-
                 if not no_progress_bar:
                     progress_bar.update(
-                        task, completed=store_count, store_count=store_count + 1
+                        task, completed=store_count, store_count=store_count
                     )
-
-            if not no_progress_bar:
-                progress_bar.update(task, completed=store_npts, store_count=store_npts)
 
         return self.sol_state, self.sol_time, self.sol_dt
 
@@ -392,8 +383,8 @@ class WHFast:
             Array of mass where eta[i] is the total mass from
             the 0-th to the i-th object
         """
-        x_cm = eta[-1] * jacobi[0, 0:3]
-        v_cm = eta[-1] * jacobi[0, 3:6]
+        x_cm = eta[-1] * jacobi[0, :3]
+        v_cm = eta[-1] * jacobi[0, 3:]
 
         for i in range(objects_count - 1, 0, -1):
             x_cm = (x_cm - m[i] * jacobi[i, :3]) / eta[i]

@@ -65,7 +65,6 @@ WIN32DLL_API int euler(
     }
 
     // Allocate memory for solution output
-    int64 count = 0;
     FILE *flush_file = NULL;
     double *sol_state = NULL;
     double *sol_time = NULL;
@@ -112,7 +111,7 @@ WIN32DLL_API int euler(
     }
 
     // Main Loop
-    while ((count + 1) <= npts)
+    for (int64 count = 1; count <= npts; count++)
     {
         acceleration(objects_count, x, a, m, G);
 
@@ -136,7 +135,7 @@ WIN32DLL_API int euler(
         }
 
         // Store solution
-        if ((count + 1) == npts)
+        if (count % store_every_n == 0)
         {
             if (flush)
             {
@@ -144,26 +143,12 @@ WIN32DLL_API int euler(
             }
             else
             {
-                memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-                sol_time[store_npts - 1] = dt * count;
-            }
-        }
-        else if (((count + 1) % store_every_n == 0) && ((*store_count + 1) != (store_npts - 1)))
-        {
-            if (flush)
-            {
-                write_to_csv_file(flush_file, dt * (count + 1), dt, objects_count, x, v, m, G);
-            }
-            else
-            {
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-                sol_time[*store_count + 1] = dt * (count + 1);
+                memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[*store_count] = dt * count;
             }
             (*store_count)++;
         }
-        count++;
 
         // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)
@@ -279,7 +264,6 @@ WIN32DLL_API int euler_cromer(
     }
 
     // Allocate memory for solution output
-    int64 count = 0;
     FILE *flush_file = NULL;
     double *sol_state = NULL;
     double *sol_time = NULL;
@@ -299,9 +283,9 @@ WIN32DLL_API int euler_cromer(
     } 
     else
     {
-        double *sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
-        double *sol_time = malloc(store_npts * sizeof(double));
-        double *sol_dt = malloc(store_npts * sizeof(double));
+        sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
+        sol_time = malloc(store_npts * sizeof(double));
+        sol_dt = malloc(store_npts * sizeof(double));
 
         if (!sol_state || !sol_time || !sol_dt)
         {
@@ -326,7 +310,7 @@ WIN32DLL_API int euler_cromer(
     }
 
     // Main Loop
-    while ((count + 1) <= npts)
+    for (int64 count = 1; count <= npts; count++)
     {
         acceleration(objects_count, x, a, m, G);
 
@@ -349,7 +333,7 @@ WIN32DLL_API int euler_cromer(
         }
 
         // Store solution
-        if ((count + 1) == npts)
+        if (count % store_every_n == 0)
         {
             if (flush)
             {
@@ -357,26 +341,12 @@ WIN32DLL_API int euler_cromer(
             }
             else
             {
-                memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-                sol_time[store_npts - 1] = dt * count;
-            }
-        }
-        else if (((count + 1) % store_every_n == 0) && ((*store_count + 1) != (store_npts - 1)))
-        {
-            if (flush)
-            {
-                write_to_csv_file(flush_file, dt * (count + 1), dt, objects_count, x, v, m, G);
-            }
-            else
-            {
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-                sol_time[*store_count + 1] = dt * (count + 1);
+                memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[*store_count] = dt * count;
             }
             (*store_count)++;
         }
-        count++;
 
         // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)
@@ -500,7 +470,6 @@ WIN32DLL_API int rk4(
     }
 
     // Allocate memory for solution output
-    int64 count = 0;
     FILE *flush_file = NULL;
     double *sol_state = NULL;
     double *sol_time = NULL;
@@ -547,7 +516,7 @@ WIN32DLL_API int rk4(
     }
 
     // Main Loop
-    while ((count + 1) <= npts)
+    for (int64 count = 1; count <= npts; count++)
     {   
         acceleration(objects_count, x, vk1, m, G);
         memcpy(xk1, v, objects_count * 3 * sizeof(real));
@@ -605,7 +574,7 @@ WIN32DLL_API int rk4(
         }
 
         // Store solution
-        if ((count + 1) == npts)
+        if (count % store_every_n == 0)
         {
             if (flush)
             {
@@ -613,26 +582,12 @@ WIN32DLL_API int rk4(
             }
             else
             {
-                memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-                sol_time[store_npts - 1] = dt * count;
-            }
-        }
-        else if (((count + 1) % store_every_n == 0) && ((*store_count + 1) != (store_npts - 1)))
-        {
-            if (flush)
-            {
-                write_to_csv_file(flush_file, dt * (count + 1), dt, objects_count, x, v, m, G);
-            }
-            else
-            {
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-                sol_time[*store_count + 1] = dt * (count + 1);
+                memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[*store_count] = dt * count;
             }
             (*store_count)++;
         }
-        count++;
 
         // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)
@@ -765,7 +720,6 @@ WIN32DLL_API int leapfrog(
     }
 
     // Allocate memory for solution output
-    int64 count = 0;
     FILE *flush_file = NULL;
     double *sol_state = NULL;
     double *sol_time = NULL;
@@ -813,7 +767,7 @@ WIN32DLL_API int leapfrog(
 
     // Main Loop
     acceleration(objects_count, x, a_1, m, G);
-    while ((count + 1) <= npts)
+    for (int64 count = 1; count <= npts; count++)
     {       
         // Use a_1 from last iteration as a_0
         memcpy(a_0, a_1, objects_count * 3 * sizeof(real));
@@ -844,7 +798,7 @@ WIN32DLL_API int leapfrog(
         }
 
         // Store solution
-        if ((count + 1) == npts)
+        if (count % store_every_n == 0)
         {
             if (flush)
             {
@@ -852,26 +806,12 @@ WIN32DLL_API int leapfrog(
             }
             else
             {
-                memcpy(&sol_state[(store_npts - 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[(store_npts - 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-                sol_time[store_npts - 1] = dt * count;
-            }
-        }
-        else if (((count + 1) % store_every_n == 0) && ((*store_count + 1) != (store_npts - 1)))
-        {
-            if (flush)
-            {
-                write_to_csv_file(flush_file, dt * (count + 1), dt, objects_count, x, v, m, G);
-            }
-            else
-            {
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-                sol_time[*store_count + 1] = dt * (count + 1);
+                memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[*store_count] = dt * count;
             }
             (*store_count)++;
         }
-        count++;
 
         // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)

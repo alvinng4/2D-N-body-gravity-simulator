@@ -118,7 +118,8 @@ real ias15_initial_dt(
  * \param m Array of masses for all objects
  * \param G Gravitational constant
  * \param t Pointer to the current simulation time
- * \param dt Current time step of the system
+ * \param dt Input of current time step of the system
+ * \param dt_old Actual current time step of the system after the function returns
  * \param tf Total time to be integrated
  * \param nodes Radau spacing dodes for the predictor-corrector algorithm
  * \param aux_b0 Array of auxiliary coefficients b0
@@ -159,6 +160,7 @@ void ias15_step(
     real G,
     real *restrict t,
     real *restrict dt,
+    real *restrict dt_old,
     real tf,
     const real *restrict nodes,
     real *restrict aux_b0,
@@ -456,14 +458,15 @@ WIN32DLL_API int ias15(
     }
 
     // Allocate memory for solution output
-    int64 count = 0;
-    real dt = ias15_initial_dt(objects_count, 15, x, v, a, m, G, acceleration);
+    int64 count = 1;    // 1 for t0
+    real dt_old = ias15_initial_dt(objects_count, 15, x, v, a, m, G, acceleration);
+    real dt = dt_old;
 
     FILE *flush_file = NULL;
     double *sol_state = NULL;
     double *sol_time = NULL;
     double *sol_dt = NULL;
-    int buffer_size = NPTS;
+    int buffer_size = BUFFER_SIZE;
 
     // For realloc solution output
     double *temp_sol_state = NULL;
@@ -485,9 +488,9 @@ WIN32DLL_API int ias15(
     } 
     else
     {
-        sol_state = malloc(NPTS * objects_count * 6 * sizeof(double));
-        sol_time = malloc(NPTS * sizeof(double));
-        sol_dt = malloc(NPTS * sizeof(double));
+        sol_state = malloc(buffer_size * objects_count * 6 * sizeof(double));
+        sol_time = malloc(buffer_size * sizeof(double));
+        sol_dt = malloc(buffer_size * sizeof(double));
 
         if (!sol_state || !sol_time || !sol_dt)
         {
@@ -512,7 +515,7 @@ WIN32DLL_API int ias15(
         sol_dt[0] = dt;
     }
 
-    while (1)
+    while (*t < tf)
     {
         ias15_step(
             objects_count,
@@ -526,6 +529,7 @@ WIN32DLL_API int ias15(
             G,
             t,
             &dt,
+            &dt_old,
             tf,
             nodes,
             aux_b0,
@@ -553,11 +557,8 @@ WIN32DLL_API int ias15(
             acceleration
         );
 
-        // Update count
-        count += 1;
-
         // Store step
-        if ((count + 1) % store_every_n == 0)
+        if (count % store_every_n == 0)
         {
             if (flush)
             {
@@ -565,90 +566,74 @@ WIN32DLL_API int ias15(
             }
             else
             {
-                sol_time[*store_count + 1] = *t;
-                sol_dt[*store_count + 1] = dt;
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[*store_count] = *t;
+                sol_dt[*store_count] = dt_old;
+                memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
             }
-            *store_count += 1;
-        }
-        else if (*t >= tf)
-        {
-            if (flush)
-            {
-                write_to_csv_file(flush_file, *t, dt, objects_count, x, v, m, G);
-            }
-            else
-            {
-                sol_time[*store_count + 1] = *t;
-                sol_dt[*store_count + 1] = dt;
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-            }
-        }
+            (*store_count)++;
 
+            // Check buffer size and extend if full
+            if ((!flush) && (*store_count == buffer_size) && (*t < tf))
+            {   
+                buffer_size *= 2;
+                temp_sol_state = realloc(sol_state, buffer_size * objects_count * 6 * sizeof(real));
+                temp_sol_time = realloc(sol_time, buffer_size * sizeof(real));
+                temp_sol_dt = realloc(sol_dt, buffer_size * sizeof(real));
+
+                if (!temp_sol_state || !temp_sol_time || !temp_sol_dt)
+                {
+                    printf("Error: Failed to allocate extra memory to extend array for solution output\n");
+                    goto err_sol_output_memory;
+                }
+                
+                sol_state = temp_sol_state;
+                sol_time = temp_sol_time;
+                sol_dt = temp_sol_dt;
+            }
+
+            count++;
+        }
+    
         // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)
         {
             goto err_user_exit;
-        }
-
-        // End simulation as t >= tf
-        else if (*t >= tf)
-        {
-            free(a);
-            free(nodes);
-            free(aux_c);
-            free(aux_r);
-            free(aux_b0);
-            free(aux_b);
-            free(aux_g);
-            free(aux_e);
-            free(aux_a);
-            free(x_step);
-            free(v_step);
-            free(a_step);
-            free(delta_b7); 
-            free(F);
-            free(delta_aux_b);
-            free(x_err_comp_sum);
-            free(v_err_comp_sum);
-            free(temp_x_err_comp_sum);
-            free(temp_v_err_comp_sum);
-            
-            if (flush)
-            {
-                fclose(flush_file);
-            }
-            else
-            {
-                solution->sol_state = sol_state;
-                solution->sol_time = sol_time;
-                solution->sol_dt = sol_dt;
-            }
-
-            return 0;
-        }
-
-        // Check buffer size and extend if full
-        if ((*store_count + 1) == buffer_size)
-        {   
-            buffer_size *= 2;
-            temp_sol_state = realloc(sol_state, buffer_size * objects_count * 6 * sizeof(real));
-            temp_sol_time = realloc(sol_time, buffer_size * sizeof(real));
-            temp_sol_dt = realloc(sol_dt, buffer_size * sizeof(real));
-
-            if (!temp_sol_state || !temp_sol_time || !temp_sol_dt)
-            {
-                printf("Error: Failed to allocate extra memory to extend array for solution output\n");
-                goto err_sol_output_memory;
-            }
-            
-            sol_state = temp_sol_state;
-            sol_time = temp_sol_time;
-            sol_dt = temp_sol_dt;
-        }
+        }   
     }
+
+    free(a);
+    free(nodes);
+    free(aux_c);
+    free(aux_r);
+    free(aux_b0);
+    free(aux_b);
+    free(aux_g);
+    free(aux_e);
+    free(aux_a);
+    free(x_step);
+    free(v_step);
+    free(a_step);
+    free(delta_b7); 
+    free(F);
+    free(delta_aux_b);
+    free(x_err_comp_sum);
+    free(v_err_comp_sum);
+    free(temp_x_err_comp_sum);
+    free(temp_v_err_comp_sum);
+    
+    if (flush)
+    {
+        fclose(flush_file);
+    }
+    else
+    {
+        solution->sol_state = sol_state;
+        solution->sol_time = sol_time;
+        solution->sol_dt = sol_dt;
+    }
+
+    return 0;
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_initial_dt_memory:
@@ -862,6 +847,7 @@ WIN32DLL_API void ias15_step(
     real G,
     real *restrict t,
     real *restrict dt,
+    real *restrict dt_old,
     real tf,
     const real *restrict nodes,
     real *restrict aux_b0,
@@ -939,15 +925,13 @@ WIN32DLL_API void ias15_step(
         error_b7 = abs_max_vec(&aux_b[dim_nodes_minus_2 * objects_count * 3], objects_count * 3) / abs_max_vec(a, objects_count * 3);
         error = pow((error_b7 / tolerance), exponent);
 
-        // Step-size for the next step
-        if (error != 0.0)
+        // Step size of the next step for refine aux b
+        *dt_old = *dt;
+        if (error < 1e-10)
         {
-            dt_new = *dt / error;
+            error = 1e-10; // Prevent error from being too small
         }
-        else
-        {
-            dt_new = *dt;
-        }
+        dt_new = *dt / error;
 
         // Accept the step
         if (error <= 1 || *dt == tf * 1e-12)
@@ -961,17 +945,9 @@ WIN32DLL_API void ias15_step(
 
             memcpy(x_err_comp_sum, temp_x_err_comp_sum, objects_count * 3 * sizeof(real));
             memcpy(v_err_comp_sum, temp_v_err_comp_sum, objects_count * 3 * sizeof(real));
-
-            if (*t >= tf)
-            {
-                memcpy(x0, x, objects_count * 3 * sizeof(real));
-                memcpy(v0, v, objects_count * 3 * sizeof(real));
-                memcpy(a0, a, objects_count * 3 * sizeof(real));     
-                break;  
-            }
         }
 
-        // Step size for the next iteration
+        // Actual step size for the next step
         if (dt_new > (*dt / safety_fac))
         {
             *dt = *dt / safety_fac;

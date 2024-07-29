@@ -8,9 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import PillowWriter
 
-from common import get_bool
-from common import get_float
-from progress_bar import Progress_bar
+import common
 
 
 def plot_2d_trajectory(
@@ -169,7 +167,7 @@ def animate_2d_traj_gif(
 
     data_size = len(sol_state)
     writer = PillowWriter(fps=fps)
-    progress_bar = Progress_bar()
+    progress_bar = common.Progress_bar()
     if not is_maintain_fixed_dt:
         with writer.saving(fig, file_path, dpi):
             with progress_bar:
@@ -342,7 +340,7 @@ def animate_3d_traj_gif(
 
     data_size = len(sol_state)
     writer = PillowWriter(fps=fps)
-    progress_bar = Progress_bar()
+    progress_bar = common.Progress_bar()
     if not is_maintain_fixed_dt:
         with writer.saving(fig, file_path, dpi):
             with progress_bar:
@@ -715,7 +713,7 @@ def plot_compare_rel_energy(grav_plot):
     while True:
         num_of_data = len(filepaths_to_labels)
         if num_of_data >= 2:
-            if not get_bool(
+            if not common.get_bool(
                 f"There are {num_of_data} sets of data. Continue adding new files?"
             ):
                 break

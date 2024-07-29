@@ -520,7 +520,7 @@ WIN32DLL_API int rk_embedded(
     }
 
     // Allocate memory for solution output
-    int64 count = 0;
+    int64 count = 1;    // 1 for t0
     real dt = rk_embedded_initial_dt(
         objects_count,
         power,
@@ -538,7 +538,7 @@ WIN32DLL_API int rk_embedded(
     double *sol_state = NULL;
     double *sol_time = NULL;
     double *sol_dt = NULL;
-    int buffer_size = NPTS;
+    int buffer_size = BUFFER_SIZE;
 
     // For realloc solution output
     double *temp_sol_state = NULL;
@@ -560,9 +560,9 @@ WIN32DLL_API int rk_embedded(
     } 
     else
     {
-        sol_state = malloc(NPTS * objects_count * 6 * sizeof(double));
-        sol_time = malloc(NPTS * sizeof(double));
-        sol_dt = malloc(NPTS * sizeof(double));
+        sol_state = malloc(buffer_size * objects_count * 6 * sizeof(double));
+        sol_time = malloc(buffer_size * sizeof(double));
+        sol_dt = malloc(buffer_size * sizeof(double));
 
         if (!sol_state || !sol_time || !sol_dt)
         {
@@ -588,7 +588,7 @@ WIN32DLL_API int rk_embedded(
     }
 
     // Main Loop
-    while (1)
+    while (*t < tf)
     {
         // Calculate xk and vk
         acceleration(objects_count, x, vk, m, G);
@@ -706,19 +706,18 @@ WIN32DLL_API int rk_embedded(
         }
         error = sqrt(sum / (objects_count * 3 * 2));
 
-        if (error <= 1 || dt == tf * 1e-12)
+        if (error <= 1 || dt <= tf * 1e-12)
         {
             // Advance step
             *t += dt; 
             memcpy(x, x_1, objects_count * 3 * sizeof(real));
             memcpy(v, v_1, objects_count * 3 * sizeof(real));
-            count += 1;
 
             memcpy(x_err_comp_sum, temp_x_err_comp_sum, objects_count * 3 * sizeof(real));
             memcpy(v_err_comp_sum, temp_v_err_comp_sum, objects_count * 3 * sizeof(real));
 
             // Store step
-            if ((count + 1) % store_every_n == 0)
+            if (count % store_every_n == 0)
             {
                 if (flush)
                 {
@@ -726,26 +725,33 @@ WIN32DLL_API int rk_embedded(
                 }
                 else
                 {
-                    sol_time[*store_count + 1] = *t;
-                    sol_dt[*store_count + 1] = dt;
-                    memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                    memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                    sol_time[*store_count] = *t;
+                    sol_dt[*store_count] = dt;
+                    memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                    memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
                 }
-                *store_count += 1;
-            }
-            else if (*t >= tf)
-            {
-                if (flush)
-                {
-                    write_to_csv_file(flush_file, *t, dt, objects_count, x, v, m, G);
+                (*store_count)++;
+
+                // Check buffer size and extend if full
+                if ((!flush) && (*store_count == buffer_size) && (*t < tf))
+                {   
+                    buffer_size *= 2;
+                    temp_sol_state = realloc(sol_state, buffer_size * objects_count * 6 * sizeof(real));
+                    temp_sol_time = realloc(sol_time, buffer_size * sizeof(real));
+                    temp_sol_dt = realloc(sol_dt, buffer_size * sizeof(real));
+
+                    if (!temp_sol_state || !temp_sol_time || !temp_sol_dt)
+                    {
+                        printf("Error: Failed to allocate extra memory to extend array for solution output\n");
+                        goto err_sol_output_memory;
+                    }
+                    
+                    sol_state = temp_sol_state;
+                    sol_time = temp_sol_time;
+                    sol_dt = temp_sol_dt;
                 }
-                else
-                {
-                    sol_time[*store_count + 1] = *t;
-                    sol_dt[*store_count + 1] = dt;
-                    memcpy(&sol_state[(*store_count + 1) * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                    memcpy(&sol_state[(*store_count + 1) * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-                }
+
+                count++;
             }
 
             // Check if user sends KeyboardInterrupt in main thread
@@ -753,75 +759,14 @@ WIN32DLL_API int rk_embedded(
             {
                 goto err_user_exit;
             }
-
-            // End simulation as t >= tf
-            else if (*t >= tf)
-            {
-                free(a);
-                free(coeff);
-                free(weights);
-                free(weights_test);
-                free(error_estimation_delta_weights);
-                free(v_1);
-                free(x_1);
-                free(vk);
-                free(xk);
-                free(temp_a);
-                free(temp_v);
-                free(temp_x);
-                free(error_estimation_delta_v);
-                free(error_estimation_delta_x);
-                free(tolerance_scale_v);
-                free(tolerance_scale_x);
-                free(x_err_comp_sum);
-                free(v_err_comp_sum);
-                free(temp_x_err_comp_sum);
-                free(temp_v_err_comp_sum);
-
-                if (flush)
-                {
-                    fclose(flush_file);
-                }
-                else
-                {
-                    solution->sol_state = sol_state;
-                    solution->sol_time = sol_time;
-                    solution->sol_dt = sol_dt;
-                }
-
-                return 0;
-            }
-
-            // Check buffer size and extend if full
-            if ((*store_count + 1) == buffer_size)
-            {   
-                buffer_size *= 2;
-                temp_sol_state = realloc(sol_state, buffer_size * objects_count * 6 * sizeof(real));
-                temp_sol_time = realloc(sol_time, buffer_size * sizeof(real));
-                temp_sol_dt = realloc(sol_dt, buffer_size * sizeof(real));
-
-                if (!temp_sol_state || !temp_sol_time || !temp_sol_dt)
-                {
-                    printf("Error: Failed to allocate extra memory to extend array for solution output\n");
-                    goto err_sol_output_memory;
-                }
-                
-                sol_state = temp_sol_state;
-                sol_time = temp_sol_time;
-                sol_dt = temp_sol_dt;
-            }
         }
 
         // Calculate dt
-        if (error != 0.0)   // Prevent division by zero
+        if (error < 1e-10)
         {
-            dt_new = dt * safety_fac / pow(error, (1.0 / (1.0 + (real) min_power)));
+            error = 1e-10;  // Prevent error from being too small
         }
-        else
-        {
-            dt_new = dt;
-        }
-        
+        dt_new = dt * safety_fac / pow(error, (1.0 / (1.0 + (real) min_power)));
         if (dt_new > safety_fac_max * dt) 
         {
             dt *= safety_fac_max;
@@ -846,6 +791,40 @@ WIN32DLL_API int rk_embedded(
             dt = tf - *t;
         }
     }
+
+    free(a);
+    free(coeff);
+    free(weights);
+    free(weights_test);
+    free(error_estimation_delta_weights);
+    free(v_1);
+    free(x_1);
+    free(vk);
+    free(xk);
+    free(temp_a);
+    free(temp_v);
+    free(temp_x);
+    free(error_estimation_delta_v);
+    free(error_estimation_delta_x);
+    free(tolerance_scale_v);
+    free(tolerance_scale_x);
+    free(x_err_comp_sum);
+    free(v_err_comp_sum);
+    free(temp_x_err_comp_sum);
+    free(temp_v_err_comp_sum);
+
+    if (flush)
+    {
+        fclose(flush_file);
+    }
+    else
+    {
+        solution->sol_state = sol_state;
+        solution->sol_time = sol_time;
+        solution->sol_dt = sol_dt;
+    }
+
+    return 0;
 
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_initial_dt_memory:

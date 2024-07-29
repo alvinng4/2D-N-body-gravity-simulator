@@ -9,8 +9,6 @@ import warnings
 import numpy as np
 
 import common
-from progress_bar import Progress_bar
-from progress_bar import progress_bar_c_lib_fixed_step_size
 from integrator_simple import SimpleIntegrator
 from integrator_rk_embedded import RKEmbedded
 from integrator_ias15 import IAS15
@@ -391,7 +389,7 @@ class Simulator:
         if self.integration_mode == "c_lib":
             count = ctypes.c_int(0)
             progress_bar_thread = threading.Thread(
-                target=progress_bar_c_lib_fixed_step_size,
+                target=common.progress_bar_c_lib_fixed_step_size,
                 args=(npts, count, self.is_exit_ctypes_bool),
             )
             progress_bar_thread.start()
@@ -416,7 +414,7 @@ class Simulator:
             progress_bar_thread.join()
 
         else:
-            progress_bar = Progress_bar()
+            progress_bar = common.Progress_bar()
             with progress_bar:
                 for count in progress_bar.track(range(npts), description=""):
                     x = self.sol_state[count]
@@ -461,7 +459,7 @@ class Simulator:
         if self.integration_mode == "c_lib":
             count = ctypes.c_int(0)
             progress_bar_thread = threading.Thread(
-                target=progress_bar_c_lib_fixed_step_size,
+                target=common.progress_bar_c_lib_fixed_step_size,
                 args=(npts, count, self.is_exit_ctypes_bool),
             )
             progress_bar_thread.start()
@@ -487,7 +485,7 @@ class Simulator:
             progress_bar_thread.join()
 
         else:
-            progress_bar = Progress_bar()
+            progress_bar = common.Progress_bar()
             with progress_bar:
                 for count in progress_bar.track(range(npts), description=""):
                     temp_vec = np.zeros(3)
@@ -519,7 +517,7 @@ class Simulator:
         if self.integration_mode == "c_lib":
             count = ctypes.c_int(0)
             progress_bar_thread = threading.Thread(
-                target=progress_bar_c_lib_fixed_step_size,
+                target=common.progress_bar_c_lib_fixed_step_size,
                 args=(npts, count, self.is_exit_ctypes_bool),
             )
             progress_bar_thread.start()
@@ -545,7 +543,7 @@ class Simulator:
             progress_bar_thread.join()
 
         else:
-            progress_bar = Progress_bar()
+            progress_bar = common.Progress_bar()
             with progress_bar:
                 for count in progress_bar.track(range(npts), description=""):
                     temp_vec = np.zeros(3)

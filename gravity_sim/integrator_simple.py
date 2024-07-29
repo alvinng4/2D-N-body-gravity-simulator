@@ -12,9 +12,8 @@ from queue import Queue
 
 import numpy as np
 
+import common
 from common import acceleration
-from progress_bar import progress_bar_c_lib_fixed_step_size
-from progress_bar import Progress_bar_with_data_size
 
 
 class SimpleIntegrator:
@@ -54,17 +53,18 @@ class SimpleIntegrator:
         self.c_lib.rk4.restype = ctypes.c_int
         self.c_lib.leapfrog.restype = ctypes.c_int
 
-        npts = int(np.floor((tf / dt))) + 1  # + 1 for t0
+        npts = math.ceil(tf / dt)
         if self.store_every_n != 1:
-            store_npts = math.floor((npts - 1) / self.store_every_n) + 1  # + 1 for t0
+            store_npts = npts // self.store_every_n
         else:
             store_npts = npts
+        store_npts += 1  # + 1 for t0
 
-        store_count = ctypes.c_int(0)
+        store_count = ctypes.c_int(1)  # 1 for t0
 
         if not no_progress_bar:
             progress_bar_thread = threading.Thread(
-                target=progress_bar_c_lib_fixed_step_size,
+                target=common.progress_bar_c_lib_fixed_step_size,
                 args=(store_npts, store_count, self.is_exit_ctypes_bool),
             )
             progress_bar_thread.start()
@@ -178,7 +178,7 @@ class SimpleIntegrator:
         # This is added since the main thread is not catching
         # exceptions on Windows
         while simple_integrator_thread.is_alive():
-            time.sleep(0.1)
+            time.sleep(0.05)
 
         simple_integrator_thread.join()
         return_code = queue.get()
@@ -198,9 +198,11 @@ class SimpleIntegrator:
 
         # Close the progress_bar_thread
         if not no_progress_bar:
-            if store_count.value < (store_npts - 1):
-                store_count.value = store_npts - 1
+            temp_store_count = store_count.value
+            if store_count.value < store_npts:
+                store_count.value = store_npts
             progress_bar_thread.join()
+            store_count.value = temp_store_count
 
         if not flush:
             # Convert C arrays to numpy arrays
@@ -253,38 +255,44 @@ class SimpleIntegrator:
         if flush:
             raise NotImplementedError("Flush is not implemented for numpy")
 
-        npts = int(np.floor((tf / dt))) + 1  # + 1 for t0
+        npts = math.ceil(tf / dt)
         if self.store_every_n != 1:
-            store_npts = math.floor((npts - 1) / self.store_every_n) + 1  # + 1 for t0
+            store_npts = npts // self.store_every_n
         else:
             store_npts = npts
-        self.sol_state = np.zeros((store_npts, objects_count * 3 * 2))
+        store_npts += 1  # + 1 for t0
+
+        self.sol_state = np.zeros((store_npts, objects_count * 6))
         self.sol_state[0] = np.concatenate(
             (
                 np.reshape(x, objects_count * 3),
                 np.reshape(v, objects_count * 3),
             )
         )
-        self.sol_time = np.linspace(0, dt * (npts - 1), store_npts)
-        self.sol_dt = np.full(shape=(store_npts), fill_value=f"{dt}", dtype=float)
+        self.sol_time = np.arange(
+            start=0.0, stop=(dt * npts), step=dt * self.store_every_n
+        )
+        self.sol_dt = np.full(shape=(store_npts), fill_value=dt)
 
         x_err_comp_sum = np.zeros((objects_count, 3))
         v_err_comp_sum = np.zeros((objects_count, 3))
 
-        progress_bar = Progress_bar_with_data_size()
-        store_count = 0
+        progress_bar = common.Progress_bar_with_data_size()
+        store_count = 1  # 1 for t0
         with progress_bar:
             if not no_progress_bar:
-                task = progress_bar.add_task("", total=store_npts, store_count=1)
+                task = progress_bar.add_task(
+                    "", total=store_npts, store_count=store_count
+                )
             match integrator:
                 case "euler":
-                    for count in range(npts - 1):
+                    for count in range(1, npts + 1):
                         a = acceleration(objects_count, x, m, G)
                         x, v, x_err_comp_sum, v_err_comp_sum = self.euler(
                             x, v, a, dt, x_err_comp_sum, v_err_comp_sum
                         )
-                        if (count + 1) % self.store_every_n == 0:
-                            self.sol_state[store_count + 1] = np.concatenate(
+                        if count % self.store_every_n == 0:
+                            self.sol_state[store_count] = np.concatenate(
                                 (
                                     np.reshape(x, objects_count * 3),
                                     np.reshape(v, objects_count * 3),
@@ -292,32 +300,19 @@ class SimpleIntegrator:
                             )
                             store_count += 1
 
-                        if (count + 2) == npts:
-                            self.sol_state[-1] = np.concatenate(
-                                (
-                                    np.reshape(x, objects_count * 3),
-                                    np.reshape(v, objects_count * 3),
-                                )
-                            )
-
                         if not no_progress_bar:
                             progress_bar.update(
-                                task, completed=store_count, store_count=store_count + 1
+                                task, completed=store_count, store_count=store_count
                             )
 
-                    if not no_progress_bar:
-                        progress_bar.update(
-                            task, completed=store_npts, store_count=store_npts
-                        )
-
                 case "euler_cromer":
-                    for count in range(npts - 1):
+                    for count in range(1, npts + 1):
                         a = acceleration(objects_count, x, m, G)
                         x, v, x_err_comp_sum, v_err_comp_sum = self.euler_cromer(
                             x, v, a, dt, x_err_comp_sum, v_err_comp_sum
                         )
-                        if (count + 1) % self.store_every_n == 0:
-                            self.sol_state[store_count + 1] = np.concatenate(
+                        if count % self.store_every_n == 0:
+                            self.sol_state[store_count] = np.concatenate(
                                 (
                                     np.reshape(x, objects_count * 3),
                                     np.reshape(v, objects_count * 3),
@@ -325,26 +320,13 @@ class SimpleIntegrator:
                             )
                             store_count += 1
 
-                        if (count + 2) == npts:
-                            self.sol_state[-1] = np.concatenate(
-                                (
-                                    np.reshape(x, objects_count * 3),
-                                    np.reshape(v, objects_count * 3),
-                                )
-                            )
-
                         if not no_progress_bar:
                             progress_bar.update(
-                                task, completed=store_count, store_count=store_count + 1
+                                task, completed=store_count, store_count=store_count
                             )
 
-                    if not no_progress_bar:
-                        progress_bar.update(
-                            task, completed=store_npts, store_count=store_npts
-                        )
-
                 case "rk4":
-                    for count in range(npts - 1):
+                    for count in range(1, npts + 1):
                         x, v, x_err_comp_sum, v_err_comp_sum = self.rk4(
                             objects_count,
                             x,
@@ -355,8 +337,8 @@ class SimpleIntegrator:
                             x_err_comp_sum,
                             v_err_comp_sum,
                         )
-                        if (count + 1) % self.store_every_n == 0:
-                            self.sol_state[store_count + 1] = np.concatenate(
+                        if count % self.store_every_n == 0:
+                            self.sol_state[store_count] = np.concatenate(
                                 (
                                     np.reshape(x, objects_count * 3),
                                     np.reshape(v, objects_count * 3),
@@ -364,27 +346,14 @@ class SimpleIntegrator:
                             )
                             store_count += 1
 
-                        if (count + 2) == npts:
-                            self.sol_state[-1] = np.concatenate(
-                                (
-                                    np.reshape(x, objects_count * 3),
-                                    np.reshape(v, objects_count * 3),
-                                )
-                            )
-
                         if not no_progress_bar:
                             progress_bar.update(
-                                task, completed=store_count, store_count=store_count + 1
+                                task, completed=store_count, store_count=store_count
                             )
-
-                    if not no_progress_bar:
-                        progress_bar.update(
-                            task, completed=store_npts, store_count=store_npts
-                        )
 
                 case "leapfrog":
                     a = acceleration(objects_count, x, m, G)
-                    for count in range(npts - 1):
+                    for count in range(1, npts + 1):
                         x, v, a, x_err_comp_sum, v_err_comp_sum = self.leapfrog(
                             objects_count,
                             x,
@@ -396,8 +365,8 @@ class SimpleIntegrator:
                             x_err_comp_sum,
                             v_err_comp_sum,
                         )
-                        if (count + 1) % self.store_every_n == 0:
-                            self.sol_state[store_count + 1] = np.concatenate(
+                        if count % self.store_every_n == 0:
+                            self.sol_state[store_count] = np.concatenate(
                                 (
                                     np.reshape(x, objects_count * 3),
                                     np.reshape(v, objects_count * 3),
@@ -405,23 +374,10 @@ class SimpleIntegrator:
                             )
                             store_count += 1
 
-                        if (count + 2) == npts:
-                            self.sol_state[-1] = np.concatenate(
-                                (
-                                    np.reshape(x, objects_count * 3),
-                                    np.reshape(v, objects_count * 3),
-                                )
-                            )
-
                         if not no_progress_bar:
                             progress_bar.update(
-                                task, completed=store_count, store_count=store_count + 1
+                                task, completed=store_count, store_count=store_count
                             )
-
-                    if not no_progress_bar:
-                        progress_bar.update(
-                            task, completed=store_npts, store_count=store_npts
-                        )
 
         return self.sol_state, self.sol_time, self.sol_dt
 
