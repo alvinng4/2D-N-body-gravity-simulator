@@ -979,7 +979,7 @@ class GravitySimulatorCLI:
         labels = []
         legend = False
 
-        for objects_name in self.gravitational_system.objects_names:
+        for objects_name in self.gravitational_system.objects_names[1:]:
             try:
                 colors.append(self.solar_like_systems_colors[objects_name])
                 legend = True  # Show legend if one of the name is recognized
@@ -1008,7 +1008,7 @@ class GravitySimulatorCLI:
         labels = []
         legend = False
 
-        for objects_name in self.gravitational_system.objects_names:
+        for objects_name in self.gravitational_system.objects_names[1:]:
             try:
                 colors.append(self.solar_like_systems_colors[objects_name])
                 legend = True  # Show legend if one of the name is recognized
