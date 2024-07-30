@@ -276,49 +276,69 @@ class GravitationalSystem:
         )
         self.add(x + primary_object_x, v + primary_object_v, m, object_name)
 
-    def remove(self, index: int = None, name: str = None) -> None:
+    def remove(self, index: int = None, indices: typing.Union[list, np.ndarray] = None, name: str = None) -> None:
         """
         Remove a celestial body from the system,
-        either by index or by name
+        either by index or by name. An array of
+        indices can also be used, in which case
+        the index and name will be ignored.
 
         Parameters
         ----------
         index : int (optional)
             Index of the celestial body to be removed
+        indices : list, np.ndarray (optional)
+            Indices of the celestial bodies to be removed
         name : str (optional)
             Name of the celestial body to be removed
 
         Raises
         ------
         ValueError
-            If index or name is not provided
-        ValueError
-            If system has no celestial bodies
+            If no parameter or more than one parameter is provided
         ValueError
             If name is not found in system
         ValueError
             If index is out of range
         """
-        if index is None and name is None:
-            raise ValueError("Error: index or name must be provided.")
-
-        if self.m is None or self.m.size == 0:
-            raise ValueError("Error: system has no celestial bodies.")
-
+        parameters_count = 0
+        if index is not None:
+            parameters_count += 1
+        if indices is not None:
+            parameters_count += 1
         if name is not None:
-            if name not in self.objects_names:
+            parameters_count += 1
+
+        if parameters_count == 0:
+            raise ValueError("Error: at least one parameter must be provided.")
+        if parameters_count > 1:
+            raise ValueError("Error: only one parameter is allowed.")
+
+        if indices is not None:
+            if isinstance(indices, list):
+                indices = np.array(indices)
+            mask = np.ones(self.objects_count, dtype=bool)
+            mask[indices] = False
+            self.x = self.x[mask]
+            self.v = self.v[mask]
+            self.m = self.m[mask]
+            self.objects_count = self.m.size
+            self.objects_names = np.array(self.objects_names)[mask].tolist()
+
+        else:
+            if (name is not None) and (name not in self.objects_names):
                 raise ValueError("Error: name not found in system.")
+                index = self.objects_names.index(name)
 
-            index = self.objects_names.index(name)
+            if index >= self.m.size or index < 0:
+                raise ValueError("Error: index out of range.")
 
-        if index >= self.m.size or index < 0:
-            raise ValueError("Error: index out of range.")
-
-        self.x = np.delete(self.x, index, axis=0)
-        self.v = np.delete(self.v, index, axis=0)
-        self.m = np.delete(self.m, index)
-        self.objects_count = self.m.size
-        del self.objects_names[index]
+            if index is not None:
+                self.x = np.delete(self.x, index, axis=0)
+                self.v = np.delete(self.v, index, axis=0)
+                self.m = np.delete(self.m, index)
+                self.objects_count = self.m.size
+                del self.objects_names[index]
 
     def center_of_mass_correction(self) -> None:
         """

@@ -33,6 +33,7 @@ Checkout the interactive simulator at https://www.github.com/alvinng4/OrbitSim
     - [Fixed step size methods](#fixed-step-size-methods)
     - [Embedded Runge-Kutta methods](#embdedded-runge-kutta-methods)
     - [IAS15](#IAS15)
+    - [WHFast](#whfast)
 * [Feedback and Bugs](#feedback-and-bugs)
 * [Data Sources](#data-sources)
 * [References](#references)
@@ -53,10 +54,17 @@ Install the required packages by
 pip install .
 ```
 
+
+
+This project offers two user-interface: API and CLI. 
+CLI is good for starters, 
+but API is generally recommended as it is 
+more flexible and provides more options.
+
 ## GravitySimulator API
 
 You may import the GravitySimulator API from `gravity_sim` to perform gravity simulation.
-See `tutorial.ipynb` or `asteroid_belt_animation.py` for some example uses.
+See `tutorial.ipynb` or `asteroid_belt_animation.py` for some example usage.
 ```
 from gravity_sim immport GravitySimulator
 
@@ -72,6 +80,7 @@ grav_sim.launch_simulation(
     store_every_n=50,
 )
 
+grav_sim.plot_2d_trajectory()
 grav_sim.save_results()
 ```
 
