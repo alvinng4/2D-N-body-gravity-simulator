@@ -114,6 +114,7 @@ class GravitySimulator:
         flush_results_path: str = None,
         no_progress_bar: bool = False,
         no_print: bool = False,
+        **kwargs,
     ) -> None:
         try:
             self.simulator.launch_simulation(
@@ -128,6 +129,7 @@ class GravitySimulator:
                 flush_results_path,
                 no_progress_bar,
                 no_print,
+                **kwargs,
             )
         except KeyboardInterrupt:
             if not no_print:

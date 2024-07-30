@@ -71,6 +71,7 @@ class Simulator:
         flush_results_path: str = None,
         no_progress_bar: bool = False,
         no_print: bool = False,
+        **kwargs,
     ) -> None:
         """
         Launch simulation
@@ -239,6 +240,7 @@ class Simulator:
                         flush,
                         str(flush_path),
                         no_progress_bar,
+                        **kwargs,
                     )
 
         else:

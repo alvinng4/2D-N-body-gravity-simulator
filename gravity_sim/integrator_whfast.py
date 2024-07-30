@@ -48,6 +48,7 @@ class WHFast:
         flush: bool = False,
         flush_path: str = "",
         no_progress_bar: bool = False,
+        kepler_auto_remove: bool = False,
     ):
         class Solutions(ctypes.Structure):
             _fields_ = [
@@ -81,6 +82,7 @@ class WHFast:
 
         queue = Queue()
         solution = Solutions()
+        kepler_actual_objects_count = ctypes.c_int(objects_count)
 
         whfast_thread = threading.Thread(
             target=whfast_wrapper,
@@ -98,6 +100,8 @@ class WHFast:
                 ctypes.c_int(store_npts),
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
+                ctypes.c_bool(kepler_auto_remove),
+                ctypes.byref(kepler_actual_objects_count),
                 ctypes.c_bool(flush),
                 flush_path.encode("utf-8"),
                 ctypes.byref(solution),
@@ -181,9 +185,13 @@ class WHFast:
         flush: bool = False,
         flush_path: str = "",
         no_progress_bar: bool = False,
+        kepler_auto_remove: bool = False,
     ):
         if flush:
             raise NotImplementedError("Flush is not implemented for numpy")
+        
+        if kepler_auto_remove:
+            raise NotImplementedError("kepler_auto_remove is not implemented for numpy")
 
         npts = int(tf // dt)
         if self.store_every_n != 1:

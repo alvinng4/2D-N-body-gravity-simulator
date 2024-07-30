@@ -147,25 +147,24 @@ def main():
             if len(row) == 0 or row[0].startswith("#"):
                 continue
 
+            ax.grid(False)
+            ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+            ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+            ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_zticks([])
+            ax.xaxis.set_visible(False)
+            ax.yaxis.set_visible(False)
+            ax.zaxis.set_visible(False)
+            ax.xaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+            ax.yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+            ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+
             row = row[3:]
             row = list(map(float, row))
 
-            # Plot the trajectory from the beginning to current position
             for i in range(0, massive_objects_count):
-                ax.grid(False)
-                ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-                ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-                ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-                ax.set_xticks([])
-                ax.set_yticks([])
-                ax.set_zticks([])
-                ax.xaxis.set_visible(False)
-                ax.yaxis.set_visible(False)
-                ax.zaxis.set_visible(False)
-                ax.xaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-                ax.yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-                ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-
                 ax.plot(
                     np.array(row[i * 3]),
                     np.array(row[1 + i * 3]),

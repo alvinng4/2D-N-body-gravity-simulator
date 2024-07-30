@@ -22,7 +22,10 @@ void whfast_drift(
     const real *restrict m,
     const real *restrict eta,
     real G,
-    real dt
+    real dt,
+    bool kepler_auto_remove,
+    bool *restrict kepler_failed_bool_array,
+    bool *restrict kepler_failed_flag
 );
 
 void whfast_acceleration_pairwise(
@@ -76,7 +79,10 @@ void propagate_kepler(
     real *restrict jacobi_x,
     real *restrict jacobi_v,
     real gm,
-    real dt
+    real dt,
+    bool kepler_auto_remove,
+    bool *restrict kepler_failed_bool_array,
+    bool *restrict kepler_failed_flag
 );
 
 /**
@@ -93,6 +99,10 @@ void propagate_kepler(
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
+ * \param kepler_auto_remove_every_n Every nth point, clear objects that failed
+ *                                  to converge in Kepler's equation
+ * \param kepler_actual_objects_count Pointer to the actual number of objects
+ *                                    after clearing objects
  * \param flush Flag to indicate whether to store solution into data file directly
  * \param flush_path Path to the file to store the solution
  * \param solution Pointer to a Solution struct, in order to store the solution
@@ -115,6 +125,8 @@ WIN32DLL_API int whfast(
     int store_npts,
     int store_every_n,
     int *restrict store_count,
+    bool kepler_auto_remove,
+    int *restrict kepler_actual_objects_count,
     const bool flush,
     const char *restrict flush_path,
     Solutions *restrict solution,
@@ -162,6 +174,20 @@ WIN32DLL_API int whfast(
     {
         printf("Error: Failed to allocate memory for calculation\n");
         goto err_calc_memory;
+    }
+
+    // Check if objects failed to converge in Kepler's equation
+    bool *kepler_failed_bool_array = NULL;
+    bool kepler_failed_flag = false;
+    if (kepler_auto_remove)
+    {
+        kepler_failed_bool_array = calloc(objects_count, sizeof(bool));
+
+        if (!kepler_failed_bool_array)
+        {
+            printf("Error: Failed to allocate memory for kepler_failed_bool_array\n");
+            goto err_kepler_memory;
+        }
     }
 
     // Allocate memory for solution output
@@ -222,7 +248,7 @@ WIN32DLL_API int whfast(
     // Main Loop
     for (int64 count = 1; count <= npts; count++)
     {
-        whfast_drift(objects_count, jacobi_x, jacobi_v, m, eta, G, dt);
+        whfast_drift(objects_count, jacobi_x, jacobi_v, m, eta, G, dt, kepler_auto_remove, kepler_failed_bool_array, &kepler_failed_flag);
         jacobi_to_cartesian(objects_count, jacobi_x, jacobi_v, x, v, m, eta);
         whfast_acceleration(objects_count, jacobi_x, x, a, m, eta, G);
         whfast_kick(objects_count, jacobi_v, a, dt);
@@ -247,6 +273,40 @@ WIN32DLL_API int whfast(
             (*store_count)++;
         }
 
+        // Clear objects that failed to converge in Kepler's equation
+        if (kepler_auto_remove && kepler_failed_flag)
+        {
+            kepler_failed_flag = false;
+            int kepler_remove_count = 0;
+
+            for (int i = 0; i < objects_count; i++)
+            {
+                if (kepler_failed_bool_array[i])
+                {
+                    kepler_remove_count++;
+                    kepler_failed_bool_array[i] = false;
+                }
+                else if (kepler_remove_count > 0)
+                {
+                    memcpy(&jacobi_x[(i - kepler_remove_count) * 3], &jacobi_x[i * 3], 3 * sizeof(real));
+                    memcpy(&jacobi_v[(i - kepler_remove_count) * 3], &jacobi_v[i * 3], 3 * sizeof(real));
+                    memcpy(&m[i - kepler_remove_count], &m[i], sizeof(real));
+                }
+            }
+            
+            if (kepler_remove_count > 0)
+            {
+                objects_count -= kepler_remove_count;
+
+                eta[0] = m[0];
+                for (int i = 1; i < objects_count; i++)
+                {
+                    eta[i] = eta[i - 1] + m[i];
+                }
+            }
+            printf("Kepler_auto_remove: %d object(s) removed. Remaining objects: %d\n", kepler_remove_count, objects_count);
+        }
+
         // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)
         {
@@ -255,11 +315,17 @@ WIN32DLL_API int whfast(
     }
 
     // Exit after simulation is finished
+    *kepler_actual_objects_count = objects_count;
+
     free(jacobi_x);
     free(jacobi_v);
     free(temp_jacobi_v);
     free(a);
     free(eta);
+    if (kepler_auto_remove)
+    {
+        free(kepler_failed_bool_array);
+    }
 
     if (flush)
     {
@@ -286,7 +352,12 @@ err_sol_output_memory:
         free(sol_state);
         free(sol_time);
         free(sol_dt);
-    }    
+    }
+err_kepler_memory:
+    if (kepler_auto_remove)
+    {
+        free(kepler_failed_bool_array);
+    }
 err_calc_memory:
     free(jacobi_x);
     free(jacobi_v);
@@ -326,13 +397,25 @@ void whfast_drift(
     const real *restrict m,
     const real *restrict eta,
     real G,
-    real dt
+    real dt,
+    bool kepler_auto_remove,
+    bool *restrict kepler_failed_bool_array,
+    bool *restrict kepler_failed_flag
 )
 {
     for (int i = 1; i < objects_count; i++)
     {
         real gm = G * m[0] * eta[i] / eta[i - 1];
-        propagate_kepler(i, jacobi_x, jacobi_v, gm, dt);
+        propagate_kepler(
+            i,
+            jacobi_x,
+            jacobi_v,
+            gm,
+            dt,
+            kepler_auto_remove,
+            kepler_failed_bool_array,
+            kepler_failed_flag
+        );
     }
 }
 
@@ -825,7 +908,10 @@ void propagate_kepler(
     real *restrict jacobi_x,
     real *restrict jacobi_v,
     real gm,
-    real dt
+    real dt,
+    bool kepler_auto_remove,
+    bool *restrict kepler_failed_bool_array,
+    bool *restrict kepler_failed_flag
 )
 {
     real temp_vec[3];
@@ -920,9 +1006,17 @@ void propagate_kepler(
 
     if (j == 500)
     {
-        printf("Warning: Kepler's equation did not converge, error = %23.15e\n",
-            fabs(chi - chi_0)
-        );
+        if (!kepler_auto_remove)
+        {
+            printf("Warning: Kepler's equation did not converge, error = %g\n",
+                fabs(chi - chi_0)
+            );
+        }
+        else
+        {
+            kepler_failed_bool_array[i] = true;
+            *kepler_failed_flag = true;
+        }
     }
 
     // Evaluate f and g functions, together with their derivatives
