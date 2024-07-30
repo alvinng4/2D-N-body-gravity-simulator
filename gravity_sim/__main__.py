@@ -693,7 +693,7 @@ class GravitySimulatorCLI:
             self.store_every_n,
             self.simulator.run_time,
             self.simulator.m,
-            self.simulator.data_size,
+            _,
         ) = common.read_results(file_path=read_file_path)
         self.gravitational_system.name = self.simulator.system_name
         self.gravitational_system.objects_names = [
