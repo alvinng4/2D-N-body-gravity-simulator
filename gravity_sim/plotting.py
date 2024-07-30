@@ -702,6 +702,58 @@ def plot_dt(
     plt.show()
 
 
+def plot_eccentricity(
+    eccentricity: np.ndarray,
+    sol_time: np.ndarray,
+    colors=None,
+    labels=None,
+    legend=False,
+    title: str = "Eccentricity against time",
+    xlabel: str = "Time",
+    ylabel: str = "Eccentricity",
+) -> None:
+    objects_count = len(eccentricity[0])
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    for i in range(objects_count):
+        ax.plot(sol_time, eccentricity[:, i], color=colors[i], label=labels[i])
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+    if legend:
+        fig.legend(loc="center right", borderaxespad=0.2)
+        fig.tight_layout()
+
+    plt.show()
+
+
+def plot_inclination(
+    inclination: np.ndarray,
+    sol_time: np.ndarray,
+    colors=None,
+    labels=None,
+    legend=False,
+    title: str = "Inclination against time",
+    xlabel: str = "Time",
+    ylabel: str = "Inclination (radians)",
+) -> None:
+    objects_count = len(inclination[0])
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    for i in range(objects_count):
+        ax.plot(sol_time, inclination[:, i], color=colors[i], label=labels[i])
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+    if legend:
+        fig.legend(loc="center right", borderaxespad=0.2)
+        fig.tight_layout()
+
+    plt.show()
+
+
 def plot_compare_rel_energy(grav_plot):
     filepaths_to_labels = {}
     filepaths_to_labels["current"] = input(

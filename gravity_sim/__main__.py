@@ -116,11 +116,15 @@ class GravitySimulatorCLI:
                 if self.is_simulate:
                     self.computed_energy = False
                     self.computed_angular_momentum = False
+                    self.computed_eccentricity = False
+                    self.computed_inclination = False
                     self._launch_simulation()
 
                 else:
                     self.computed_energy = True
                     self.computed_angular_momentum = False
+                    self.computed_eccentricity = False
+                    self.computed_inclination = False
                     self._read_simulation_data()
 
                 if self.tf_unit == "years":
@@ -165,17 +169,19 @@ class GravitySimulatorCLI:
             + "5. Plot relative energy error\n"
             + "6. Plot relative angular momentum error\n"
             + "7. Plot dt\n"
-            + "8. Read data size\n"
-            + "9. Trim data\n"
-            + "10. Save simulation data\n"
-            + "11. Compare relative energy error\n"
-            + "12. Restart program\n"
-            + "13. Exit\n"
+            + "8. Plot eccentricity\n"
+            + "9. Plot inclination\n"
+            + "10. Read data size\n"
+            + "11. Trim data\n"
+            + "12. Save simulation data\n"
+            + "13. Compare relative energy error\n"
+            + "14. Restart program\n"
+            + "15. Exit\n"
             + "Enter action (Number): "
         )
 
         while True:
-            action = common.get_int(msg, larger_than=0, smaller_than=14)
+            action = common.get_int(msg, larger_than=0, smaller_than=16)
             print()
 
             match action:
@@ -194,24 +200,28 @@ class GravitySimulatorCLI:
                 case 7:
                     self._plot_dt_wrapper()
                 case 8:
+                    self._plot_eccentricity_wrapper()
+                case 9:
+                    self._plot_inclination_wrapper()
+                case 10:
                     print(f"There are {self.simulator.data_size} lines of data.")
                     print()
-                case 9:
+                case 11:
                     print(f"There are {self.simulator.data_size} lines of data.")
                     self.trim_data()
-                case 10:
+                case 12:
                     if not self.computed_energy:
                         self.simulator.compute_energy()
                         self.computed_energy = True
                     self._save_results()
-                case 11:
+                case 13:
                     if not self.computed_energy:
                         self.simulator.compute_energy()
                         self.computed_energy = True
                     plotting.plot_compare_rel_energy(self)
-                case 12:
+                case 14:
                     break
-                case 13:
+                case 15:
                     print("Exiting the program...")
                     sys.exit(0)
 
@@ -854,48 +864,18 @@ class GravitySimulatorCLI:
         if not is_cancel:
             print("Animating 2D trajectory (xy plane) in .gif...")
 
-            colors = None
-            labels = None
-            legend = False
+            colors = []
+        labels = []
+        legend = False
 
-            if self.gravitational_system in self.solar_like_systems:
-                # Get specific colors if the system is solar-like
-                match self.gravitational_system:
-                    case "sun_earth_moon":
-                        objs_name = ["Sun", "Earth", "Moon"]
-                    case "solar_system":
-                        objs_name = [
-                            "Sun",
-                            "Mercury",
-                            "Venus",
-                            "Earth",
-                            "Mars",
-                            "Jupiter",
-                            "Saturn",
-                            "Uranus",
-                            "Neptune",
-                        ]
-                    case "solar_system_plus":
-                        objs_name = [
-                            "Sun",
-                            "Mercury",
-                            "Venus",
-                            "Earth",
-                            "Mars",
-                            "Jupiter",
-                            "Saturn",
-                            "Uranus",
-                            "Neptune",
-                            "Pluto",
-                            "Ceres",
-                            "Vesta",
-                        ]
-                colors = [
-                    self.solar_like_systems_colors[objs_name[i]]
-                    for i in range(grav_plot.simulator.objects_count)
-                ]
-                labels = objs_name
-                legend = True
+        for objects_name in self.gravitational_system.objects_names:
+            try:
+                colors.append(self.solar_like_systems_colors[objects_name])
+                legend = True  # Show legend if one of the name is recognized
+            except:
+                colors.append(None)
+
+            labels.append(objects_name)
 
             plotting.animate_2d_traj_gif(
                 self.simulator.objects_count,
@@ -926,48 +906,18 @@ class GravitySimulatorCLI:
         if not is_cancel:
             print("Animating 3D trajectory in .gif...")
 
-            colors = None
-            labels = None
-            legend = False
+            colors = []
+        labels = []
+        legend = False
 
-            if self.gravitational_system in self.solar_like_systems:
-                # Get specific colors if the system is solar-like
-                match self.gravitational_system:
-                    case "sun_earth_moon":
-                        objs_name = ["Sun", "Earth", "Moon"]
-                    case "solar_system":
-                        objs_name = [
-                            "Sun",
-                            "Mercury",
-                            "Venus",
-                            "Earth",
-                            "Mars",
-                            "Jupiter",
-                            "Saturn",
-                            "Uranus",
-                            "Neptune",
-                        ]
-                    case "solar_system_plus":
-                        objs_name = [
-                            "Sun",
-                            "Mercury",
-                            "Venus",
-                            "Earth",
-                            "Mars",
-                            "Jupiter",
-                            "Saturn",
-                            "Uranus",
-                            "Neptune",
-                            "Pluto",
-                            "Ceres",
-                            "Vesta",
-                        ]
-                colors = [
-                    self.solar_like_systems_colors[objs_name[i]]
-                    for i in range(grav_plot.simulator.objects_count)
-                ]
-                labels = objs_name
-                legend = True
+        for objects_name in self.gravitational_system.objects_names:
+            try:
+                colors.append(self.solar_like_systems_colors[objects_name])
+                legend = True  # Show legend if one of the name is recognized
+            except:
+                colors.append(None)
+
+            labels.append(objects_name)
 
             plotting.animate_3d_traj_gif(
                 self.simulator.objects_count,
@@ -1017,6 +967,64 @@ class GravitySimulatorCLI:
             self.sol_time_in_tf_unit,
             xlabel=f"Time ({self.tf_unit})",
             ylabel="dt (days)",
+        )
+        print()
+
+    def _plot_eccentricity_wrapper(self) -> None:
+        if not self.computed_eccentricity:
+            self.simulator.compute_eccentricity()
+            self.computed_eccentricity = True
+
+        colors = []
+        labels = []
+        legend = False
+
+        for objects_name in self.gravitational_system.objects_names:
+            try:
+                colors.append(self.solar_like_systems_colors[objects_name])
+                legend = True  # Show legend if one of the name is recognized
+            except:
+                colors.append(None)
+
+            labels.append(objects_name)
+
+        print("Plotting eccentricity...(Please check the window)")
+        plotting.plot_eccentricity(
+            self.simulator.eccentricity,
+            self.sol_time_in_tf_unit,
+            colors=colors,
+            labels=labels,
+            legend=legend,
+            xlabel=f"Time ({self.tf_unit})",
+        )
+        print()
+
+    def _plot_inclination_wrapper(self) -> None:
+        if not self.computed_inclination:
+            self.simulator.compute_inclination()
+            self.computed_inclination = True
+
+        colors = []
+        labels = []
+        legend = False
+
+        for objects_name in self.gravitational_system.objects_names:
+            try:
+                colors.append(self.solar_like_systems_colors[objects_name])
+                legend = True  # Show legend if one of the name is recognized
+            except:
+                colors.append(None)
+
+            labels.append(objects_name)
+
+        print("Plotting inclination...(Please check the window)")
+        plotting.plot_inclination(
+            self.simulator.inclination,
+            self.sol_time_in_tf_unit,
+            colors=colors,
+            labels=labels,
+            legend=legend,
+            xlabel=f"Time ({self.tf_unit})",
         )
         print()
 

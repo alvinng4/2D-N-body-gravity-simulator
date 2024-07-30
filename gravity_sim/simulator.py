@@ -574,6 +574,86 @@ class Simulator:
         print(f"Run time: {(stop - start):.3f} s")
         print("")
 
+    def compute_eccentricity(self):
+        """
+        Compute the eccentricity using the sol_state array,
+        assuming that the first object is the central object
+
+        C library is not implemented since this is mostly NumPy
+        vector operations, which can be done almost instantly.
+        """
+        print("Computing eccentricity (Assuming the first body is the central star)...")
+        self.eccentricity = np.zeros(self.data_size)
+
+        start = timeit.default_timer()
+        x = (
+            self.sol_state[:, 3 : (self.objects_count * 3)]
+            .reshape(-1, (self.objects_count - 1), 3)
+            .copy()
+        )
+        v = (
+            self.sol_state[:, (self.objects_count + 1) * 3 :]
+            .reshape(-1, (self.objects_count - 1), 3)
+            .copy()
+        )
+
+        x = x - self.sol_state[:, :3].reshape(-1, 1, 3)
+        v = v - self.sol_state[
+            :, (self.objects_count) * 3 : (self.objects_count + 1) * 3
+        ].reshape(-1, 1, 3)
+
+        eccentricity = (
+            np.cross(v, np.cross(x, v))
+            / (self.G * (self.m[0] + self.m[1:]))[:, np.newaxis]
+            - x / np.linalg.norm(x, axis=2)[:, :, np.newaxis]
+        )
+        self.eccentricity = np.linalg.norm(eccentricity, axis=2)
+
+        stop = timeit.default_timer()
+        print(f"Run time: {(stop - start):.3f} s")
+        print("")
+
+    def compute_inclination(self):
+        """
+        Compute the inclination using the sol_state array,
+        assuming that the first object is the central object
+
+        C library is not implemented since this is mostly NumPy
+        vector operations, which can be done almost instantly.
+        """
+        print("Computing inclination (Assuming the first body is the central star)...")
+        self.inclination = np.zeros(self.data_size)
+
+        start = timeit.default_timer()
+        x = (
+            self.sol_state[:, 3 : (self.objects_count * 3)]
+            .reshape(-1, (self.objects_count - 1), 3)
+            .copy()
+        )
+        v = (
+            self.sol_state[:, (self.objects_count + 1) * 3 :]
+            .reshape(-1, (self.objects_count - 1), 3)
+            .copy()
+        )
+
+        x = x - self.sol_state[:, :3].reshape(-1, 1, 3)
+        v = v - self.sol_state[
+            :, (self.objects_count) * 3 : (self.objects_count + 1) * 3
+        ].reshape(-1, 1, 3)
+
+        unit_angular_momentum_vector = (
+            np.cross(x, v) / np.linalg.norm(np.cross(x, v), axis=2)[:, :, np.newaxis]
+        )
+        unit_z = np.array([0, 0, 1])
+
+        self.inclination = np.arccos(
+            np.sum(unit_angular_momentum_vector * unit_z, axis=2)
+        )
+
+        stop = timeit.default_timer()
+        print(f"Run time: {(stop - start):.3f} s")
+        print("")
+
     @staticmethod
     def combine_metadata_with_flushed_data(
         results_file_path: str,

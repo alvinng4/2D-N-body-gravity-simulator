@@ -276,7 +276,12 @@ class GravitationalSystem:
         )
         self.add(x + primary_object_x, v + primary_object_v, m, object_name)
 
-    def remove(self, index: int = None, indices: typing.Union[list, np.ndarray] = None, name: str = None) -> None:
+    def remove(
+        self,
+        name: str = None,
+        index: int = None,
+        indices: typing.Union[list, np.ndarray] = None,
+    ) -> None:
         """
         Remove a celestial body from the system,
         either by index or by name. An array of
@@ -285,12 +290,12 @@ class GravitationalSystem:
 
         Parameters
         ----------
+        name : str (optional)
+            Name of the celestial body to be removed
         index : int (optional)
             Index of the celestial body to be removed
         indices : list, np.ndarray (optional)
             Indices of the celestial bodies to be removed
-        name : str (optional)
-            Name of the celestial body to be removed
 
         Raises
         ------
@@ -302,11 +307,11 @@ class GravitationalSystem:
             If index is out of range
         """
         parameters_count = 0
+        if name is not None:
+            parameters_count += 1
         if index is not None:
             parameters_count += 1
         if indices is not None:
-            parameters_count += 1
-        if name is not None:
             parameters_count += 1
 
         if parameters_count == 0:
@@ -327,7 +332,7 @@ class GravitationalSystem:
 
         else:
             if name is not None:
-                if (name not in self.objects_names):
+                if name not in self.objects_names:
                     raise ValueError("Error: name not found in system.")
                 else:
                     index = self.objects_names.index(name)

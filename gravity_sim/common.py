@@ -380,6 +380,7 @@ def read_results(
 
     system_name = None
     integrator = None
+    G = None
     dt = None
     tolerance = None
     store_every_n = None

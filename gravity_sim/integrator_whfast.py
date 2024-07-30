@@ -189,7 +189,7 @@ class WHFast:
     ):
         if flush:
             raise NotImplementedError("Flush is not implemented for numpy")
-        
+
         if kepler_auto_remove:
             raise NotImplementedError("kepler_auto_remove is not implemented for numpy")
 
