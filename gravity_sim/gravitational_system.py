@@ -326,9 +326,11 @@ class GravitationalSystem:
             self.objects_names = np.array(self.objects_names)[mask].tolist()
 
         else:
-            if (name is not None) and (name not in self.objects_names):
-                raise ValueError("Error: name not found in system.")
-                index = self.objects_names.index(name)
+            if name is not None:
+                if (name not in self.objects_names):
+                    raise ValueError("Error: name not found in system.")
+                else:
+                    index = self.objects_names.index(name)
 
             if index >= self.m.size or index < 0:
                 raise ValueError("Error: index out of range.")
