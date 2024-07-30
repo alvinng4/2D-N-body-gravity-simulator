@@ -549,7 +549,7 @@ void whfast_acceleration_massless(
     int massless_objects_count = 0;
     for (int i = 0; i < objects_count; i++)
     {
-        if (m[i] != 0)
+        if (m[i] != 0.0)
         {
             massive_indices[massive_objects_count] = i;
             massive_objects_count++;
@@ -686,7 +686,7 @@ void whfast_acceleration_massless(
         temp_jacobi_norm_cube = temp_jacobi_norm * temp_jacobi_norm * temp_jacobi_norm;
         for (int j = 0; j < 3; j++)
         {
-            a[idx_i * 3 + j] = G * m[0] * eta[idx_i] / eta[idx_i - 1]
+            a[idx_i * 3 + j] = G * m[0]
             * (
                 jacobi_x[idx_i * 3 + j] / temp_jacobi_norm_cube
                 - temp_vec[j] / temp_vec_norm_cube
@@ -698,7 +698,7 @@ void whfast_acceleration_massless(
             idx_j = massive_indices[j];
             if (idx_j >= idx_i)
             {
-                continue;
+                break;
             }
 
             // Calculate x_ji
@@ -713,9 +713,9 @@ void whfast_acceleration_massless(
             aux[1] += G * m[idx_j] * temp_vec[1] / temp_vec_norm_cube;
             aux[2] += G * m[idx_j] * temp_vec[2] / temp_vec_norm_cube;
         }
-        a[idx_i * 3 + 0] -= aux[0] * eta[idx_i] / eta[idx_i - 1];
-        a[idx_i * 3 + 1] -= aux[1] * eta[idx_i] / eta[idx_i - 1];
-        a[idx_i * 3 + 2] -= aux[2] * eta[idx_i] / eta[idx_i - 1];
+        a[idx_i * 3 + 0] -= aux[0];
+        a[idx_i * 3 + 1] -= aux[1];
+        a[idx_i * 3 + 2] -= aux[2];
 
         aux[0] = 0.0;
         aux[1] = 0.0;
@@ -754,7 +754,7 @@ void whfast_acceleration_massless(
             idx_j = massive_indices[j];
             if (idx_j >= idx_i)
             {
-                continue;
+                break;
             }
 
             for (int k = j + 1; k < massive_objects_count; k++)
@@ -1008,9 +1008,7 @@ void propagate_kepler(
     {
         if (!kepler_auto_remove)
         {
-            printf("Warning: Kepler's equation did not converge, error = %g\n",
-                fabs(chi - chi_0)
-            );
+            printf("Warning: Kepler's equation did not converge\n");
         }
         else
         {

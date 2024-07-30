@@ -79,7 +79,7 @@ WIN32DLL_API void acceleration_massless(
     int massless_objects_count = 0;
     for (int i = 0; i < objects_count; i++)
     {
-        if (m[i] != 0)
+        if (m[i] != 0.0)
         {
             massive_indices[massive_objects_count] = i;
             massive_objects_count++;
