@@ -413,7 +413,14 @@ class GravitySimulator:
         GravitationalSystem object
         """
         new_system = GravitationalSystem()
-        new_system.name = self.current_system.name
+        try:
+            name = self.current_system.name
+            objects_names = self.current_system.objects_names
+        except AttributeError:
+            name = None
+            objects_names = [None for _ in range(self.simulator.objects_count)]
+
+        new_system.name = name
 
         for i in range(self.simulator.objects_count):
             x = self.simulator.sol_state[index, (i * 3) : (i * 3) + 3]
@@ -426,7 +433,7 @@ class GravitySimulator:
                 + 3,
             ]
             m = self.simulator.m[i]
-            new_system.add(x, v, m, object_name=self.current_system.objects_names[i])
+            new_system.add(x, v, m, object_name=objects_names[i])
 
         return new_system
 
@@ -439,14 +446,21 @@ class GravitySimulator:
         GravitationalSystem object
         """
         new_system = GravitationalSystem()
-        new_system.name = self.current_system.name
+        try:
+            name = self.current_system.name
+            objects_names = self.current_system.objects_names
+        except AttributeError:
+            name = None
+            objects_names = [None for _ in range(self.simulator.objects_count)]
+
+        new_system.name = name
 
         for i in range(self.simulator.objects_count):
             new_system.add(
                 self.simulator.x,
                 self.simulator.v,
                 self.simulator.m,
-                object_name=self.current_system.objects_names[i],
+                object_name=objects_names[i],
             )
 
         return new_system

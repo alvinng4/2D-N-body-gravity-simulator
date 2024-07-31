@@ -378,6 +378,17 @@ def read_results(
     if start < 0 or end < -1 or step < 1:
         raise ValueError("Invalid start, end or step values.")
 
+    # Increase field limit
+    import sys
+
+    new_field_lim = sys.maxsize
+    while True:
+        try:
+            csv.field_size_limit(new_field_lim)
+            break
+        except OverflowError:
+            new_field_lim = new_field_lim // 10
+
     system_name = None
     integrator = None
     G = None
