@@ -50,6 +50,7 @@ class WHFast:
         no_progress_bar: bool = False,
         kepler_auto_remove: bool = False,
         kepler_auto_remove_limit: int = 0,
+        debug: bool = False,
     ):
         class Solutions(ctypes.Structure):
             _fields_ = [
@@ -108,6 +109,7 @@ class WHFast:
                 flush_path.encode("utf-8"),
                 ctypes.byref(solution),
                 ctypes.byref(self.is_exit_ctypes_bool),
+                ctypes.c_bool(debug),
             ),
         )
 
@@ -188,6 +190,7 @@ class WHFast:
         flush_path: str = "",
         no_progress_bar: bool = False,
         kepler_auto_remove: bool = False,
+        debug: bool = False,
     ):
         if flush:
             raise NotImplementedError("Flush is not implemented for numpy")

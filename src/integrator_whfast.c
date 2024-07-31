@@ -108,6 +108,7 @@ void propagate_kepler(
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
+ * \param debug Flag to indicate whether to print debug information
  * 
  * \retval 0 If exit successfully
  * \retval 1 If failed to allocate memory
@@ -131,7 +132,8 @@ WIN32DLL_API int whfast(
     const bool flush,
     const char *restrict flush_path,
     Solutions *restrict solution,
-    bool *restrict is_exit
+    bool *restrict is_exit,
+    bool debug
 )
 {   
     void (*whfast_acceleration)(
@@ -286,6 +288,11 @@ WIN32DLL_API int whfast(
                 if (kepler_failed_bool_array[i])
                 {
                     kepler_remove_count++;
+                    
+                    if (debug)
+                    {
+                        printf("DEBUG: Object index %d failed to converge in Kepler's equation\n", i);
+                    }
                 }
             }
 
