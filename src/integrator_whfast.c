@@ -126,6 +126,7 @@ WIN32DLL_API int whfast(
     int store_every_n,
     int *restrict store_count,
     bool kepler_auto_remove,
+    int kepler_auto_remove_limit,
     int *restrict kepler_actual_objects_count,
     const bool flush,
     const char *restrict flush_path,
@@ -277,8 +278,49 @@ WIN32DLL_API int whfast(
         if (kepler_auto_remove && kepler_failed_flag)
         {
             kepler_failed_flag = false;
-            int kepler_remove_count = 0;
 
+            // Count number of objects to be removed
+            int kepler_remove_count = 0;
+            for (int i = 0; i < objects_count; i++)
+            {
+                if (kepler_failed_bool_array[i])
+                {
+                    kepler_remove_count++;
+                }
+            }
+
+            if (kepler_remove_count >= kepler_auto_remove_limit)
+            {
+                printf("Kepler_auto_remove: %d object(s) failed to converge in Kepler's equation.\n", kepler_remove_count);
+                while (1)
+                {
+                    printf("Remove all %d object(s)? (y/n): ", kepler_remove_count);
+                    char c;
+                    scanf(" %c", &c);
+                    if (c == 'y')
+                    {
+                        break;
+                    }
+                    else if (c == 'n')
+                    {
+                        for (int i = 0; i < objects_count; i++)
+                        {
+                            if (kepler_failed_bool_array[i])
+                            {
+                                kepler_failed_bool_array[i] = false;
+                            }
+                        }
+                        goto kepler_auto_remove_limit_reject;
+                    }
+                    else
+                    {
+                        printf("Invalid input! Please enter 'y' or 'n'.\n");
+                    }
+                }
+            }
+
+            // Remove objects
+            kepler_remove_count = 0;
             for (int i = 0; i < objects_count; i++)
             {
                 if (kepler_failed_bool_array[i])
@@ -293,19 +335,16 @@ WIN32DLL_API int whfast(
                     memcpy(&m[i - kepler_remove_count], &m[i], sizeof(real));
                 }
             }
-            
-            if (kepler_remove_count > 0)
+    
+            objects_count -= kepler_remove_count;
+            eta[0] = m[0];
+            for (int i = 1; i < objects_count; i++)
             {
-                objects_count -= kepler_remove_count;
-
-                eta[0] = m[0];
-                for (int i = 1; i < objects_count; i++)
-                {
-                    eta[i] = eta[i - 1] + m[i];
-                }
+                eta[i] = eta[i - 1] + m[i];
             }
             printf("Kepler_auto_remove: %d object(s) removed. Remaining objects: %d\n", kepler_remove_count, objects_count);
         }
+kepler_auto_remove_limit_reject:
 
         // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)
