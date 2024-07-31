@@ -100,7 +100,7 @@ def main():
         flush_results_path=str(data_path),
         no_print=True,
         kepler_auto_remove=True,
-        kepler_auto_remove_limit=10,
+        debug=True,
     )
 
     # ---------- Data Analysis and drawing frames ---------- #

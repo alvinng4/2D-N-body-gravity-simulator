@@ -99,8 +99,8 @@ void propagate_kepler(
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
- * \param kepler_auto_remove_every_n Every nth point, clear objects that failed
- *                                  to converge in Kepler's equation
+ * \param kepler_auto_remove Automatically remove objects that failed
+ *                           to converge in Kepler's equation
  * \param kepler_actual_objects_count Pointer to the actual number of objects
  *                                    after clearing objects
  * \param flush Flag to indicate whether to store solution into data file directly
@@ -127,7 +127,6 @@ WIN32DLL_API int whfast(
     int store_every_n,
     int *restrict store_count,
     bool kepler_auto_remove,
-    int kepler_auto_remove_limit,
     int *restrict kepler_actual_objects_count,
     const bool flush,
     const char *restrict flush_path,
@@ -276,82 +275,40 @@ WIN32DLL_API int whfast(
             (*store_count)++;
         }
 
-        // Clear objects that failed to converge in Kepler's equation
+        // Remove objects that failed to converge in Kepler's equation
         if (kepler_auto_remove && kepler_failed_flag)
         {
             kepler_failed_flag = false;
 
-            // Count number of objects to be removed
-            int kepler_remove_count = 0;
-            for (int i = 0; i < objects_count; i++)
-            {
-                if (kepler_failed_bool_array[i])
-                {
-                    kepler_remove_count++;
-                    
-                    if (debug)
-                    {
-                        printf("DEBUG: Object index %d failed to converge in Kepler's equation\n", i);
-                    }
-                }
-            }
-
-            if (kepler_remove_count >= kepler_auto_remove_limit)
-            {
-                printf("Kepler_auto_remove: %d object(s) failed to converge in Kepler's equation.\n", kepler_remove_count);
-                while (1)
-                {
-                    printf("Remove all %d object(s)? (y/n): ", kepler_remove_count);
-                    char c;
-                    scanf(" %c", &c);
-                    if (c == 'y')
-                    {
-                        break;
-                    }
-                    else if (c == 'n')
-                    {
-                        for (int i = 0; i < objects_count; i++)
-                        {
-                            if (kepler_failed_bool_array[i])
-                            {
-                                kepler_failed_bool_array[i] = false;
-                            }
-                        }
-                        goto kepler_auto_remove_limit_reject;
-                    }
-                    else
-                    {
-                        printf("Invalid input! Please enter 'y' or 'n'.\n");
-                    }
-                }
-            }
-
             // Remove objects
-            kepler_remove_count = 0;
-            for (int i = 0; i < objects_count; i++)
+            int kepler_remove_count = 0;
+            for (int i = 1; i < objects_count; i++)
             {
                 if (kepler_failed_bool_array[i])
                 {
                     kepler_remove_count++;
                     kepler_failed_bool_array[i] = false;
+
+                    if (debug)
+                    {
+                        printf("DEBUG: Object index %d failed to converge in Kepler's equation\n", i);
+                    }
                 }
                 else if (kepler_remove_count > 0)
                 {
                     memcpy(&jacobi_x[(i - kepler_remove_count) * 3], &jacobi_x[i * 3], 3 * sizeof(real));
                     memcpy(&jacobi_v[(i - kepler_remove_count) * 3], &jacobi_v[i * 3], 3 * sizeof(real));
-                    memcpy(&m[i - kepler_remove_count], &m[i], sizeof(real));
+                    m[i - kepler_remove_count] = m[i];
                 }
             }
     
             objects_count -= kepler_remove_count;
-            eta[0] = m[0];
             for (int i = 1; i < objects_count; i++)
             {
                 eta[i] = eta[i - 1] + m[i];
             }
             printf("Kepler_auto_remove: %d object(s) removed. Remaining objects: %d\n", kepler_remove_count, objects_count);
         }
-kepler_auto_remove_limit_reject:
 
         // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)
@@ -1003,7 +960,7 @@ void propagate_kepler(
     // Parabolic orbits
     else
     {
-        vec_cross(&jacobi_x[i * 3], &jacobi_v[i * 3], temp_vec);
+        vec_cross(x, v, temp_vec);
         real p = vec_norm(temp_vec, 3);
         p = p * p / gm;
         real s = 0.5 * atan(1.0 / (3.0 * sqrt(gm / (p * p * p)) * dt));

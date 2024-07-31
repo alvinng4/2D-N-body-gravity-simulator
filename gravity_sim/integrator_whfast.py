@@ -49,7 +49,6 @@ class WHFast:
         flush_path: str = "",
         no_progress_bar: bool = False,
         kepler_auto_remove: bool = False,
-        kepler_auto_remove_limit: int = 0,
         debug: bool = False,
     ):
         class Solutions(ctypes.Structure):
@@ -103,7 +102,6 @@ class WHFast:
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
                 ctypes.c_bool(kepler_auto_remove),
-                ctypes.c_int(kepler_auto_remove_limit),
                 ctypes.byref(kepler_actual_objects_count),
                 ctypes.c_bool(flush),
                 flush_path.encode("utf-8"),
