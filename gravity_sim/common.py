@@ -1,5 +1,6 @@
 import csv
 import datetime
+import math
 from pathlib import Path
 import re
 import time
@@ -714,7 +715,7 @@ def trim_data(
         raise ValueError("store_every_n must be greater than 1")
 
     input_data_shape = list(data.shape)
-    input_data_shape[0] = original_data_size // store_every_n
+    input_data_shape[0] = math.ceil(original_data_size / store_every_n)
     trimmed_data = np.zeros(tuple(input_data_shape))
 
     store_count = 0

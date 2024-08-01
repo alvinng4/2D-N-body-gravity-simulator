@@ -519,11 +519,9 @@ class GravitySimulatorCLI:
         print(f"Store every nth point: {self.store_every_n}")
 
         if self.integrator in self.simulator.FIXED_STEP_SIZE_INTEGRATORS:
-            npts = int(self.tf // self.dt)
-
-            store_npts = npts
+            npts = math.ceil(self.tf / self.dt)
             if self.store_every_n != 1:
-                store_npts = npts // self.store_every_n
+                store_npts = math.floor(npts / self.store_every_n)
             else:
                 store_npts = npts
             store_npts += 1  # + 1 for t0
@@ -558,7 +556,7 @@ class GravitySimulatorCLI:
 
             else:
                 store_every_n = math.ceil(self.simulator.data_size / desired_trim_size)
-                trim_size = self.simulator.data_size // store_every_n
+                trim_size = math.ceil(self.simulator.data_size / store_every_n)
                 if common.get_bool(
                     f"The trimmed data size would be {trim_size}. Continue?"
                 ):

@@ -63,9 +63,9 @@ class SimpleIntegrator:
         self.c_lib.rk4.restype = ctypes.c_int
         self.c_lib.leapfrog.restype = ctypes.c_int
 
-        npts = int(tf // dt)
+        npts = math.ceil(tf / dt)
         if self.store_every_n != 1:
-            store_npts = npts // self.store_every_n
+            store_npts = math.floor(npts / self.store_every_n)
         else:
             store_npts = npts
         store_npts += 1  # + 1 for t0
@@ -263,9 +263,9 @@ class SimpleIntegrator:
         if flush:
             raise NotImplementedError("Flush is not implemented for numpy")
 
-        npts = int(tf // dt)
+        npts = math.ceil(tf / dt)
         if self.store_every_n != 1:
-            store_npts = npts // self.store_every_n
+            store_npts = math.floor(npts / self.store_every_n)
         else:
             store_npts = npts
         store_npts += 1  # + 1 for t0

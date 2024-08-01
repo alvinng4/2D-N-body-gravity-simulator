@@ -100,9 +100,9 @@ class WHFast:
 
         self.c_lib.whfast.restype = ctypes.c_int
 
-        npts = int(tf // dt)
+        npts = math.ceil(tf / dt)
         if self.store_every_n != 1:
-            store_npts = npts // self.store_every_n
+            store_npts = math.floor(npts / self.store_every_n)
         else:
             store_npts = npts
         store_npts += 1  # + 1 for t0
@@ -238,9 +238,9 @@ class WHFast:
         if kepler_auto_remove != 0:
             raise NotImplementedError("kepler_auto_remove is not implemented for NumPy")
 
-        npts = int(tf // dt)
+        npts = math.ceil(tf / dt)
         if self.store_every_n != 1:
-            store_npts = npts // self.store_every_n
+            store_npts = math.floor(npts / self.store_every_n)
         else:
             store_npts = npts
         store_npts += 1  # + 1 for t0
