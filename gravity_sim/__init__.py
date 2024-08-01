@@ -66,7 +66,7 @@ class GravitySimulator:
         self.compute_angular_momentum = self.simulator.compute_angular_momentum
         self.trim_data = common.trim_data
 
-    def create_system(self, system_name: str = None):
+    def create_system(self, system_name: str = None) -> GravitationalSystem:
         """
         Create a gravitational system
 

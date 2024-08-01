@@ -29,8 +29,8 @@ Checkout the interactive simulator at https://www.github.com/alvinng4/OrbitSim
 * [Output animation in .gif](#output-animation-in-gif)
 * [Saving the data](#saving-the-data)
 * [Compensated summation](#compensated-summation)
-* [Available integrators](#available-integrators)
-    - [Fixed step size methods](#fixed-step-size-methods)
+* [Integrators](#available-integrators)
+    - [Simple methods](#simple-methods)
     - [Embedded Runge-Kutta methods](#embdedded-runge-kutta-methods)
     - [IAS15](#IAS15)
     - [WHFast](#whfast)
@@ -98,7 +98,8 @@ If you want to use numpy, run the program with
 python gravity_sim [-n|--numpy]
 ```
 
-## Available systems
+## Default systems
+Some systems are available by default.
 | System | Description |
 |:-------|:------------| 
 | circular_binary_orbit | A circular orbit formed by two stars |
@@ -109,7 +110,6 @@ python gravity_sim [-n|--numpy]
 | pyth-3-body | Three stars arranged in a triangle with length ratios of 3, 4, and 5. It is a highly chaotic orbit with close encounters that can be used to test the difference between fixed and variable step size integrators. |
 | solar_system | Solar System with the Sun and the planets |
 | solar_system_plus | solar_system with the inclusion of Pluto, Ceres, and Vesta  |
-| custom | Customize your own system |
 
 ## Customizing system
 If you want to setup your own system, choose the "custom" option.
@@ -184,10 +184,10 @@ allows us to effectively eliminates round off error with very little cost.
 However, for WHFast, the improvement is little but takes 10% longer run time.
 Therefore, it is excluded from this method.
 
-## Available integrators 
-### Fixed step size methods
-Fixed step size integrators are simple methods to simulate the system with the given step size dt.
-| Fixed step size methods |
+## Integrators 
+### Simple methods
+Below are four simple fixed step size methods to simulate the system with a given step size $\text{d}t$.
+| Simple methods |
 |:-----------|
 | Euler |
 | Euler Cromer |
@@ -195,27 +195,32 @@ Fixed step size integrators are simple methods to simulate the system with the g
 | Leapfrog |
 
 ### Embedded Runge-Kutta methods
-Embedded RK methods are adaptive methods that decides the step size automatically based on the estimated error. The system would adopt smaller step size for smaller tolerance.
+Embedded RK methods are adaptive methods that decides the step size automatically based on the estimated error.
+It can resolve close encounters but fail to conserve energy over long time scele.
 
 | Embdedded Runge-Kutta methods | Recommended tolerance* |
 |:-----------|:-------------|
-| Runge–Kutta–Fehlberg 4(5) | 1e-8 to 1e-14 |
-| Dormand–Prince method (DOPRI) 5(4) | 1e-8 to 1e-14 |
-| Verner's method (DVERK) 6(5) | 1e-8 to 1e-14 |
-| Runge–Kutta–Fehlberg 7(8) | 1e-4 to 1e-8 |
+| Runge–Kutta–Fehlberg 4(5) | $10^{-8}$ to $10^{-14}$ |
+| Dormand–Prince method (DOPRI) 5(4) | $10^{-8}$ to $10^{-14}$ |
+| Verner's method (DVERK) 6(5) | $10^{-8}$ to $10^{-14}$ |
+| Runge–Kutta–Fehlberg 7(8) | $10^{-4}$ to $10^{-8}$ |
+
+*For reference only
 
 ### IAS15
-IAS15 (Implicit integrator with Adaptive time Stepping, 15th order) is a highly optimized and efficient integrator. It is the default method for this project.
+IAS15 (Implicit integrator with Adaptive time Stepping, 15th order) is a highly optimized integrator with extremely high accuracy. It is the default method for this project.
 
-Recommended tolerance*: 1e-9
+The recommended tolerance* is $10^{-9}$. Since the integrator is 15th order, changing the tolerance
+results in little improvement in performance, but a huge penalty in accuracy. Therefore, it is not
+recommended to change this tolerance.
 
 *For reference only
 
 ### WHFast
-WHFast is a fast symplectic method with fixed step size. Similar to LeapFrog, it conserves energy over long integration period.
+WHFast is a second order symplectic method with fixed step size, which conserves energy over long integration period. This integrator cannot resolve close encounter.
 
 > [!WARNING]\
-> When using WHFast, the order of adding objects matters. Since WHFast use Jacobi coordinate, we must first add the inner object. For convenience, you may also add the objects first, then call `system.sort_by_distance(primary_object_name)` or `system.sort_by_distance(primary_object_index)`
+> When using WHFast, the order of adding objects matters. Since WHFast use Jacobi coordinate, we must add the inner object first, followed by outer objects relative to the central star. For convenience, you may also add the objects in any order, then call `system.sort_by_distance(primary_object_name)` or `system.sort_by_distance(primary_object_index)`
 
 ## Feedback and Bugs
 If you find any bugs or want to leave some feedback, please feel free to let me know by opening an issue or sending an email to alvinng324@gmail.com.

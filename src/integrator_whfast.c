@@ -6,6 +6,14 @@
 
 #include "common.h"
 
+/**
+ * \brief Compute the velocity kick
+ * 
+ * \param objects_count Number of objects in the system
+ * \param jacobi_v Array of Jacobi velocity vectors
+ * \param a Array of acceleration vectors
+ * \param dt Time step of the system
+ */
 void whfast_kick(
     int objects_count,
     real *restrict jacobi_v,
@@ -13,6 +21,28 @@ void whfast_kick(
     real dt
 );
 
+/** 
+ * \brief Compute the position drift
+ * 
+ * \param objects_count Number of objects in the system
+ * \param jacobi_x Array of Jacobi position vectors
+ * \param jacobi_v Array of Jacobi velocity vectors
+ * \param m Array of masses
+ * \param eta Array of cumulative masses
+ * \param G Gravitational constant
+ * \param dt Time step of the system
+ * \param kepler_tolerance Tolerance for solving Kepler's equation
+ * \param kepler_max_iter Maximum number of iterations in solving Kepler's equation
+ * \param kepler_auto_remove Integer flag to indicate whether to remove objects
+ *                           that failed to converge in Kepler's equation
+ *                           Value 0: False
+ *                           Value 1: True for all objects
+ *                           Value 2: True for massless objects only
+ * \param kepler_failed_bool_array Array of flags to indicate whether 
+ *                                 an object failed to converge in Kepler's equation
+ * \param kepler_failed_flag Flag to indicate whether any object failed to converge
+ *                           in Kepler's equation
+ */
 void whfast_drift(
     int objects_count,
     real *restrict jacobi_x,
@@ -28,6 +58,21 @@ void whfast_drift(
     bool *restrict kepler_failed_flag
 );
 
+/**
+ * \brief Compute the pairwise gravitational acceleration
+ * 
+ * \details This is a brute-force pairwise calculation
+ *          of gravitational acceleration between all objects,
+ *          which is O(n^2) complexity.
+ * 
+ * \param objects_count Number of objects in the system
+ * \param jacobi_x Array of Jacobi position vectors
+ * \param x Array of position vectors
+ * \param a Array of acceleration vectors
+ * \param m Array of masses
+ * \param eta Array of cumulative masses
+ * \param G Gravitational constant
+ */
 void whfast_acceleration_pairwise(
     int objects_count,
     real *restrict jacobi_x,
@@ -38,6 +83,23 @@ void whfast_acceleration_pairwise(
     real G
 );
 
+/**
+ * \brief Compute the gravitational acceleration, separating massive and massless objects
+ * 
+ * \details This function calculates the gravitational acceleration
+ *          between massive and massless objects separately.
+ *          This is an O(m^2 + mn) complexity calculation,
+ *          where m and n are the number of massive and massless 
+ *          objects, respectively.
+ * 
+ * \param objects_count Number of objects in the system
+ * \param jacobi_x Array of Jacobi position vectors
+ * \param x Array of position vectors
+ * \param a Array of acceleration vectors
+ * \param m Array of masses
+ * \param eta Array of cumulative masses
+ * \param G Gravitational constant
+ */
 void whfast_acceleration_massless(
     int objects_count,
     real *restrict jacobi_x,
@@ -48,6 +110,17 @@ void whfast_acceleration_massless(
     real G
 );
 
+/**
+ * \brief Transform Cartesian coordinates to Jacobi coordinates
+ * 
+ * \param objects_count Number of objects in the system
+ * \param jacobi_x Array of Jacobi position vectors to be stored
+ * \param jacobi_v Array of Jacobi velocity vectors to be stored
+ * \param x Array of position vectors
+ * \param v Array of velocity vectors
+ * \param m Array of masses
+ * \param eta Array of cumulative masses
+ */
 void cartesian_to_jacobi(
     int objects_count,
     real *restrict jacobi_x,
@@ -58,6 +131,17 @@ void cartesian_to_jacobi(
     const real *restrict eta
 );
 
+/**
+ * \brief Transform Jacobi coordinates to Cartesian coordinates
+ * 
+ * \param objects_count Number of objects in the system
+ * \param jacobi_x Array of Jacobi position vectors
+ * \param jacobi_v Array of Jacobi velocity vectors
+ * \param x Array of position vectors to be stored
+ * \param v Array of velocity vectors to be stored
+ * \param m Array of masses
+ * \param eta Array of cumulative masses
+ */
 void jacobi_to_cartesian(
     int objects_count,
     real *restrict jacobi_x,
@@ -68,6 +152,15 @@ void jacobi_to_cartesian(
     const real *restrict eta
 );
 
+/**
+ * \brief Compute the Stumpff functions c0, c1, c2, and c3 for a given argument z
+ * 
+ * \param z Input value
+ * \param c0 Pointer to store c0
+ * \param c1 Pointer to store c1
+ * \param c2 Pointer to store c2
+ * \param c3 Pointer to store c3
+ */
 void stumpff_functions(
     real z,
     real *restrict c0,
@@ -76,6 +169,27 @@ void stumpff_functions(
     real *restrict c3
 );
 
+/**
+ * \brief Propagate the position and velocity vectors using Kepler's equation
+ * 
+ * \param i Index of the object
+ * \param jacobi_x Array of Jacobi position vectors
+ * \param jacobi_v Array of Jacobi velocity vectors
+ * \param gm Product of gravitational constant and total mass between
+ *           the object and the central object
+ * \param dt Time step of the system
+ * \param kepler_tolerance Tolerance for solving Kepler's equation
+ * \param kepler_max_iter Maximum number of iterations in solving Kepler's equation
+ * \param kepler_auto_remove Integer flag to indicate whether to remove objects
+ *                           that failed to converge in Kepler's equation
+ *                           Value 0: False
+ *                           Value 1: True for all objects
+ *                           Value 2: True for massless objects only
+ * \param kepler_failed_bool_array Array of flags to indicate whether
+ *                                an object failed to converge in Kepler's equation
+ * \param kepler_failed_flag Flag to indicate whether any object failed to converge
+ *                           in Kepler's equation
+ */
 void propagate_kepler(
     int i,
     real *restrict jacobi_x,
@@ -93,18 +207,20 @@ void propagate_kepler(
  * \brief WHFast integrator
  * 
  * \param objects_count Number of objects in the system
- * \param x Array of position vectors of all objects
- * \param v Array of velocity vectors of all objects
- * \param m Array of masses for all objects
+ * \param x Array of position vectors
+ * \param v Array of velocity vectors
+ * \param m Array of masses
  * \param G Gravitational constant
  * \param dt Time step of the system
- * \param npts Number of time steps to be integrated
  * \param acceleration_method Method to calculate acceleration
+ * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
- * \param kepler_auto_remove Automatically remove objects that failed
- *                           to converge in Kepler's equation
+ * \param kepler_tolerance Tolerance for solving Kepler's equation
+ * \param kepler_max_iter Maximum number of iterations in solving Kepler's equation
+ * \param kepler_auto_remove Integer flag to indicate whether to remove objects
+ *                           that failed to converge in Kepler's equation
  *                           Value 0: False
  *                           Value 1: True for all objects
  *                           Value 2: True for massless objects only

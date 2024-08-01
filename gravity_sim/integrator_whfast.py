@@ -46,12 +46,51 @@ class WHFast:
         tf: float,
         acceleration: str,
         flush: bool = False,
-        flush_path: str = "",
+        flush_path: str = None,
         no_progress_bar: bool = False,
         kepler_tolerance: float = 1e-12,
         kepler_max_iter: int = 500,
         kepler_auto_remove: int = 0,
     ):
+        """
+        Simulate the system using the WHFast integrator in the C library.
+
+        Parameters
+        ----------
+        objects_count : int
+            Number of objects
+        x : np.ndarray
+            Array of initial positions
+        v : np.ndarray
+            Array of initial velocities
+        m : np.ndarray
+            Array of masses
+        G : float
+            Gravitational constant
+        dt : float
+            Time step
+        tf : float
+            Simulation time
+        acceleration : str
+            Acceleration method
+        flush : bool, optional
+            Whether to flush the solution to a file, by default False
+        flush_path : str, optional
+            Path to flush the solution
+        no_progress_bar : bool, optional
+            Whether to disable the progress bar, by default False
+        kepler_tolerance : float, optional
+            Tolerance for solving Kepler's equation, by default 1e-12
+        kepler_max_iter : int, optional
+            Maximum number of iterations in solving Kepler's equation, by default 500
+        kepler_auto_remove : int, optional
+            Integer flag to indicate whether to remove objects
+            that failed to converge in Kepler's equation
+            Value 0: False
+            Value 1: True for all objects
+            Value 2: True for massless objects only
+        """
+
         class Solutions(ctypes.Structure):
             _fields_ = [
                 ("sol_state", ctypes.POINTER(ctypes.c_double)),
@@ -468,7 +507,7 @@ class WHFast:
 
         ########################################################
         # Analytical expressions for the Stumpff functions
-        # Warning: the implementation below suffers from a loss of 
+        # Warning: the implementation below suffers from a loss of
         #          precision in python.
         #
         # if z > 0:
@@ -496,7 +535,11 @@ class WHFast:
 
     @staticmethod
     def propagate_kepler(
-        jacobi_i: np.ndarray, gm: float, dt: float, kepler_tolerance: float, kepler_max_iter: int
+        jacobi_i: np.ndarray,
+        gm: float,
+        dt: float,
+        kepler_tolerance: float,
+        kepler_max_iter: int,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Propagate the position and velocity vectors using Kepler's equation.

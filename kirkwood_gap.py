@@ -74,17 +74,15 @@ def main():
             m=0.0,
             primary_object_name="Sun",
         )
-
     system.sort_by_distance(primary_object_name="Sun")
     system.center_of_mass_correction()
     system.name = "kirkwood_gap_N50000"
-    system.save()
 
     # ---------- Simulation ---------- #
     file_path = Path(__file__).parent / "gravity_sim" / "results"
     file_path.mkdir(parents=True, exist_ok=True)
     data_path = file_path / "kirkwood_gap_sim.csv"
-    
+
     print("Simulating kirkwood gap...")
     # Store about 2000 points in total
     tf = grav_sim.years_to_days(5000000)
@@ -99,8 +97,9 @@ def main():
         flush=True,
         flush_results_path=str(data_path),
         no_print=True,
-        kepler_auto_remove=True,
-        debug=True,
+        kepler_tolerance=1e-12,
+        kepler_max_iter=500,
+        kepler_auto_remove=2,  # 2: Only remove massless objects
     )
 
     # ---------- Data Analysis and drawing frames ---------- #
@@ -155,7 +154,7 @@ def main():
                 year = grav_sim.days_to_years(float(row[0])) / 1e6
                 row = row[3:]
                 row = list(map(float, row))
-                
+
                 # fmt: off
 
                 # Due to removal of asteroids by Kepler auto clear,
