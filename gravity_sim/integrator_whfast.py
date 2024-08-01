@@ -90,6 +90,8 @@ class WHFast:
             Value 0: False
             Value 1: True for all objects
             Value 2: True for massless objects only
+        kepler_auto_remove_tol : float, optional
+            Tolerance for removing objects that failed to converge in Kepler's equation
         """
 
         class Solutions(ctypes.Structure):

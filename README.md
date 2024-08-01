@@ -3,8 +3,8 @@ Newtonian N-body gravity simulator accelerated with C library
 * Ten integrators including WHFast and IAS15 are implemented
 * Barnes-Hut algorithm and CUDA acceleration will be implemented in the future
 
-This is a student project developed for learning purpose,
-and is designed to be lightweight and easy to use. 
+This is a student project developed for learning purpose.
+It aims to be lightweight and easy to use. 
 Other packages such as REBOUND are recommended for better 
 accuracy and efficiency.
 
@@ -21,19 +21,19 @@ Checkout the interactive simulator at https://www.github.com/alvinng4/OrbitSim
 * [Quick Start](#quick-start)
     - [Python version](#python-version)
     - [Installation](#installation)
+    - [Important note](#important-note)
 * [GravitySimulator API](#gravitysimulator-api)
 * [Running the program](#running-the-program)
-    - [C library / Numpy (Optional)](#c-library--numpy-optional-1)
 * [Available systems](#available-systems-1)
-* [Customizing system](#customizing-system)
+* [Make changes to saved systems](#make-changes-to-saved-systems)
+* [Saving the results](#saving-the-results)
 * [Output animation in .gif](#output-animation-in-gif)
-* [Saving the data](#saving-the-data)
-* [Compensated summation](#compensated-summation)
 * [Integrators](#available-integrators)
     - [Simple methods](#simple-methods)
     - [Embedded Runge-Kutta methods](#embdedded-runge-kutta-methods)
     - [IAS15](#IAS15)
     - [WHFast](#whfast)
+* [Compensated summation](#compensated-summation)
 * [Feedback and Bugs](#feedback-and-bugs)
 * [Data Sources](#data-sources)
 * [References](#references)
@@ -53,13 +53,23 @@ Install the required packages by
 ```
 pip install .
 ```
+If the installation is not successful, install the following packages manually:
+```
+matplotlib==3.8.3
+numpy==1.26.4
+rich==13.7.1
+```
 
-
-
-This project offers two user-interface: API and CLI. 
+## Important note
+* This project offers two user-interface: API and CLI. 
 CLI is good for starters, 
 but API is generally recommended as it is 
 more flexible and provides more options.
+* The default unit for this project is solar masses, AU and days, with G = 0.00029591220828411956.
+It is possible to change this value in the API by changing `system.G`.
+* Animations, simulation results, etc. will be stored to `gravity_sim/result` by default, unless a file path is specified.
+* This project is still in early development, and will undergo many changes. Backward capability may not be guaranteed until later versions
+* Complex animations like the asteroid belt cannot be done solely with the API functions. Sample scripts are provided in this repository (e.g. See `asteroid_belt_animation.py`)
 
 ## GravitySimulator API
 
@@ -69,6 +79,7 @@ See `tutorial.ipynb` or `asteroid_belt_animation.py` for some example usage.
 from gravity_sim immport GravitySimulator
 
 grav_sim = GravitySimulator()
+gravity_sim.integration_mode = "c_lib"  # "numpy" is also available
 
 system = grav_sim.create_system()
 system.load("solar_system")
@@ -90,13 +101,7 @@ Once you have downloaded the source files, navigate to the source directory in t
 ```
 python gravity_sim [-n|--numpy]
 ```
-
-### C library / Numpy (Optional)
-By default, the simulation is performed in C to improve performance.
-If you want to use numpy, run the program with
-```
-python gravity_sim [-n|--numpy]
-```
+`-n, --numpy`: run the program with NumPy instead of C library
 
 ## Default systems
 Some systems are available by default.
@@ -110,79 +115,6 @@ Some systems are available by default.
 | pyth-3-body | Three stars arranged in a triangle with length ratios of 3, 4, and 5. It is a highly chaotic orbit with close encounters that can be used to test the difference between fixed and variable step size integrators. |
 | solar_system | Solar System with the Sun and the planets |
 | solar_system_plus | solar_system with the inclusion of Pluto, Ceres, and Vesta  |
-
-## Customizing system
-If you want to setup your own system, choose the "custom" option.
-Note that the default unit is in solar masses, AU and days.
-
-The system data will be saved once all the required information has been entered.
-If you wish to make any changes, you can access the file at 
-```
-gravity_simulator/gravity_sim/customized_systems.csv
-``` 
-The data follow the format
-```
-Name, Gravitational constant, Number of objects, m1, ..., x1, y1, z1, ..., vx1, vy1, vz1, ...
-```
-
-## Output animation in .gif
-
-You may output the trajectory in 2D / 3D as an animation in .gif.
-The output file would be stored in `gravity_sim/result`.
-
-To generate the animation, the program would ask for the following information:
-* FPS: Frames per second
-* Desired time length of the output file
-* File name without extension
-* Dots per inch (dpi): the resolution of the output file
-* Dynamic axes limit: rescale the axes limit dynamically
-* Maintain fixed dt: attempt to maintain fixed step size with variable time step data
-
-## Saving the data
-If you choose to save the data, the numerical data will be stored in the following folder:
-```
-Gravity-Simulator/gravity_sim/results
-```
-The file will starts with the metadata which starts with `#`.
-Missing information will be saved as `None`.
-More rows may be added in the future.
-
-Below is an example:
-```
-# Data saved on (YYYY-MM-DD): 2024-07-27
-# System Name: solar_system
-# Integrator: IAS15
-# Number of objects: 9
-# Gravitational constant: 0.00029591220828411956
-# Simulation time (days): 73048.4378
-# dt (days): None
-# Tolerance: 1e-09
-# Data size: 64596
-# Store every nth point: 1
-# Run time (s): 1.4667500000214204
-# masses: 1.0 1.6601208254589484e-07 2.447838287796944e-06 3.0034896154649684e-06 3.2271560829322774e-07 0.0009547919099414248 0.00028588567002459455 4.36624961322212e-05 5.151383772654274e-05
-```
-Then, the actual data will be saved in the default unit (solar masses, AU and days), and follow this format:
-```
-time, dt, total energy, x1, y1, z1, ... vx1, vy1, vz1, ...
-```
-The saved data file can be read by the program.
-Even if the metadata is corrupted or missing, the program can still read the data file, although some information could be missing.
-
-## Compensated summation
-
-A method known as compensated summation [1], [4] is implemented for all integrators EXCEPT WHFast:
-
-When we advance our system by $\text{d}t$, we have 
-
-$x_{n+1} = x_n + \delta x$
-
-Since $\delta x$ is very small compared to $x_n$, many digits of precision will be lost.
-By compensated summation, we keep track of the losing digits using another variable, which
-allows us to effectively eliminates round off error with very little cost.
-
-However, for WHFast, the improvement is little but takes 10% longer run time.
-Therefore, it is excluded from this method.
 
 ## Integrators 
 ### Simple methods
@@ -219,8 +151,93 @@ recommended to change this tolerance.
 ### WHFast
 WHFast is a second order symplectic method with fixed step size, which conserves energy over long integration period. This integrator cannot resolve close encounter.
 
+#### `**kwargs` for WHFast
+| Argument               | Description                                                  | Default Value |
+|------------------------|--------------------------------------------------------------|---------------|
+| `kepler_tol`           | Tolerance in solving the Kepler's equation                   | $10^{-12}$    |
+| `kepler_max_iter`      | Maximum number of iterations in solving Kepler's equation    | 500        |
+| `kepler_auto_remove`   | Integer flag to indicate whether to remove objects that failed to converge in Kepler's equation. 0: False, 1: True for all objects, 2: True for massless objects only | 0 |
+| `kepler_auto_remove_tol` | Tolerance for removing objects that failed to converge in Kepler's equation  | `kepler_tol` |
+
 > [!WARNING]\
 > When using WHFast, the order of adding objects matters. Since WHFast use Jacobi coordinate, we must add the inner object first, followed by outer objects relative to the central star. For convenience, you may also add the objects in any order, then call `system.sort_by_distance(primary_object_name)` or `system.sort_by_distance(primary_object_index)`
+
+## Making changes to saved systems
+
+If you wish to make any changes to saved systems, you can access the file at 
+```
+gravity_simulator/gravity_sim/customized_systems.csv
+``` 
+The data follow the format
+```
+Name, Gravitational constant, Number of objects, m1, ..., x1, y1, z1, ..., vx1, vy1, vz1, ...
+```
+You may also load the system in API and then save the system after making the changes.
+
+## Saving the results
+If you saved the results, the numerical data will be stored in the following folder:
+```
+Gravity-Simulator/gravity_sim/results
+```
+The file will starts with the metadata which starts with `#`.
+Missing information will be saved as `None`.
+More rows may be added in the future.
+
+Below is an example:
+```
+# Data saved on (YYYY-MM-DD): 2024-07-27
+# System Name: solar_system
+# Integrator: IAS15
+# Number of objects: 9
+# Gravitational constant: 0.00029591220828411956
+# Simulation time (days): 73048.4378
+# dt (days): None
+# Tolerance: 1e-09
+# Data size: 64596
+# Store every nth point: 1
+# Run time (s): 1.4667500000214204
+# masses: 1.0 1.6601208254589484e-07 2.447838287796944e-06 3.0034896154649684e-06 3.2271560829322774e-07 0.0009547919099414248 0.00028588567002459455 4.36624961322212e-05 5.151383772654274e-05
+```
+Then, the actual data will be saved in the default unit (solar masses, AU and days), and follow this format:
+```
+time, dt, total energy, x1, y1, z1, ... vx1, vy1, vz1, ...
+```
+The saved data file can be read by the program.
+Even if the metadata is corrupted or missing, the program can still read the data file, although some information could be missing.
+
+## Output animations in .gif
+
+You may output the trajectory in 2D / 3D as an animation in .gif.
+The output file would be stored in `gravity_sim/result`.
+
+Available parameters:
+| Parameter                  | Description                                             |
+|----------------------------|---------------------------------------------------------|
+| FPS                        | Frames per second                                       |
+| Animation length           | Desired length of the output gif                        |
+| plot_every_nth_point       | File name without extension                             |
+| dpi                        | The resolution of the animation (dots per inch)         |
+| is_dynamic_axes            | Rescale the axes limit dynamically                      |
+| axes_lim | An array for the axes limits
+| is_maintain_fixed_dt          | Attempt to maintain fixed step size with variable time step data |
+| traj_len | Length of the trajectory in number of data points |
+
+Some parameters are not listed here due to limit of space.
+
+## Compensated summation
+
+A method known as compensated summation [1], [4] is implemented for all integrators EXCEPT WHFast:
+
+When we advance our system by $\text{d}t$, we have 
+
+$x_{n+1} = x_n + \delta x$
+
+Since $\delta x$ is very small compared to $x_n$, many digits of precision will be lost.
+By compensated summation, we keep track of the losing digits using another variable, which
+allows us to effectively eliminates round off error with very little cost.
+
+However, for WHFast, the improvement is little but takes 10% longer run time.
+Therefore, it is excluded from this method.
 
 ## Feedback and Bugs
 If you find any bugs or want to leave some feedback, please feel free to let me know by opening an issue or sending an email to alvinng324@gmail.com.
