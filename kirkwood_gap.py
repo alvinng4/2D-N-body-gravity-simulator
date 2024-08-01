@@ -97,9 +97,10 @@ def main():
         flush=True,
         flush_results_path=str(data_path),
         no_print=True,
-        kepler_tolerance=1e-12,
+        kepler_tol=1e-12,
         kepler_max_iter=500,
         kepler_auto_remove=2,  # 2: Only remove massless objects
+        kepler_auto_remove_tol=1e-8,
     )
 
     # ---------- Data Analysis and drawing frames ---------- #
@@ -171,18 +172,18 @@ def main():
                         row[(inner_objects_count * 3) 
                             : (inner_objects_count + asteroids_count) * 3
                         ]
-                    ).reshape(asteroids_count, 3) - sun_x
+                    ).reshape(asteroids_count, 3)
                 )
                 asteroids_v = (
                     np.array(
                         row[inner_objects_count * 6 + (asteroids_count + outer_objects_count) * 3
                             : (inner_objects_count + asteroids_count) * 6 + outer_objects_count * 3
                         ]
-                    ).reshape(asteroids_count, 3) - sun_v
+                    ).reshape(asteroids_count, 3)
                 )
 
-                eccentricity = calculate_eccentricity(asteroids_x, asteroids_v, 0.0, G, M)
-                semi_major_axes = calculate_semi_major_axis(asteroids_x, asteroids_v, 0.0, G, M)
+                eccentricity = calculate_eccentricity(asteroids_x - sun_x, asteroids_v - sun_v, 0.0, G, M)
+                semi_major_axes = calculate_semi_major_axis(asteroids_x - sun_x, asteroids_v - sun_v, 0.0, G, M)
                 # fmt: on
 
                 # Scatter plot
@@ -278,13 +279,12 @@ def main():
                             * 3
                         ]
                     ).reshape(asteroids_count, 3)
-                    - sun_x
                 )
 
                 # Plotting the sun
                 ax2.plot(
-                    0.0,
-                    0.0,
+                    sun_x[0],
+                    sun_x[1],
                     "o",
                     label=labels[0],
                     color=colors[0],

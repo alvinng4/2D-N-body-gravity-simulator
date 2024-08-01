@@ -48,9 +48,10 @@ class WHFast:
         flush: bool = False,
         flush_path: str = None,
         no_progress_bar: bool = False,
-        kepler_tolerance: float = 1e-12,
+        kepler_tol: float = 1e-12,
         kepler_max_iter: int = 500,
         kepler_auto_remove: int = 0,
+        kepler_auto_remove_tol: float = None,
     ):
         """
         Simulate the system using the WHFast integrator in the C library.
@@ -79,7 +80,7 @@ class WHFast:
             Path to flush the solution
         no_progress_bar : bool, optional
             Whether to disable the progress bar, by default False
-        kepler_tolerance : float, optional
+        kepler_tol : float, optional
             Tolerance for solving Kepler's equation, by default 1e-12
         kepler_max_iter : int, optional
             Maximum number of iterations in solving Kepler's equation, by default 500
@@ -123,6 +124,9 @@ class WHFast:
 
         queue = Queue()
         solution = Solutions()
+
+        if kepler_auto_remove_tol is None:
+            kepler_auto_remove_tol = 1e-10
         kepler_actual_objects_count = ctypes.c_int(objects_count)
 
         whfast_thread = threading.Thread(
@@ -141,9 +145,10 @@ class WHFast:
                 ctypes.c_int(store_npts),
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
-                ctypes.c_double(kepler_tolerance),
+                ctypes.c_double(kepler_tol),
                 ctypes.c_int(kepler_max_iter),
                 ctypes.c_int(kepler_auto_remove),
+                ctypes.c_double(kepler_auto_remove_tol),
                 ctypes.byref(kepler_actual_objects_count),
                 ctypes.c_bool(flush),
                 flush_path.encode("utf-8"),
@@ -228,9 +233,10 @@ class WHFast:
         flush: bool = False,
         flush_path: str = "",
         no_progress_bar: bool = False,
-        kepler_tolerance: float = 1e-12,
+        kepler_tol: float = 1e-12,
         kepler_max_iter: int = 500,
         kepler_auto_remove: int = 0,
+        kepler_auto_remove_tol: float = None,
     ):
         if flush:
             raise NotImplementedError("Flush is not implemented for NumPy")
@@ -278,7 +284,7 @@ class WHFast:
                     eta,
                     G,
                     dt,
-                    kepler_tolerance,
+                    kepler_tol,
                     kepler_max_iter,
                 )
                 WHFast.jacobi_to_cartesian(objects_count, jacobi, x, v, m, eta)
@@ -311,13 +317,11 @@ class WHFast:
 
     @staticmethod
     def whfast_drift(
-        objects_count, jacobi, m, eta, G, dt, kepler_tolerance, kepler_max_iter
+        objects_count, jacobi, m, eta, G, dt, kepler_tol, kepler_max_iter
     ) -> None:
         for i in range(1, objects_count):
             gm = G * m[0] * eta[i] / eta[i - 1]
-            WHFast.propagate_kepler(
-                jacobi[i], gm, dt, kepler_tolerance, kepler_max_iter
-            )
+            WHFast.propagate_kepler(jacobi[i], gm, dt, kepler_tol, kepler_max_iter)
 
     @staticmethod
     def whfast_acceleration(objects_count, jacobi, x, a, m, eta, G) -> None:
@@ -538,7 +542,7 @@ class WHFast:
         jacobi_i: np.ndarray,
         gm: float,
         dt: float,
-        kepler_tolerance: float,
+        kepler_tol: float,
         kepler_max_iter: int,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -552,7 +556,7 @@ class WHFast:
             Gravitational parameter
         dt : float
             Time step
-        kepler_tolerance : float
+        kepler_tol : float
             Tolerance for solving Kepler's equation
         kepler_max_iter : int
             Maximum number of iterations in solving Kepler's equation
@@ -596,7 +600,7 @@ class WHFast:
             s += ds
 
             # Check convergence
-            if abs(ds) < kepler_tolerance:
+            if abs(ds) < kepler_tol:
                 break
 
         # The radial distance is equal to the derivative of F

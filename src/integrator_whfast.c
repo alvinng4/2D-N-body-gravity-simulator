@@ -31,7 +31,7 @@ void whfast_kick(
  * \param eta Array of cumulative masses
  * \param G Gravitational constant
  * \param dt Time step of the system
- * \param kepler_tolerance Tolerance for solving Kepler's equation
+ * \param kepler_tol Tolerance for solving Kepler's equation
  * \param kepler_max_iter Maximum number of iterations in solving Kepler's equation
  * \param kepler_auto_remove Integer flag to indicate whether to remove objects
  *                           that failed to converge in Kepler's equation
@@ -51,9 +51,10 @@ void whfast_drift(
     const real *restrict eta,
     real G,
     real dt,
-    real kepler_tolerance,
+    real kepler_tol,
     int kepler_max_iter,
     int kepler_auto_remove,
+    real kepler_auto_remove_tol,
     bool *restrict kepler_failed_bool_array,
     bool *restrict kepler_failed_flag
 );
@@ -178,7 +179,7 @@ void stumpff_functions(
  * \param gm Product of gravitational constant and total mass between
  *           the object and the central object
  * \param dt Time step of the system
- * \param kepler_tolerance Tolerance for solving Kepler's equation
+ * \param kepler_tol Tolerance for solving Kepler's equation
  * \param kepler_max_iter Maximum number of iterations in solving Kepler's equation
  * \param kepler_auto_remove Integer flag to indicate whether to remove objects
  *                           that failed to converge in Kepler's equation
@@ -196,9 +197,10 @@ void propagate_kepler(
     real *restrict jacobi_v,
     real gm,
     real dt,
-    real kepler_tolerance,
+    real kepler_tol,
     int kepler_max_iter,
     int kepler_auto_remove,
+    real kepler_auto_remove_tol,
     bool *restrict kepler_failed_bool_array,
     bool *restrict kepler_failed_flag
 );
@@ -217,7 +219,7 @@ void propagate_kepler(
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
- * \param kepler_tolerance Tolerance for solving Kepler's equation
+ * \param kepler_tol Tolerance for solving Kepler's equation
  * \param kepler_max_iter Maximum number of iterations in solving Kepler's equation
  * \param kepler_auto_remove Integer flag to indicate whether to remove objects
  *                           that failed to converge in Kepler's equation
@@ -248,9 +250,10 @@ WIN32DLL_API int whfast(
     int store_npts,
     int store_every_n,
     int *restrict store_count,
-    real kepler_tolerance,
+    real kepler_tol,
     int kepler_max_iter,
     int kepler_auto_remove,
+    real kepler_auto_remove_tol,
     int *restrict kepler_actual_objects_count,
     const bool flush,
     const char *restrict flush_path,
@@ -373,32 +376,27 @@ WIN32DLL_API int whfast(
     // Main Loop
     for (int64 count = 1; count <= npts; count++)
     {
-        whfast_drift(objects_count, jacobi_x, jacobi_v, m, eta, G, dt, kepler_tolerance, kepler_max_iter, kepler_auto_remove, kepler_failed_bool_array, &kepler_failed_flag);
-        jacobi_to_cartesian(objects_count, jacobi_x, jacobi_v, x, v, m, eta);
-        whfast_acceleration(objects_count, jacobi_x, x, a, m, eta, G);
-        whfast_kick(objects_count, jacobi_v, a, dt);
-
-        // Store solution
-        if (count % store_every_n == 0)
-        {
-            memcpy(temp_jacobi_v, jacobi_v, objects_count * 3 * sizeof(real));
-            whfast_kick(objects_count, temp_jacobi_v, a, -0.5 * dt);
-            jacobi_to_cartesian(objects_count, jacobi_x, temp_jacobi_v, x, v, m, eta);
-            
-            if (flush)
-            {
-                write_to_csv_file(flush_file, dt * count, dt, objects_count, x, v, m, G);
-            }
-            else
-            {
-                memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
-                sol_time[*store_count] = dt * count;
-            }
-            (*store_count)++;
-        }
-
+        whfast_drift(
+            objects_count,
+            jacobi_x,
+            jacobi_v,
+            m,
+            eta,
+            G,
+            dt,
+            kepler_tol,
+            kepler_max_iter,
+            kepler_auto_remove,
+            kepler_auto_remove_tol,
+            kepler_failed_bool_array,
+            &kepler_failed_flag
+        );
         // Remove objects that failed to converge in Kepler's equation
+        //
+        // IMPORTANT:
+        // It is important to remove objects right after drift step
+        // for large N, otherwise one hyperbolic object could pollute
+        // the data of the whole system with nan values
         if ((kepler_auto_remove != 0) && kepler_failed_flag)
         {
             kepler_failed_flag = false;
@@ -436,6 +434,29 @@ WIN32DLL_API int whfast(
                 eta[i] = eta[i - 1] + m[i];
             }
             printf("Kepler_auto_remove: %d object(s) removed. Remaining objects: %d\n", kepler_remove_count, objects_count);
+        }
+        jacobi_to_cartesian(objects_count, jacobi_x, jacobi_v, x, v, m, eta);
+        whfast_acceleration(objects_count, jacobi_x, x, a, m, eta, G);
+        whfast_kick(objects_count, jacobi_v, a, dt);
+
+        // Store solution
+        if (count % store_every_n == 0)
+        {
+            memcpy(temp_jacobi_v, jacobi_v, objects_count * 3 * sizeof(real));
+            whfast_kick(objects_count, temp_jacobi_v, a, -0.5 * dt);
+            jacobi_to_cartesian(objects_count, jacobi_x, temp_jacobi_v, x, v, m, eta);
+            
+            if (flush)
+            {
+                write_to_csv_file(flush_file, dt * count, dt, objects_count, x, v, m, G);
+            }
+            else
+            {
+                memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                sol_time[*store_count] = dt * count;
+            }
+            (*store_count)++;
         }
 
         // Check if user sends KeyboardInterrupt in main thread
@@ -529,9 +550,10 @@ void whfast_drift(
     const real *restrict eta,
     real G,
     real dt,
-    real kepler_tolerance,
+    real kepler_tol,
     int kepler_max_iter,
     int kepler_auto_remove,
+    real kepler_auto_remove_tol,
     bool *restrict kepler_failed_bool_array,
     bool *restrict kepler_failed_flag
 )
@@ -545,9 +567,10 @@ void whfast_drift(
             jacobi_v,
             gm,
             dt,
-            kepler_tolerance,
+            kepler_tol,
             kepler_max_iter,
             kepler_auto_remove,
+            kepler_auto_remove_tol,
             kepler_failed_bool_array,
             kepler_failed_flag
         );
@@ -1056,9 +1079,10 @@ void propagate_kepler(
     real *restrict jacobi_v,
     real gm,
     real dt,
-    real kepler_tolerance,
+    real kepler_tol,
     int kepler_max_iter,
     int kepler_auto_remove,
+    real kepler_auto_remove_tol,
     bool *restrict kepler_failed_bool_array,
     bool *restrict kepler_failed_flag
 )
@@ -1110,7 +1134,7 @@ void propagate_kepler(
         s += ds;
 
         // Check convergence
-        if (fabs(ds) < kepler_tolerance)
+        if (fabs(ds) < kepler_tol)
         {
             break;
         }
@@ -1122,18 +1146,20 @@ void propagate_kepler(
 
     if (j == kepler_max_iter)
     {
-        printf("Warning: Kepler's equation did not converge\n");
-        printf("Object index: %d, error = %23.15g\n", 
-            i, 
-            (x_norm * s * c1
+        real error = (x_norm * s * c1
             + x_norm * radial_v * (s * s) * c2
             + gm * (s * s * s) * c3
-            - dt) / r);
-        if (kepler_auto_remove != 0)
+            - dt) / r;
+        printf("Warning: Kepler's equation did not converge\n");
+        printf("Object index: %d, error = %23.15g\n", i, error);
+        if ((kepler_auto_remove != 0) && ((fabs(error) > kepler_auto_remove_tol) || isnan(error)))
         {
             kepler_failed_bool_array[i] = true;
             *kepler_failed_flag = true;
         }
+
+        // Debug information
+        // printf("Input: x: %23.15g %23.15g %23.15g, v: %23.15g %23.15g %23.15g, gm: %23.15g, dt: %23.15g\n", x[0], x[1], x[2], v[0], v[1], v[2], gm, dt);
     }
 
     // Evaluate f and g functions, together with their derivatives
