@@ -48,8 +48,9 @@ class WHFast:
         flush: bool = False,
         flush_path: str = "",
         no_progress_bar: bool = False,
-        kepler_auto_remove: bool = False,
-        debug: bool = False,
+        kepler_tolerance: float = 1e-12,
+        kepler_max_iter: int = 500,
+        kepler_auto_remove: int = 0,
     ):
         class Solutions(ctypes.Structure):
             _fields_ = [
@@ -101,13 +102,14 @@ class WHFast:
                 ctypes.c_int(store_npts),
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
-                ctypes.c_bool(kepler_auto_remove),
+                ctypes.c_double(kepler_tolerance),
+                ctypes.c_int(kepler_max_iter),
+                ctypes.c_int(kepler_auto_remove),
                 ctypes.byref(kepler_actual_objects_count),
                 ctypes.c_bool(flush),
                 flush_path.encode("utf-8"),
                 ctypes.byref(solution),
                 ctypes.byref(self.is_exit_ctypes_bool),
-                ctypes.c_bool(debug),
             ),
         )
 
@@ -187,14 +189,15 @@ class WHFast:
         flush: bool = False,
         flush_path: str = "",
         no_progress_bar: bool = False,
-        kepler_auto_remove: bool = False,
-        debug: bool = False,
+        kepler_tolerance: float = 1e-12,
+        kepler_max_iter: int = 500,
+        kepler_auto_remove: int = 0,
     ):
         if flush:
-            raise NotImplementedError("Flush is not implemented for numpy")
+            raise NotImplementedError("Flush is not implemented for NumPy")
 
-        if kepler_auto_remove:
-            raise NotImplementedError("kepler_auto_remove is not implemented for numpy")
+        if kepler_auto_remove != 0:
+            raise NotImplementedError("kepler_auto_remove is not implemented for NumPy")
 
         npts = int(tf // dt)
         if self.store_every_n != 1:
@@ -229,7 +232,16 @@ class WHFast:
                 )
 
             for count in range(1, npts + 1):
-                WHFast.whfast_drift(objects_count, jacobi, m, eta, G, dt)
+                WHFast.whfast_drift(
+                    objects_count,
+                    jacobi,
+                    m,
+                    eta,
+                    G,
+                    dt,
+                    kepler_tolerance,
+                    kepler_max_iter,
+                )
                 WHFast.jacobi_to_cartesian(objects_count, jacobi, x, v, m, eta)
                 WHFast.whfast_acceleration(objects_count, jacobi, x, a, m, eta, G)
                 WHFast.whfast_kick(jacobi, a, dt)
@@ -259,10 +271,14 @@ class WHFast:
         jacobi[:, 3:] += a * dt
 
     @staticmethod
-    def whfast_drift(objects_count, jacobi, m, eta, G, dt) -> None:
+    def whfast_drift(
+        objects_count, jacobi, m, eta, G, dt, kepler_tolerance, kepler_max_iter
+    ) -> None:
         for i in range(1, objects_count):
             gm = G * m[0] * eta[i] / eta[i - 1]
-            WHFast.propagate_kepler(jacobi[i], gm, dt)
+            WHFast.propagate_kepler(
+                jacobi[i], gm, dt, kepler_tolerance, kepler_max_iter
+            )
 
     @staticmethod
     def whfast_acceleration(objects_count, jacobi, x, a, m, eta, G) -> None:
@@ -407,71 +423,81 @@ class WHFast:
         v[0] = v_cm / m[0]
 
     @staticmethod
-    def stumpff_functions(psi: float) -> tuple[float, float]:
+    def stumpff_functions(z: float) -> tuple[float, float, float, float]:
         """
-        Compute the Stumpff functions c2 and c3 for a given argument psi.
+        Compute the Stumpff functions c0, c1, c2, and c3 for a given argument z.
 
         Parameters
         ----------
-        psi : float
+        z : float
             Argument of the Stumpff functions.
 
         Returns
         -------
-        tuple[float, float]
-            Tuple containing the Stumpff functions c2, and c3.
-
-        References
-        ----------
-        1. ABIE, https://github.com/MovingPlanetsAround/ABIE
-        2. Moving Planets Around: An Introduction to N-Body Simulations
-           Applied to Exoplanetary Systems, Appendix B
+        tuple[float, float, float, float]
+            Tuple containing the Stumpff functions c0, c1, c2, and c3.
         """
-        # # Reduce the argument
-        # n = 0
-        # while abs(psi) > 0.1:
-        #     n += 1
-        #     psi /= 4.0
 
-        # # Compute c3, c2, c1, c0
-        # # fmt: off
-        # c3 = (1.0 - psi / 20.0 * (1.0 - psi / 42.0 * (1.0 - psi / 72.0 * (1.0 - psi / 110.0 \
-        #          * (1.0 - psi / 156.0 * (1.0 - psi / 210.0)))))
-        #      ) / 6.0
-        # c2 = (1.0 - psi / 12.0 * (1.0 - psi / 30.0 * (1.0 - psi / 56.0 * (1.0 - psi / 90.0 \
-        #          * (1.0 - psi / 132.0 * (1.0 - psi / 182.0)))))
-        #      ) / 2.0
+        # Reduce the argument
+        n = 0
+        while abs(z) > 0.1:
+            n += 1
+            z /= 4.0
 
-        # # Half-angle formulae to recover the actual argument
-        # while n > 0:
-        #     n -= 1
-        #     c3 = (c2 + c0 * c3) / 4.0
-        #     c2 = c1 * c1 / 2.0
+        # Compute c3, c2, c1, c0
+        # fmt: off
+        c3 = (1.0 - z / 20.0 * (1.0 - z / 42.0 * (1.0 - z / 72.0 * (1.0 - z / 110.0 \
+                 * (1.0 - z / 156.0 * (1.0 - z / 210.0)))))
+             ) / 6.0
+        c2 = (1.0 - z / 12.0 * (1.0 - z / 30.0 * (1.0 - z / 56.0 * (1.0 - z / 90.0 \
+                 * (1.0 - z / 132.0 * (1.0 - z / 182.0)))))
+             ) / 2.0
+        c1 = 1.0 - z * c3
+        c0 = 1.0 - z * c2
 
-        # return c2, c3
+        # Half-angle formulae to recover the actual argument
+        while n > 0:
+            n -= 1
+            c3 = (c2 + c0 * c3) / 4.0
+            c2 = c1 * c1 / 2.0
+            c1 = c0 * c1
+            c0 = 2.0 * c0 * c0 - 1.0
+
+        return c0, c1, c2, c3
         # # fmt: on
 
         ########################################################
         # Analytical expressions for the Stumpff functions
-        if psi > 1e-10:
-            c2 = (1.0 - math.cos(math.sqrt(psi))) / psi
-            c3 = (math.sqrt(psi) - math.sin(math.sqrt(psi))) / (psi**1.5)
+        # Warning: the implementation below suffers from a loss of 
+        #          precision in python.
+        #
+        # if z > 0:
+        #     sqrt_z = math.sqrt(z)
+        #     c3 = (sqrt_z - math.sin(sqrt_z)) / (z * sqrt_z)
+        #     c2 = (1.0 - math.cos(sqrt_z)) / z
+        #     c1 = math.sin(sqrt_z) / sqrt_z
+        #     c0 = math.cos(sqrt_z)
 
-        elif psi < -1e-10:
-            c2 = (1.0 - math.cosh(math.sqrt(-psi))) / psi
-            c3 = (math.sqrt(-psi) - math.sinh(math.sqrt(-psi))) / (
-                psi * math.sqrt(-psi)
-            )
+        # elif z < 0:
+        #     sqrt_z = math.sqrt(-z)
+        #     c3 = (sqrt_z - math.sinh(sqrt_z)) / (z * sqrt_z)
+        #     c2 = (1.0 - math.cosh(sqrt_z)) / z
+        #     c1 = math.sinh(sqrt_z) / sqrt_z
+        #     c0 = math.cosh(sqrt_z)
 
-        else:
-            c2 = 0.5
-            c3 = 1.0 / 6.0
+        # else:
+        #     c3 = 1.0 / 6.0
+        #     c2 = 0.5
+        #     c1 = 1.0
+        #     c0 = 1.0
 
-        return c2, c3
+        # return c0, c1, c2, c3
         ########################################################
 
     @staticmethod
-    def propagate_kepler(jacobi_i: np.ndarray, gm: float, dt: float) -> None:
+    def propagate_kepler(
+        jacobi_i: np.ndarray, gm: float, dt: float, kepler_tolerance: float, kepler_max_iter: int
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Propagate the position and velocity vectors using Kepler's equation.
 
@@ -483,100 +509,63 @@ class WHFast:
             Gravitational parameter
         dt : float
             Time step
+        kepler_tolerance : float
+            Tolerance for solving Kepler's equation
+        kepler_max_iter : int
+            Maximum number of iterations in solving Kepler's equation
 
-        References
-        ----------
-        Directly modified from ABIE, https://github.com/MovingPlanetsAround/ABIE
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            New position and velocity vectors
         """
-        # Internal tolerance for solving Kepler's equation
-        tol = 1e-12
-
-        # Energy tolerance: used to distinguish between elliptic, parabolic, and hyperbolic orbits,
-        # ideally 0:
-        tol_energy = 0.0
 
         x = jacobi_i[:3].copy()
         v = jacobi_i[3:].copy()
         x_norm = np.linalg.norm(x)
         v_norm = np.linalg.norm(v)
 
-        # Initial value of the Keplerian energy:
-        xi = v_norm * v_norm * 0.5 - gm / x_norm
+        # Radial velocity
+        radial_v = np.dot(x, v) / x_norm
 
-        semi_major_axis = -gm / (2.0 * xi)
-        alpha = 1.0 / semi_major_axis
+        alpha = 2.0 * gm / x_norm - (v_norm * v_norm)
 
-        sqrt_gm = math.sqrt(gm)
+        # Solve Kepler's equation with Newton-Raphson method
 
-        if alpha > tol_energy + 1e-12:
-            # Elliptic orbits:
-            chi_0 = sqrt_gm * dt * alpha
+        # initial guess
+        s = dt / x_norm
 
-        elif alpha < tol_energy - 1e-12:
-            # Hyperbolic orbits:
-            chi_0 = math.sqrt(-semi_major_axis) * math.log(
-                -2.0
-                * gm
-                * alpha
-                * dt
-                / (
-                    np.dot(x, v)
-                    + math.sqrt(-gm * semi_major_axis) * (1.0 - x_norm * alpha)
-                )
-            )  # * math.copysign(dt) *
-        else:
-            # Parabolic orbits:
-            vh = np.cross(x, v)
-            p = np.linalg.norm(vh) ** 2 / gm
-            s = 0.5 * math.atan(1.0 / (3.0 * math.sqrt(gm / p**3) * dt))
-            w = math.atan(math.tan(s) ** (1.0 / 3.0))
-            chi_0 = math.sqrt(p) * 2.0 / math.tan(2.0 * w)
-
-        # Solve Kepler's equation
-        for _ in range(500):
-            # Compute universal variable
-            psi = chi_0 * chi_0 * alpha
-
+        for _ in range(kepler_max_iter):
             # Compute Stumpff functions
-            c2, c3 = WHFast.stumpff_functions(psi)
+            c0, c1, c2, c3 = WHFast.stumpff_functions(alpha * (s * s))
 
-            # Propagate radial distance:
-            r = (
-                chi_0 * chi_0 * c2
-                + np.dot(x, v) / sqrt_gm * chi_0 * (1 - psi * c3)
-                + x_norm * (1 - psi * c2)
+            # Evaluate Kepler's equation and its derivative
+            F = (
+                x_norm * s * c1
+                + x_norm * radial_v * (s * s) * c2
+                + gm * (s * s * s) * c3
+                - dt
             )
+            dF = x_norm * c0 + x_norm * radial_v * s * c1 + gm * (s * s) * c2
 
-            # Auxiliary variable for f and g functions:
-            chi = (
-                chi_0
-                + (
-                    sqrt_gm * dt
-                    - chi_0**3 * c3
-                    - np.dot(x, v) / sqrt_gm * chi_0**2 * c2
-                    - x_norm * chi_0 * (1 - psi * c3)
-                )
-                / r
-            )
+            # Advance step
+            ds = -F / dF
+            s += ds
 
             # Check convergence
-            if abs(chi - chi_0) < tol:
+            if abs(ds) < kepler_tolerance:
                 break
 
-            chi_0 = chi
+        # The radial distance is equal to the derivative of F
+        # r = dF
+        r = x_norm * c0 + x_norm * radial_v * s * c1 + gm * (s * s) * c2
 
-        if abs(chi - chi_0) > tol:
-            warnings.warn(
-                "Failed to solver Kepler's equation, error = %23.15e\n"
-                % abs(chi - chi_0)
-            )
+        # Evaluate f and g functions
+        f = 1.0 - gm * (s * s) * c2 / x_norm
+        g = dt - gm * (s * s * s) * c3
 
-        # Evaluate f and g functions, together with their derivatives
-        f = 1.0 - chi * chi * c2 / x_norm
-        g = dt - chi * chi * chi * c3 / sqrt_gm
-
-        df = sqrt_gm * chi * (psi * c3 - 1.0) / (r * x_norm)
-        dg = 1.0 - chi * chi * c2 / r
+        df = -gm / (r * x_norm) * s * c1
+        dg = 1.0 - gm / r * (s * s) * c2
 
         # Compute position and velocity vectors
         jacobi_i[:3] = f * x + g * v

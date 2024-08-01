@@ -6,8 +6,6 @@
 
 #include "common.h"
 
-#define TOL_KEPLER 1e-12
-
 void whfast_kick(
     int objects_count,
     real *restrict jacobi_v,
@@ -23,7 +21,9 @@ void whfast_drift(
     const real *restrict eta,
     real G,
     real dt,
-    bool kepler_auto_remove,
+    real kepler_tolerance,
+    int kepler_max_iter,
+    int kepler_auto_remove,
     bool *restrict kepler_failed_bool_array,
     bool *restrict kepler_failed_flag
 );
@@ -69,7 +69,9 @@ void jacobi_to_cartesian(
 );
 
 void stumpff_functions(
-    real psi,
+    real z,
+    real *restrict c0,
+    real *restrict c1,
     real *restrict c2,
     real *restrict c3
 );
@@ -80,7 +82,9 @@ void propagate_kepler(
     real *restrict jacobi_v,
     real gm,
     real dt,
-    bool kepler_auto_remove,
+    real kepler_tolerance,
+    int kepler_max_iter,
+    int kepler_auto_remove,
     bool *restrict kepler_failed_bool_array,
     bool *restrict kepler_failed_flag
 );
@@ -101,6 +105,9 @@ void propagate_kepler(
  * \param store_count Pointer to the store count
  * \param kepler_auto_remove Automatically remove objects that failed
  *                           to converge in Kepler's equation
+ *                           Value 0: False
+ *                           Value 1: True for all objects
+ *                           Value 2: True for massless objects only
  * \param kepler_actual_objects_count Pointer to the actual number of objects
  *                                    after clearing objects
  * \param flush Flag to indicate whether to store solution into data file directly
@@ -108,7 +115,6 @@ void propagate_kepler(
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
  *                KeyboardInterrupt in the main thread
- * \param debug Flag to indicate whether to print debug information
  * 
  * \retval 0 If exit successfully
  * \retval 1 If failed to allocate memory
@@ -126,13 +132,14 @@ WIN32DLL_API int whfast(
     int store_npts,
     int store_every_n,
     int *restrict store_count,
-    bool kepler_auto_remove,
+    real kepler_tolerance,
+    int kepler_max_iter,
+    int kepler_auto_remove,
     int *restrict kepler_actual_objects_count,
     const bool flush,
     const char *restrict flush_path,
     Solutions *restrict solution,
-    bool *restrict is_exit,
-    bool debug
+    bool *restrict is_exit
 )
 {   
     void (*whfast_acceleration)(
@@ -178,10 +185,10 @@ WIN32DLL_API int whfast(
         goto err_calc_memory;
     }
 
-    // Check if objects failed to converge in Kepler's equation
+    // Auto remove objects that failed to converge in Kepler's equation
     bool *kepler_failed_bool_array = NULL;
     bool kepler_failed_flag = false;
-    if (kepler_auto_remove)
+    if (kepler_auto_remove != 0)
     {
         kepler_failed_bool_array = calloc(objects_count, sizeof(bool));
 
@@ -250,7 +257,7 @@ WIN32DLL_API int whfast(
     // Main Loop
     for (int64 count = 1; count <= npts; count++)
     {
-        whfast_drift(objects_count, jacobi_x, jacobi_v, m, eta, G, dt, kepler_auto_remove, kepler_failed_bool_array, &kepler_failed_flag);
+        whfast_drift(objects_count, jacobi_x, jacobi_v, m, eta, G, dt, kepler_tolerance, kepler_max_iter, kepler_auto_remove, kepler_failed_bool_array, &kepler_failed_flag);
         jacobi_to_cartesian(objects_count, jacobi_x, jacobi_v, x, v, m, eta);
         whfast_acceleration(objects_count, jacobi_x, x, a, m, eta, G);
         whfast_kick(objects_count, jacobi_v, a, dt);
@@ -276,7 +283,7 @@ WIN32DLL_API int whfast(
         }
 
         // Remove objects that failed to converge in Kepler's equation
-        if (kepler_auto_remove && kepler_failed_flag)
+        if ((kepler_auto_remove != 0) && kepler_failed_flag)
         {
             kepler_failed_flag = false;
 
@@ -284,15 +291,20 @@ WIN32DLL_API int whfast(
             int kepler_remove_count = 0;
             for (int i = 1; i < objects_count; i++)
             {
-                if (kepler_failed_bool_array[i])
+                bool is_remove = false;
+                if (kepler_auto_remove == 1)
+                {
+                    is_remove = kepler_failed_bool_array[i];
+                }
+                else if (kepler_auto_remove == 2)
+                {
+                    is_remove = (m[i] == 0.0) && kepler_failed_bool_array[i];
+                }
+                kepler_failed_bool_array[i] = false;
+
+                if (is_remove)
                 {
                     kepler_remove_count++;
-                    kepler_failed_bool_array[i] = false;
-
-                    if (debug)
-                    {
-                        printf("DEBUG: Object index %d failed to converge in Kepler's equation\n", i);
-                    }
                 }
                 else if (kepler_remove_count > 0)
                 {
@@ -325,7 +337,7 @@ WIN32DLL_API int whfast(
     free(temp_jacobi_v);
     free(a);
     free(eta);
-    if (kepler_auto_remove)
+    if (kepler_auto_remove != 0)
     {
         free(kepler_failed_bool_array);
     }
@@ -401,7 +413,9 @@ void whfast_drift(
     const real *restrict eta,
     real G,
     real dt,
-    bool kepler_auto_remove,
+    real kepler_tolerance,
+    int kepler_max_iter,
+    int kepler_auto_remove,
     bool *restrict kepler_failed_bool_array,
     bool *restrict kepler_failed_flag
 )
@@ -415,6 +429,8 @@ void whfast_drift(
             jacobi_v,
             gm,
             dt,
+            kepler_tolerance,
+            kepler_max_iter,
             kepler_auto_remove,
             kepler_failed_bool_array,
             kepler_failed_flag
@@ -882,27 +898,39 @@ void jacobi_to_cartesian(
 }
 
 void stumpff_functions(
-    real psi,
+    real z,
+    real *restrict c0,
+    real *restrict c1,
     real *restrict c2,
     real *restrict c3
 )
 {
-    if (psi > 1e-10)
+    // Reduce the argument
+    int n = 0;
+    while (fabs(z) > 0.1)
     {
-        real sqrt_psi = sqrt(psi);
-        *c2 = (1.0 - cos(sqrt_psi)) / psi;
-        *c3 = (sqrt_psi - sin(sqrt_psi)) / (psi * sqrt_psi);
+        z /= 4.0;
+        n++;
     }
-    else if (psi < -1e-10)
+
+    // Compute stumpff functions
+    *c3 = (1.0 - z / 20.0 * (1.0 - z / 42.0 * (1.0 - z / 72.0 * (1.0 - z / 110.0 \
+                 * (1.0 - z / 156.0 * (1.0 - z / 210.0)))))
+             ) / 6.0;
+    *c2 = (1.0 - z / 12.0 * (1.0 - z / 30.0 * (1.0 - z / 56.0 * (1.0 - z / 90.0 \
+                * (1.0 - z / 132.0 * (1.0 - z / 182.0)))))
+            ) / 2.0;
+    *c1 = 1.0 - z * (*c3);
+    *c0 = 1.0 - z * (*c2);
+
+    // Half-angle formulae to recover the actual argument
+    while (n > 0)
     {
-        real sqrt_abs_psi = sqrt(-psi);
-        *c2 = (1.0 - cosh(sqrt_abs_psi)) / psi;
-        *c3 = (sqrt_abs_psi - sinh(sqrt_abs_psi)) / (psi * sqrt_abs_psi);
-    }
-    else
-    {
-        *c2 = 0.5;
-        *c3 = 1.0 / 6.0;
+        *c3 = ((*c2) + (*c0) * (*c3)) / 4.0;
+        *c2 = ((*c1) * (*c1)) / 2.0;
+        *c1 = (*c0) * (*c1);
+        *c0 = 2.0 * (*c0) * (*c0) - 1.0;
+        n--;
     }
 }
 
@@ -912,108 +940,80 @@ void propagate_kepler(
     real *restrict jacobi_v,
     real gm,
     real dt,
-    bool kepler_auto_remove,
+    real kepler_tolerance,
+    int kepler_max_iter,
+    int kepler_auto_remove,
     bool *restrict kepler_failed_bool_array,
     bool *restrict kepler_failed_flag
 )
 {
-    real temp_vec[3];
-
-    // Energy tolerance: used to distinguish between elliptic, parabolic, and hyperbolic orbits,
-    // ideally 0:
-    real tol_energy = 0.0;
-
     real x[3];
     real v[3];
     memcpy(x, &jacobi_x[i * 3], 3 * sizeof(real));
     memcpy(v, &jacobi_v[i * 3], 3 * sizeof(real));
-    real x_dot_v = vec_dot(x, v, 3);
+
     real x_norm = vec_norm(x, 3);
     real v_norm = vec_norm(v, 3);
 
-    // Initial value of the Keplerian energy:
-    real xi = v_norm * v_norm * 0.5 - gm / x_norm;
+    // Radial velocity
+    real radial_v = vec_dot(x, v, 3) / x_norm; 
 
-    real semi_major_axis = - gm / (2.0 * xi);
-    real alpha = 1.0 / semi_major_axis;
-    real sqrt_gm = sqrt(gm);
-    real chi_0;
+    real alpha = 2.0 * gm / x_norm - (v_norm * v_norm);
 
-    // Elliptic orbits
-    if (alpha > tol_energy + 1e-12)
-    {
-        chi_0 = sqrt_gm * dt * alpha;
-    } 
-
-    // Hyperbolic orbits
-    else if (alpha < tol_energy - 1e-12)
-    {
-        chi_0 = ( 
-            sqrt(-semi_major_axis) * log(
-                -2.0 * gm * alpha * dt / (
-                    x_dot_v + sqrt(-gm * semi_major_axis) * (1.0 - x_norm * alpha)
-                )
-            )
-        ) /* * copysign(1.0, dt) */;
-    }
-
-    // Parabolic orbits
-    else
-    {
-        vec_cross(x, v, temp_vec);
-        real p = vec_norm(temp_vec, 3);
-        p = p * p / gm;
-        real s = 0.5 * atan(1.0 / (3.0 * sqrt(gm / (p * p * p)) * dt));
-        real w = atan(pow(tan(s), (1.0 / 3.0)));
-        chi_0 = sqrt(p) * 2.0 / tan(2.0 * w); 
-    }
+    /* Solve Kepler's equation with Newton-Raphson method */
+    
+    // Initial guess
+    real s = dt / x_norm;
 
     // Solve Kepler's equation
-    real psi;
-    real c2;
-    real c3;
-    real r;
-    real chi;
+    real c0 = 0.0;
+    real c1 = 0.0;
+    real c2 = 0.0;
+    real c3 = 0.0;
     int j = 0;
-    for (; j < 500; j++)
+    for (; j < kepler_max_iter; j++)
     {
-        // Compute universal variable
-        psi = chi_0 * chi_0 * alpha;
+        // Compute Stumpff functions
+        stumpff_functions(alpha * (s * s), &c0, &c1, &c2, &c3);
 
-        // Copmute Stumpff functions
-        stumpff_functions(psi, &c2, &c3);
-
-        // Propagate radial distance
-        r = (
-            chi_0 * chi_0 * c2 
-            + x_dot_v / sqrt_gm * chi_0 * (1.0 - psi * c3) 
-            + x_norm * (1.0 - psi * c2)
+        // Evaluate Kepler's equation and its derivative
+        real F = (
+            x_norm * s * c1
+            + x_norm * radial_v * (s * s) * c2
+            + gm * (s * s * s) * c3
+            - dt
+        );
+        real dF = (
+            x_norm * c0
+            + x_norm * radial_v * s * c1
+            + gm * (s * s) * c2
         );
 
-        // Auxiliary variable for f and g functions
-        chi = chi_0 + (
-                sqrt_gm * dt 
-                - (chi_0 * chi_0 * chi_0) * c3
-                - x_dot_v / sqrt_gm * (chi_0 * chi_0) * c2
-                - x_norm * chi_0 * (1.0 - psi * c3)
-            ) / r;
+        // Advance step
+        real ds = -F / dF;
+        s += ds;
 
         // Check convergence
-        if (fabs(chi - chi_0) < TOL_KEPLER)
+        if (fabs(ds) < kepler_tolerance)
         {
             break;
         }
-
-        chi_0 = chi;
     }
 
-    if (j == 500)
+    // The raidal distance is equal to the derivative of F
+    // real r = dF
+    real r = x_norm * c0 + x_norm * radial_v * s * c1 + gm * (s * s) * c2;
+
+    if (j == kepler_max_iter)
     {
-        if (!kepler_auto_remove)
-        {
-            printf("Warning: Kepler's equation did not converge\n");
-        }
-        else
+        printf("Warning: Kepler's equation did not converge\n");
+        printf("Object index: %d, error = %23.15g\n", 
+            i, 
+            (x_norm * s * c1
+            + x_norm * radial_v * (s * s) * c2
+            + gm * (s * s * s) * c3
+            - dt) / r);
+        if (kepler_auto_remove != 0)
         {
             kepler_failed_bool_array[i] = true;
             *kepler_failed_flag = true;
@@ -1021,11 +1021,11 @@ void propagate_kepler(
     }
 
     // Evaluate f and g functions, together with their derivatives
-    real f = 1.0 - (chi * chi) * c2 / x_norm;
-    real g = dt - (chi * chi * chi) * c3 / sqrt_gm;
+    real f = 1.0 - gm * (s * s) * c2 / x_norm;
+    real g = dt - gm * (s * s * s) * c3;
 
-    real df = sqrt_gm / (r * x_norm) * chi * (psi * c3 - 1.0);
-    real dg = 1.0 - (chi * chi) * c2 / r;
+    real df = -gm * s * c1 / (r * x_norm);
+    real dg = 1.0 - gm * (s * s) * c2 / r; 
 
     // Compute position and velocity vectors
     for (int j = 0; j < 3; j++)
