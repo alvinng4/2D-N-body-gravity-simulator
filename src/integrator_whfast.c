@@ -33,11 +33,8 @@ void whfast_kick(
  * \param dt Time step of the system
  * \param kepler_tol Tolerance for solving Kepler's equation
  * \param kepler_max_iter Maximum number of iterations in solving Kepler's equation
- * \param kepler_auto_remove Integer flag to indicate whether to remove objects
+ * \param kepler_auto_remove Flag to indicate whether to remove objects
  *                           that failed to converge in Kepler's equation
- *                           Value 0: False
- *                           Value 1: True for all objects
- *                           Value 2: True for massless objects only
  * \param kepler_failed_bool_array Array of flags to indicate whether 
  *                                 an object failed to converge in Kepler's equation
  * \param kepler_failed_flag Flag to indicate whether any object failed to converge
@@ -53,7 +50,7 @@ void whfast_drift(
     real dt,
     real kepler_tol,
     int kepler_max_iter,
-    int kepler_auto_remove,
+    bool kepler_auto_remove,
     real kepler_auto_remove_tol,
     bool *restrict kepler_failed_bool_array,
     bool *restrict kepler_failed_flag
@@ -181,11 +178,8 @@ void stumpff_functions(
  * \param dt Time step of the system
  * \param kepler_tol Tolerance for solving Kepler's equation
  * \param kepler_max_iter Maximum number of iterations in solving Kepler's equation
- * \param kepler_auto_remove Integer flag to indicate whether to remove objects
+ * \param kepler_auto_remove Flag to indicate whether to remove objects
  *                           that failed to converge in Kepler's equation
- *                           Value 0: False
- *                           Value 1: True for all objects
- *                           Value 2: True for massless objects only
  * \param kepler_failed_bool_array Array of flags to indicate whether
  *                                an object failed to converge in Kepler's equation
  * \param kepler_failed_flag Flag to indicate whether any object failed to converge
@@ -199,7 +193,7 @@ void propagate_kepler(
     real dt,
     real kepler_tol,
     int kepler_max_iter,
-    int kepler_auto_remove,
+    bool kepler_auto_remove,
     real kepler_auto_remove_tol,
     bool *restrict kepler_failed_bool_array,
     bool *restrict kepler_failed_flag
@@ -221,11 +215,8 @@ void propagate_kepler(
  * \param store_count Pointer to the store count
  * \param kepler_tol Tolerance for solving Kepler's equation
  * \param kepler_max_iter Maximum number of iterations in solving Kepler's equation
- * \param kepler_auto_remove Integer flag to indicate whether to remove objects
+ * \param kepler_auto_remove Flag to indicate whether to remove objects
  *                           that failed to converge in Kepler's equation
- *                           Value 0: False
- *                           Value 1: True for all objects
- *                           Value 2: True for massless objects only
  * \param kepler_actual_objects_count Pointer to the actual number of objects
  *                                    after clearing objects
  * \param flush Flag to indicate whether to store solution into data file directly
@@ -252,7 +243,7 @@ WIN32DLL_API int whfast(
     int *restrict store_count,
     real kepler_tol,
     int kepler_max_iter,
-    int kepler_auto_remove,
+    bool kepler_auto_remove,
     real kepler_auto_remove_tol,
     int *restrict kepler_actual_objects_count,
     const bool flush,
@@ -307,7 +298,7 @@ WIN32DLL_API int whfast(
     // Auto remove objects that failed to converge in Kepler's equation
     bool *kepler_failed_bool_array = NULL;
     bool kepler_failed_flag = false;
-    if (kepler_auto_remove != 0)
+    if (kepler_auto_remove)
     {
         kepler_failed_bool_array = calloc(objects_count, sizeof(bool));
 
@@ -397,7 +388,7 @@ WIN32DLL_API int whfast(
         // It is important to remove objects right after drift step
         // for large N, otherwise one hyperbolic object could pollute
         // the data of the whole system with nan values
-        if ((kepler_auto_remove != 0) && kepler_failed_flag)
+        if (kepler_auto_remove && kepler_failed_flag)
         {
             kepler_failed_flag = false;
 
@@ -405,19 +396,9 @@ WIN32DLL_API int whfast(
             int kepler_remove_count = 0;
             for (int i = 1; i < objects_count; i++)
             {
-                bool is_remove = false;
-                if (kepler_auto_remove == 1)
+                if (kepler_failed_bool_array[i])
                 {
-                    is_remove = kepler_failed_bool_array[i];
-                }
-                else if (kepler_auto_remove == 2)
-                {
-                    is_remove = (m[i] == 0.0) && kepler_failed_bool_array[i];
-                }
-                kepler_failed_bool_array[i] = false;
-
-                if (is_remove)
-                {
+                    kepler_failed_bool_array[i] = false;
                     kepler_remove_count++;
                 }
                 else if (kepler_remove_count > 0)
@@ -474,7 +455,7 @@ WIN32DLL_API int whfast(
     free(temp_jacobi_v);
     free(a);
     free(eta);
-    if (kepler_auto_remove != 0)
+    if (kepler_auto_remove)
     {
         free(kepler_failed_bool_array);
     }
@@ -552,7 +533,7 @@ void whfast_drift(
     real dt,
     real kepler_tol,
     int kepler_max_iter,
-    int kepler_auto_remove,
+    bool kepler_auto_remove,
     real kepler_auto_remove_tol,
     bool *restrict kepler_failed_bool_array,
     bool *restrict kepler_failed_flag
@@ -1081,7 +1062,7 @@ void propagate_kepler(
     real dt,
     real kepler_tol,
     int kepler_max_iter,
-    int kepler_auto_remove,
+    bool kepler_auto_remove,
     real kepler_auto_remove_tol,
     bool *restrict kepler_failed_bool_array,
     bool *restrict kepler_failed_flag
@@ -1152,7 +1133,7 @@ void propagate_kepler(
             - dt) / r;
         printf("Warning: Kepler's equation did not converge\n");
         printf("Object index: %d, error = %23.15g\n", i, error);
-        if ((kepler_auto_remove != 0) && ((fabs(error) > kepler_auto_remove_tol) || isnan(error)))
+        if (kepler_auto_remove && ((fabs(error) > kepler_auto_remove_tol) || isnan(error)))
         {
             kepler_failed_bool_array[i] = true;
             *kepler_failed_flag = true;

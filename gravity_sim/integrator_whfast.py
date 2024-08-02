@@ -50,8 +50,8 @@ class WHFast:
         no_progress_bar: bool = False,
         kepler_tol: float = 1e-12,
         kepler_max_iter: int = 500,
-        kepler_auto_remove: int = 0,
-        kepler_auto_remove_tol: float = None,
+        kepler_auto_remove: bool = False,
+        kepler_auto_remove_tol: float = 1e-8,
     ):
         """
         Simulate the system using the WHFast integrator in the C library.
@@ -84,12 +84,9 @@ class WHFast:
             Tolerance for solving Kepler's equation, by default 1e-12
         kepler_max_iter : int, optional
             Maximum number of iterations in solving Kepler's equation, by default 500
-        kepler_auto_remove : int, optional
-            Integer flag to indicate whether to remove objects
+        kepler_auto_remove : bool, optional
+            Flag flag to indicate whether to remove objects
             that failed to converge in Kepler's equation
-            Value 0: False
-            Value 1: True for all objects
-            Value 2: True for massless objects only
         kepler_auto_remove_tol : float, optional
             Tolerance for removing objects that failed to converge in Kepler's equation
         """
@@ -127,8 +124,6 @@ class WHFast:
         queue = Queue()
         solution = Solutions()
 
-        if kepler_auto_remove_tol is None:
-            kepler_auto_remove_tol = 1e-10
         kepler_actual_objects_count = ctypes.c_int(objects_count)
 
         whfast_thread = threading.Thread(
@@ -149,7 +144,7 @@ class WHFast:
                 ctypes.byref(store_count),
                 ctypes.c_double(kepler_tol),
                 ctypes.c_int(kepler_max_iter),
-                ctypes.c_int(kepler_auto_remove),
+                ctypes.c_bool(kepler_auto_remove),
                 ctypes.c_double(kepler_auto_remove_tol),
                 ctypes.byref(kepler_actual_objects_count),
                 ctypes.c_bool(flush),
@@ -237,13 +232,13 @@ class WHFast:
         no_progress_bar: bool = False,
         kepler_tol: float = 1e-12,
         kepler_max_iter: int = 500,
-        kepler_auto_remove: int = 0,
-        kepler_auto_remove_tol: float = None,
+        kepler_auto_remove: bool = False,
+        kepler_auto_remove_tol: float = 1e-8,
     ):
         if flush:
             raise NotImplementedError("Flush is not implemented for NumPy")
 
-        if kepler_auto_remove != 0:
+        if kepler_auto_remove:
             raise NotImplementedError("kepler_auto_remove is not implemented for NumPy")
 
         npts = math.ceil(tf / dt)

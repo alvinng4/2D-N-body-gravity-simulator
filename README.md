@@ -156,8 +156,8 @@ WHFast is a second order symplectic method with fixed step size, which conserves
 |------------------------|--------------------------------------------------------------|---------------|
 | `kepler_tol`           | Tolerance in solving the Kepler's equation                   | $10^{-12}$    |
 | `kepler_max_iter`      | Maximum number of iterations in solving Kepler's equation    | 500        |
-| `kepler_auto_remove`   | Integer flag to indicate whether to remove objects that failed to converge in Kepler's equation. 0: False, 1: True for all objects, 2: True for massless objects only | 0 |
-| `kepler_auto_remove_tol` | Tolerance for removing objects that failed to converge in Kepler's equation  | `kepler_tol` |
+| `kepler_auto_remove`   | Integer flag to indicate whether to remove objects that failed to converge in Kepler's equation | False |
+| `kepler_auto_remove_tol` | Tolerance for removing objects that failed to converge in Kepler's equation  | $10^{-8}$ |
 
 > [!WARNING]\
 > When using WHFast, the order of adding objects matters. Since WHFast use Jacobi coordinate, we must add the inner object first, followed by outer objects relative to the central star. For convenience, you may also add the objects in any order, then call `system.sort_by_distance(primary_object_name)` or `system.sort_by_distance(primary_object_index)`
@@ -207,7 +207,7 @@ Even if the metadata is corrupted or missing, the program can still read the dat
 
 ## Output animations in .gif
 
-You may output the trajectory in 2D / 3D as an animation in .gif.
+You may output the simple trajectory animations in 2D / 3D in .gif.
 The output file would be stored in `gravity_sim/result`.
 
 Available parameters:
