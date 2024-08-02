@@ -340,14 +340,8 @@ WIN32DLL_API int whfast(
         }
 
         // Initial value
-        for (int i = 0; i < objects_count; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                sol_state[i * 3 + j] = x[i * 3 + j];
-                sol_state[objects_count * 3 + i * 3 + j] = v[i * 3 + j];
-            }
-        }
+        memcpy(&sol_state[0], x, objects_count * 3 * sizeof(double));
+        memcpy(&sol_state[objects_count * 3], v, objects_count * 3 * sizeof(double));
         sol_time[0] = 0.0;
         for (int i = 0; i < store_npts; i++)
         {
@@ -434,8 +428,8 @@ WIN32DLL_API int whfast(
             }
             else
             {
-                memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 6 * sizeof(double));
-                memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 6 * sizeof(double));
+                memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 3 * sizeof(double));
+                memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 3 * sizeof(double));
                 sol_time[*store_count] = dt * count;
             }
             (*store_count)++;

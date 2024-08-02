@@ -223,17 +223,15 @@ WIN32DLL_API void write_to_csv_file(
     fprintf(file, ",%.17g", compute_energy_one_step(objects_count, x, v, m, G));
     for (int i = 0; i < objects_count; i++)
     {
-        for (int j = 0; j < 3; j++)
-        {
-            fprintf(file, ",%.17g", x[i * 3 + j]);
-        }
+        fprintf(file, ",%.17g", x[i * 3 + 0]);
+        fprintf(file, ",%.17g", x[i * 3 + 1]);
+        fprintf(file, ",%.17g", x[i * 3 + 2]);
     }
     for (int i = 0; i < objects_count; i++)
     {
-        for (int j = 0; j < 3; j++)
-        {
-            fprintf(file, ",%.17g", v[i * 3 + j]);
-        }
+        fprintf(file, ",%.17g", v[i * 3 + 0]);
+        fprintf(file, ",%.17g", v[i * 3 + 1]);
+        fprintf(file, ",%.17g", v[i * 3 + 2]);
     }
     fprintf(file, "\n");
     fflush(file);
