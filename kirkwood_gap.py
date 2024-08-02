@@ -10,6 +10,9 @@ Warning: This script will take a lot of storage space on your computer (probably
          When combining the individual frames, the pillow library will take a lot of memories.
          You may reduce the frame sizes or integration time if you run out of memory.
          It will ask user's permission to erase the data after the video is generated.
+
+         I have reduced number of asteroids, dpi and frame size as it crashed my computer
+         when combining the frames. You may increase them if you want better quality.
 """
 
 import csv
@@ -24,9 +27,9 @@ from gravity_sim import GravitySimulator
 from gravity_sim.common import get_bool
 from gravity_sim.common import Progress_bar
 
-N = 50000
+N = 10000
 FPS = 30
-DPI = 300
+DPI = 150
 
 G = 0.00029591220828411956
 M = 1.0
@@ -79,7 +82,7 @@ def main():
         )
     system.sort_by_distance(primary_object_name="Sun")
     system.center_of_mass_correction()
-    system.name = "kirkwood_gap_N50000"
+    system.name = f"kirkwood_gap_N{N}"
 
     # ---------- Simulation ---------- #
     file_path = Path(__file__).parent / "gravity_sim" / "results"
@@ -90,7 +93,7 @@ def main():
     # Store about 2000 points in total
     tf = grav_sim.years_to_days(5000000)
     dt = 180.0
-    store_every_n = int((grav_sim.years_to_days(5000000) // dt) // 2000)
+    store_every_n = int((grav_sim.years_to_days(5000000) // dt) // 500)
     grav_sim.launch_simulation(
         "whfast",
         tf=tf,
@@ -102,7 +105,7 @@ def main():
         no_print=True,
         kepler_tol=1e-12,
         kepler_max_iter=500,
-        kepler_auto_remove=2,  # 2: Only remove massless objects
+        kepler_auto_remove=True,
         kepler_auto_remove_tol=1e-8,
     )
 
