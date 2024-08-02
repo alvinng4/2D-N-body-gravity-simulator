@@ -395,14 +395,14 @@ WIN32DLL_API int ias15(
     }
     else
     {
-        printf("Error: acceleration method not recognized\n");
+        fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;
     }
     
     real *a = malloc(objects_count * 3 * sizeof(real));
     if (!a)
     {
-        printf("Error: Failed to allocate memory for acceleration vectors\n");
+        fprintf(stderr, "Error: Failed to allocate memory for acceleration vectors\n");
         goto err_a;
     }
 
@@ -432,7 +432,7 @@ WIN32DLL_API int ias15(
 
     if (!nodes || !aux_c || !aux_r || !aux_b0 || !aux_b || !aux_g || !aux_e)
     {
-        printf("Error: Failed to allocate memory for auxiliary variables\n");
+        fprintf(stderr, "Error: Failed to allocate memory for auxiliary variables\n");
         goto err_aux_memory;
     }
     ias15_radau_spacing(nodes);
@@ -474,7 +474,7 @@ WIN32DLL_API int ias15(
         !temp_v_err_comp_sum
     )
     {
-        printf("Error: Failed to allocate memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate memory for calculation\n");
         goto err_calc_memory;
     }
 
@@ -500,7 +500,7 @@ WIN32DLL_API int ias15(
 
         if (!flush_file)
         {
-            printf("Error: Failed to open file for flushing\n");
+            fprintf(stderr, "Error: Failed to open file for flushing\n");
             goto err_flush_file;
         }
 
@@ -515,7 +515,7 @@ WIN32DLL_API int ias15(
 
         if (!sol_state || !sol_time || !sol_dt)
         {
-            printf("Error: Failed to allocate memory for solution output\n");
+            fprintf(stderr, "Error: Failed to allocate memory for solution output\n");
             goto err_sol_output_memory;
         }
 
@@ -598,7 +598,7 @@ WIN32DLL_API int ias15(
 
                 if (!temp_sol_state || !temp_sol_time || !temp_sol_dt)
                 {
-                    printf("Error: Failed to allocate extra memory to extend array for solution output\n");
+                    fprintf(stderr, "Error: Failed to allocate extra memory to extend array for solution output\n");
                     goto err_sol_output_memory;
                 }
                 
@@ -805,7 +805,7 @@ WIN32DLL_API real ias15_initial_dt(
 
     if (!x_1 || !a_1)
     {
-        printf("Error: Failed to allocate memory for ias15_initial_dt()\n");
+        fprintf(stderr, "Error: Failed to allocate memory for ias15_initial_dt()\n");
         free(x_1);
         free(a_1);
         return -1.0;

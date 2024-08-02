@@ -66,7 +66,7 @@ WIN32DLL_API int euler(
     }
     else
     {
-        printf("Error: acceleration method not recognized\n");
+        fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;
     }
 
@@ -81,7 +81,7 @@ WIN32DLL_API int euler(
 
     if (!temp_x || !temp_v || !a || !x_err_comp_sum || !v_err_comp_sum)
     {
-        printf("Error: Failed to allocate memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate memory for calculation\n");
         goto err_calc_memory;
     }
 
@@ -96,7 +96,7 @@ WIN32DLL_API int euler(
 
         if (!flush_file)
         {
-            printf("Error: Failed to open file for flushing\n");
+            fprintf(stderr, "Error: Failed to open file for flushing\n");
             goto err_flush_file;
         }
 
@@ -111,7 +111,7 @@ WIN32DLL_API int euler(
 
         if (!sol_state || !sol_time || !sol_dt)
         {
-            printf("Error: Failed to allocate memory for solution output\n");
+            fprintf(stderr, "Error: Failed to allocate memory for solution output\n");
             goto err_sol_output_memory;
         }
 
@@ -281,7 +281,7 @@ WIN32DLL_API int euler_cromer(
     }
     else
     {
-        printf("Error: acceleration method not recognized\n");
+        fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;
     }
 
@@ -296,7 +296,7 @@ WIN32DLL_API int euler_cromer(
     
     if (!temp_x || !temp_v || !a || !x_err_comp_sum || !v_err_comp_sum)
     {
-        printf("Error: Failed to allocate memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate memory for calculation\n");
         goto err_calc_memory;
     }
 
@@ -311,7 +311,7 @@ WIN32DLL_API int euler_cromer(
 
         if (!flush_file)
         {
-            printf("Error: Failed to open file for flushing\n");
+            fprintf(stderr, "Error: Failed to open file for flushing\n");
             goto err_flush_file;
         }
 
@@ -326,7 +326,7 @@ WIN32DLL_API int euler_cromer(
 
         if (!sol_state || !sol_time || !sol_dt)
         {
-            printf("Error: Failed to allocate memory for solution output\n");
+            fprintf(stderr, "Error: Failed to allocate memory for solution output\n");
             goto err_sol_output_memory;
         }
 
@@ -495,7 +495,7 @@ WIN32DLL_API int rk4(
     }
     else
     {
-        printf("Error: acceleration method not recognized\n");
+        fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;
     }
 
@@ -518,7 +518,7 @@ WIN32DLL_API int rk4(
 
     if (!temp_x || !temp_v || !a || !vk1 || !vk2 || !vk3 || !vk4 || !xk1 || !xk2 || !xk3 || !xk4 || !x_err_comp_sum || !v_err_comp_sum)
     {
-        printf("Error: Failed to allocate memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate memory for calculation\n");
         goto err_calc_memory;
     }
 
@@ -533,7 +533,7 @@ WIN32DLL_API int rk4(
 
         if (!flush_file)
         {
-            printf("Error: Failed to open file for flushing\n");
+            fprintf(stderr, "Error: Failed to open file for flushing\n");
             goto err_flush_file;
         }
 
@@ -548,7 +548,7 @@ WIN32DLL_API int rk4(
 
         if (!sol_state || !sol_time || !sol_dt)
         {
-            printf("Error: Failed to allocate memory for solution output\n");
+            fprintf(stderr, "Error: Failed to allocate memory for solution output\n");
             goto err_sol_output_memory;
         }
 
@@ -768,7 +768,7 @@ WIN32DLL_API int leapfrog(
     }
     else
     {
-        printf("Error: acceleration method not recognized\n");
+        fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;
     }
 
@@ -784,7 +784,7 @@ WIN32DLL_API int leapfrog(
 
     if (!temp_x || !temp_v || !a_0 || !a_1 || !x_err_comp_sum || !v_err_comp_sum)
     {
-        printf("Error: Failed to allocate memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate memory for calculation\n");
         goto err_calc_memory;
     }
 
@@ -799,7 +799,7 @@ WIN32DLL_API int leapfrog(
 
         if (!flush_file)
         {
-            printf("Error: Failed to open file for flushing\n");
+            fprintf(stderr, "Error: Failed to open file for flushing\n");
             goto err_flush_file;
         }
 
@@ -814,7 +814,7 @@ WIN32DLL_API int leapfrog(
 
         if (!sol_state || !sol_time || !sol_dt)
         {
-            printf("Error: Failed to allocate memory for solution output\n");
+            fprintf(stderr, "Error: Failed to allocate memory for solution output\n");
             goto err_sol_output_memory;
         }
 

@@ -272,7 +272,7 @@ WIN32DLL_API int whfast(
     }
     else
     {
-        printf("Error: acceleration method not recognized\n");
+        fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;
     }
 
@@ -291,7 +291,7 @@ WIN32DLL_API int whfast(
         !eta
     )
     {
-        printf("Error: Failed to allocate memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate memory for calculation\n");
         goto err_calc_memory;
     }
 
@@ -304,7 +304,7 @@ WIN32DLL_API int whfast(
 
         if (!kepler_failed_bool_array)
         {
-            printf("Error: Failed to allocate memory for kepler_failed_bool_array\n");
+            fprintf(stderr, "Error: Failed to allocate memory for kepler_failed_bool_array\n");
             goto err_kepler_memory;
         }
     }
@@ -320,7 +320,7 @@ WIN32DLL_API int whfast(
 
         if (!flush_file)
         {
-            printf("Error: Failed to open file for flushing\n");
+            fprintf(stderr, "Error: Failed to open file for flushing\n");
             goto err_flush_file;
         }
 
@@ -335,7 +335,7 @@ WIN32DLL_API int whfast(
 
         if (!sol_state || !sol_time || !sol_dt)
         {
-            printf("Error: Failed to allocate memory for solution output\n");
+            fprintf(stderr, "Error: Failed to allocate memory for solution output\n");
             goto err_sol_output_memory;
         }
 
@@ -394,7 +394,7 @@ WIN32DLL_API int whfast(
                 {
                     kepler_failed_bool_array[i] = false;
                     kepler_remove_count++;
-                    printf("kepler_auto_remove: Object %d with mass %f removed\n", i, m[i]);
+                    fprintf(stderr, "kepler_auto_remove: Object %d with mass %f removed\n", i, m[i]);
                 }
                 else if (kepler_remove_count > 0)
                 {
@@ -409,7 +409,7 @@ WIN32DLL_API int whfast(
             {
                 eta[i] = eta[i - 1] + m[i];
             }
-            printf("%d object(s) removed in total. Remaining objects: %d\n", kepler_remove_count, objects_count);
+            fprintf(stderr, "%d object(s) removed in total. Remaining objects: %d\n", kepler_remove_count, objects_count);
         }
         jacobi_to_cartesian(objects_count, jacobi_x, jacobi_v, x, v, m, eta);
         whfast_acceleration(objects_count, jacobi_x, x, a, m, eta, G);
@@ -1126,8 +1126,8 @@ void propagate_kepler(
             + x_norm * radial_v * (s * s) * c2
             + gm * (s * s * s) * c3
             - dt) / r;
-        printf("Warning: Kepler's equation did not converge\n");
-        printf("Object index: %d, error = %23.15g\n", i, error);
+        fprintf(stderr, "Warning: Kepler's equation did not converge\n");
+        fprintf(stderr, "Object index: %d, error = %23.15g\n", i, error);
         if (kepler_auto_remove && ((fabs(error) > kepler_auto_remove_tol) || isnan(error)))
         {
             kepler_failed_bool_array[i] = true;
@@ -1135,7 +1135,7 @@ void propagate_kepler(
         }
 
         // Debug information
-        // printf("Input: x: %23.15g %23.15g %23.15g, v: %23.15g %23.15g %23.15g, gm: %23.15g, dt: %23.15g\n", x[0], x[1], x[2], v[0], v[1], v[2], gm, dt);
+        // fprintf(stderr, "Input: x: %23.15g %23.15g %23.15g, v: %23.15g %23.15g %23.15g, gm: %23.15g, dt: %23.15g\n", x[0], x[1], x[2], v[0], v[1], v[2], gm, dt);
     }
 
     // Evaluate f and g functions, together with their derivatives

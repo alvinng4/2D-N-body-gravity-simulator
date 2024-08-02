@@ -231,14 +231,14 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
             break;
 
         default:
-            printf("Error: Invalid order for Embedded RK integrator\n");
+            fprintf(stderr, "Error: Invalid order for Embedded RK integrator\n");
             exit(EXIT_FAILURE);
             break;
     }
 
     if (!*coeff || !*weights || !weights_test)
     {
-        printf("Error: Failed to allocate memory for rk_embedded_butcher_tableaus()\n");
+        fprintf(stderr, "Error: Failed to allocate memory for rk_embedded_butcher_tableaus()\n");
         free(*coeff);
         free(*weights);
         free(*weights_test);
@@ -303,7 +303,7 @@ WIN32DLL_API real rk_embedded_initial_dt(
         !a_1
     )
     {
-        printf("Error: Failed to allocate memory for rk_embedded_initial_dt()\n");
+        fprintf(stderr, "Error: Failed to allocate memory for rk_embedded_initial_dt()\n");
         free(tolerance_scale_x);
         free(tolerance_scale_v);
         free(x_1);
@@ -455,7 +455,7 @@ WIN32DLL_API int rk_embedded(
     }
     else
     {
-        printf("Error: acceleration method not recognized\n");
+        fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;
     }
 
@@ -478,7 +478,7 @@ WIN32DLL_API int rk_embedded(
     real *restrict error_estimation_delta_weights = malloc(len_weights * sizeof(real));
     if (!error_estimation_delta_weights)
     {
-        printf("Error: Failed to allocate memory for error_estimation_delta_weights variable in rk_embedded()\n");
+        fprintf(stderr, "Error: Failed to allocate memory for error_estimation_delta_weights variable in rk_embedded()\n");
         goto err_error_estimation_delta_weights;
     }
 
@@ -536,7 +536,7 @@ WIN32DLL_API int rk_embedded(
         !temp_v_err_comp_sum
     ) 
     {
-        printf("Error: Failed to allocate memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate memory for calculation\n");
         goto err_calc_memory;
     }
 
@@ -572,7 +572,7 @@ WIN32DLL_API int rk_embedded(
 
         if (!flush_file)
         {
-            printf("Error: Failed to open file for flushing\n");
+            fprintf(stderr, "Error: Failed to open file for flushing\n");
             goto err_flush_file;
         }
 
@@ -587,7 +587,7 @@ WIN32DLL_API int rk_embedded(
 
         if (!sol_state || !sol_time || !sol_dt)
         {
-            printf("Error: Failed to allocate memory for solution output\n");
+            fprintf(stderr, "Error: Failed to allocate memory for solution output\n");
             goto err_sol_output_memory;
         }
 
@@ -757,7 +757,7 @@ WIN32DLL_API int rk_embedded(
 
                     if (!temp_sol_state || !temp_sol_time || !temp_sol_dt)
                     {
-                        printf("Error: Failed to allocate extra memory to extend array for solution output\n");
+                        fprintf(stderr, "Error: Failed to allocate extra memory to extend array for solution output\n");
                         goto err_sol_output_memory;
                     }
                     
