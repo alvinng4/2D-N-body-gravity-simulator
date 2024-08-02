@@ -48,14 +48,6 @@ def main():
     system.remove(name="Earth")
     system.remove(name="Neptune")
     system.remove(name="Uranus")
-    colors = [
-        "orange",
-        "red",
-        "darkgoldenrod",
-        "gold",
-    ]
-    labels = system.objects_names.copy()
-    marker_sizes = [6.0, 1.5, 4.0, 3.5]
 
     massive_objects_count = system.objects_count
     inner_objects_count = 2
@@ -116,7 +108,6 @@ def main():
     # in this case. Therefore, we save each frames as images and
     # combine them as gif instead.
     save_count_semi_major_axes = 0
-    save_count_visualization = 0
     new_field_lim = sys.maxsize
     while True:
         try:
@@ -250,82 +241,7 @@ def main():
 
         progress_bar.stop_task(task)
         plt.close("all")
-        file.seek(0)
-
-        print()
-        print("Drawing frames for visualization plots...")
-        fig2, ax2 = plt.subplots(figsize=(4.8, 4.8))
-        ax2.set_facecolor("black")
-        ax2_xlim_min = -3.5
-        ax2_xlim_max = 3.5
-        ax2_ylim_min = -3.5
-        ax2_ylim_max = 3.5
-        with progress_bar:
-            if data_size is not None:
-                task = progress_bar.add_task("", total=data_size)
-
-            # Plotting the sun
-            ax2.plot(
-                sun_x[0],
-                sun_x[1],
-                "o",
-                label=labels[0],
-                color=colors[0],
-                markersize=marker_sizes[0],
-            )
-
-            # Plotting the asteroids
-            ax2.scatter(
-                asteroids_x[:, 0],
-                asteroids_x[:, 1],
-                color="white",
-                marker=".",
-                s=0.1,
-                alpha=0.2,
-            )
-
-            # Annotate time
-            ax2.annotate(
-                f"{year:.2f} Myr",
-                xy=(0.95, 0.95),
-                xycoords="axes fraction",
-                fontsize=12,
-                ha="right",
-                va="top",
-                color="white",
-            )
-
-            # Set labels
-            ax2.set_xlabel("$x$ (AU)")
-            ax2.set_ylabel("$y$ (AU)")
-
-            # Set axes
-            ax2.set_xlim(ax2_xlim_min, ax2_xlim_max)
-            ax2.set_ylim(ax2_ylim_min, ax2_ylim_max)
-
-            # Set equal aspect ratio to prevent distortion
-            ax2.set_aspect("equal")
-
-            fig2.tight_layout()
-
-            # Capture the frame
-            plt.savefig(
-                file_path
-                / f"visualization_frames_{save_count_visualization:04d}.png",
-                dpi=DPI,
-            )
-            save_count_visualization += 1
-
-            # Clear the plot to prepare for the next frame
-            ax2.clear()
-
-            if data_size is not None:
-                progress_bar.update(task, completed=save_count_visualization)
-
-        plt.close("all")
-
-    progress_bar.stop_task(task)
-    print()
+        
     print("Combining frames to gif...")
     semi_major_axes_frames = []
     for i in range(save_count_semi_major_axes):
@@ -341,20 +257,6 @@ def main():
         duration=(1000 // FPS),
     )
 
-    visualization_frames = []
-    for i in range(save_count_visualization):
-        visualization_frames.append(
-            PIL.Image.open(file_path / f"visualization_frames_{i:04d}.png")
-        )
-
-    visualization_frames[0].save(
-        file_path / "Kirkwood_gap_visualization.gif",
-        save_all=True,
-        append_images=visualization_frames[1:],
-        loop=0,
-        duration=(1000 // FPS),
-    )
-
     print(
         f"Output completed! Please check {file_path / 'Kirkwood_gap_semi_major_axes.gif'} \nand {file_path / 'Kirkwood_gap_visualization.gif'}"
     )
@@ -363,9 +265,6 @@ def main():
     print("Deleting files...")
     for i in range(save_count_semi_major_axes):
         (file_path / f"semi_major_axes_frames_{i:04d}.png").unlink()
-
-    for i in range(save_count_visualization):
-        (file_path / f"visualization_frames_{i:04d}.png").unlink()
 
     if get_bool(f"Delete data file? Path: {data_path}"):
         data_path.unlink()
