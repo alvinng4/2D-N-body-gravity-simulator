@@ -1,8 +1,11 @@
 """
 Demonstration on using the gravity simulator to simulate the asteroid belt
+You will need to install the `Pillow` library for this script.
 
 Warning: This script will take a lot of storage space on your computer (probably a few GBs).
-         It will attempt to erase the data after the video is generated.
+         When combining the individual frames, the pillow library will take a lot of memories.
+         You may reduce the frame sizes or integration time if you run out of memory.
+         It will ask user's permission to erase the data after the video is generated.
 """
 
 import csv
@@ -14,6 +17,7 @@ import PIL
 import matplotlib.pyplot as plt
 
 from gravity_sim import GravitySimulator
+from gravity_sim.common import get_bool
 
 N = 50000
 FPS = 30
@@ -21,23 +25,17 @@ DPI = 300
 
 
 def main():
+    # ---------- Initialization ---------- #
     grav_sim = GravitySimulator()
     system = grav_sim.create_system()
     grav_sim.set_current_system(system)
 
     system.load("solar_system")
-    system.remove(name="Mercury")
-    system.remove(name="Venus")
+    system.remove("Mercury")
     system.remove(name="Neptune")
     system.remove(name="Uranus")
-    colors = [
-        "orange",
-        "skyblue",
-        "red",
-        "darkgoldenrod",
-        "gold",
-    ]
-    marker_sizes = [6.0, 2.0, 1.5, 4.0, 3.5]
+    colors = [grav_sim.SOLAR_SYSTEM_COLORS[name] for name in system.objects_names]
+    marker_sizes = [6.0, 1.5, 2.0, 1.5, 4.0, 3.5]
 
     #################################################
     # Adding a star to the system
@@ -98,6 +96,7 @@ def main():
 
     system.center_of_mass_correction()
 
+    # ---------- Simulation ---------- #
     file_path = Path(__file__).parent / "gravity_sim" / "results"
     file_path.mkdir(parents=True, exist_ok=True)
     data_path = file_path / "asteroid_belt_sim.csv"
@@ -106,15 +105,15 @@ def main():
     grav_sim.launch_simulation(
         "rk4",
         grav_sim.years_to_days(5.0),
-        dt=grav_sim.years_to_days(0.001),
-        store_every_n=10,
+        dt=grav_sim.years_to_days(0.0001),
+        store_every_n=100,
         acceleration="massless",
         flush=True,
         flush_results_path=str(data_path),
         no_print=True,
     )
 
-    # Draw frames
+    # ---------- Drawing frames ---------- #
     print()
     print("Drawing frames...")
     fig = plt.figure()
@@ -128,7 +127,7 @@ def main():
     zlim_min = -3
     zlim_max = 3
 
-    # In the library, we use PillowWriter to generate animations.
+    # In the API, we use PillowWriter to generate animations.
     # However, for some reason, the PillowWriter run out of memory
     # in this case. Therefore, we save each frames as images and
     # combine them as gif instead.
@@ -233,7 +232,9 @@ def main():
 
     for i in range(save_count):
         (file_path / f"frames_{i:04d}.png").unlink()
-    data_path.unlink()
+
+    if get_bool(f"Delete data file? Path: {data_path}"):
+        data_path.unlink()
 
     print(f"Output completed! Please check {file_path / 'asteroid_belt.gif'}")
     print()

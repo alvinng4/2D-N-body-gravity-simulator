@@ -1,12 +1,15 @@
 """
 Demonstration on using the gravity simulator to simulate the Kirkwood gap.
+You will need to install the `Pillow` library for this script.
 
-Note: N = 1000 is enough to observe the gaps, but it may not be very clear.
-Since the simulation is O(N), seting N = 50000 would take a few days to 
-finish, and reducing N to 25000 will reduce the runtime by half. 
+Note: N = 1000 is enough to observe some gaps, but it may not be very clear.
+Since the simulation is O(N), seting N = 50000 would take 24 hours to a few days to 
+finish, and reducing N to 25000 will reduce the runtime by half.
 
 Warning: This script will take a lot of storage space on your computer (probably a few GBs).
-         It will attempt to erase the data after the video is generated.
+         When combining the individual frames, the pillow library will take a lot of memories.
+         You may reduce the frame sizes or integration time if you run out of memory.
+         It will ask user's permission to erase the data after the video is generated.
 """
 
 import csv
@@ -105,7 +108,7 @@ def main():
 
     # ---------- Data Analysis and drawing frames ---------- #
 
-    # In the library, we use PillowWriter to generate animations.
+    # In the API, we use PillowWriter to generate animations.
     # However, for some reason, the PillowWriter run out of memory
     # in this case. Therefore, we save each frames as images and
     # combine them as gif instead.
@@ -258,84 +261,63 @@ def main():
             if data_size is not None:
                 task = progress_bar.add_task("", total=data_size)
 
-            for row in reader:
-                if len(row) == 0 or row[0].startswith("#"):
-                    continue
+            # Plotting the sun
+            ax2.plot(
+                sun_x[0],
+                sun_x[1],
+                "o",
+                label=labels[0],
+                color=colors[0],
+                markersize=marker_sizes[0],
+            )
 
-                year = grav_sim.days_to_years(float(row[0])) / 1e6
-                row = row[3:]
-                row = list(map(float, row))
+            # Plotting the asteroids
+            ax2.scatter(
+                asteroids_x[:, 0],
+                asteroids_x[:, 1],
+                color="white",
+                marker=".",
+                s=0.1,
+                alpha=0.2,
+            )
 
-                # Due to removal of asteroids by Kepler auto clear,
-                # we need to count the number of asteroids every row
-                asteroids_count = int(len(row) // 6) - massive_objects_count
-                sun_x = np.array(row[:3])
-                asteroids_x = np.array(
-                    row[
-                        (inner_objects_count * 3) : (
-                            inner_objects_count + asteroids_count
-                        )
-                        * 3
-                    ]
-                ).reshape(asteroids_count, 3)
+            # Annotate time
+            ax2.annotate(
+                f"{year:.2f} Myr",
+                xy=(0.95, 0.95),
+                xycoords="axes fraction",
+                fontsize=12,
+                ha="right",
+                va="top",
+                color="white",
+            )
 
-                # Plotting the sun
-                ax2.plot(
-                    sun_x[0],
-                    sun_x[1],
-                    "o",
-                    label=labels[0],
-                    color=colors[0],
-                    markersize=marker_sizes[0],
-                )
+            # Set labels
+            ax2.set_xlabel("$x$ (AU)")
+            ax2.set_ylabel("$y$ (AU)")
 
-                # Plotting the asteroids
-                ax2.scatter(
-                    asteroids_x[:, 0],
-                    asteroids_x[:, 1],
-                    color="white",
-                    marker=".",
-                    s=0.1,
-                    alpha=0.2,
-                )
+            # Set axes
+            ax2.set_xlim(ax2_xlim_min, ax2_xlim_max)
+            ax2.set_ylim(ax2_ylim_min, ax2_ylim_max)
 
-                # Annotate time
-                ax2.annotate(
-                    f"{year:.2f} Myr",
-                    xy=(0.95, 0.95),
-                    xycoords="axes fraction",
-                    fontsize=12,
-                    ha="right",
-                    va="top",
-                    color="white",
-                )
+            # Set equal aspect ratio to prevent distortion
+            ax2.set_aspect("equal")
 
-                # Set labels
-                ax2.set_xlabel("$x$ (AU)")
-                ax2.set_ylabel("$y$ (AU)")
+            fig2.tight_layout()
 
-                # Set axes
-                ax2.set_xlim(ax2_xlim_min, ax2_xlim_max)
-                ax2.set_ylim(ax2_ylim_min, ax2_ylim_max)
+            # Capture the frame
+            plt.savefig(
+                file_path
+                / f"visualization_frames_{save_count_visualization:04d}.png",
+                dpi=DPI,
+            )
+            save_count_visualization += 1
 
-                # Set equal aspect ratio to prevent distortion
-                ax2.set_aspect("equal")
+            # Clear the plot to prepare for the next frame
+            ax2.clear()
 
-                fig2.tight_layout()
-
-                # Capture the frame
-                plt.savefig(
-                    file_path
-                    / f"visualization_frames_{save_count_visualization:04d}.png",
-                    dpi=DPI,
-                )
-                save_count_visualization += 1
-
-                # Clear the plot to prepare for the next frame
-                ax2.clear()
-
-                if data_size is not None:
-                    progress_bar.update(task, completed=save_count_visualization)
+            if data_size is not None:
+                progress_bar.update(task, completed=save_count_visualization)
 
         plt.close("all")
 
@@ -343,15 +325,9 @@ def main():
     print()
     print("Combining frames to gif...")
     semi_major_axes_frames = []
-    visualization_frames = []
     for i in range(save_count_semi_major_axes):
         semi_major_axes_frames.append(
             PIL.Image.open(file_path / f"semi_major_axes_frames_{i:04d}.png")
-        )
-
-    for i in range(save_count_visualization):
-        visualization_frames.append(
-            PIL.Image.open(file_path / f"visualization_frames_{i:04d}.png")
         )
 
     semi_major_axes_frames[0].save(
@@ -361,6 +337,12 @@ def main():
         loop=0,
         duration=(1000 // FPS),
     )
+
+    visualization_frames = []
+    for i in range(save_count_visualization):
+        visualization_frames.append(
+            PIL.Image.open(file_path / f"visualization_frames_{i:04d}.png")
+        )
 
     visualization_frames[0].save(
         file_path / "Kirkwood_gap_visualization.gif",
