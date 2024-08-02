@@ -713,6 +713,11 @@ def plot_eccentricity(
     ylabel: str = "Eccentricity",
 ) -> None:
     objects_count = len(eccentricity[0])
+    if colors is None:
+        colors = [None for _ in range(objects_count)]
+    if labels is None:
+        labels = [None for _ in range(objects_count)]
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
     for i in range(objects_count):
@@ -739,6 +744,11 @@ def plot_inclination(
     ylabel: str = "Inclination (radians)",
 ) -> None:
     objects_count = len(inclination[0])
+    if colors is None:
+        colors = [None for _ in range(objects_count)]
+    if labels is None:
+        labels = [None for _ in range(objects_count)]
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
     for i in range(objects_count):

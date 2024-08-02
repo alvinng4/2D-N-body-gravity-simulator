@@ -37,6 +37,21 @@ class GravitySimulator:
         "ias15": "IAS15",
         "whfast": "WHFast",
     }
+    SOLAR_SYSTEM_COLORS = {
+        "Sun": "orange",
+        "Mercury": "slategrey",
+        "Venus": "wheat",
+        "Earth": "skyblue",
+        "Mars": "red",
+        "Jupiter": "darkgoldenrod",
+        "Saturn": "gold",
+        "Uranus": "paleturquoise",
+        "Neptune": "blue",
+        "Moon": "grey",
+        "Pluto": None,
+        "Ceres": None,
+        "Vesta": None,
+    }
 
     def __init__(self):
         self.c_lib = None
@@ -64,6 +79,8 @@ class GravitySimulator:
         self.simulator = Simulator(c_lib=self.c_lib, is_exit_ctypes_bool=self.is_exit)
         self.compute_energy = self.simulator.compute_energy
         self.compute_angular_momentum = self.simulator.compute_angular_momentum
+        self.compute_eccentricity = self.simulator.compute_eccentricity
+        self.compute_inclination = self.simulator.compute_inclination
         self.trim_data = common.trim_data
 
     def create_system(self, system_name: str = None) -> GravitationalSystem:
@@ -398,6 +415,64 @@ class GravitySimulator:
             sol_time = self.simulator.sol_time
 
         plotting.plot_dt(sol_dt, sol_time, title, xlabel, ylabel, yscale, marker_size)
+
+    def plot_eccentricity(
+        self,
+        eccentricity: np.ndarray = None,
+        sol_time: np.ndarray = None,
+        colors: list = None,
+        labels: list = None,
+        legend: bool = False,
+        title: str = "Eccentricity against time",
+        xlabel: str = "Time",
+        ylabel: str = "Eccentricity",
+        computed_eccentricity: bool = False,
+    ) -> None:
+        if not computed_eccentricity:
+            self.compute_eccentricity()
+        eccentricity = self.simulator.eccentricity
+        if sol_time is None:
+            sol_time = self.simulator.sol_time
+
+        plotting.plot_eccentricity(
+            eccentricity=eccentricity,
+            sol_time=sol_time,
+            colors=colors,
+            labels=labels,
+            legend=legend,
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+        )
+
+    def plot_inclination(
+        self,
+        inclination: np.ndarray = None,
+        sol_time: np.ndarray = None,
+        colors: list = None,
+        labels: list = None,
+        legend: bool = False,
+        title: str = "Inclination against time",
+        xlabel: str = "Time",
+        ylabel: str = "Inclination (radians)",
+        computed_inclination: bool = False,
+    ) -> None:
+        if not computed_inclination:
+            self.compute_inclination()
+        inclination = self.simulator.inclination
+        if sol_time is None:
+            sol_time = self.simulator.sol_time
+
+        plotting.plot_inclination(
+            inclination=inclination,
+            sol_time=sol_time,
+            colors=colors,
+            labels=labels,
+            legend=legend,
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+        )
 
     def sol_state_to_system(self, index: int = -1) -> GravitationalSystem:
         """

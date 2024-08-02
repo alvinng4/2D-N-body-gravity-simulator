@@ -24,15 +24,15 @@ Checkout the interactive simulator at https://www.github.com/alvinng4/OrbitSim
     - [Important note](#important-note)
 * [GravitySimulator API](#gravitysimulator-api)
 * [Running the program](#running-the-program)
-* [Available systems](#available-systems-1)
-* [Make changes to saved systems](#make-changes-to-saved-systems)
-* [Saving the results](#saving-the-results)
-* [Output animation in .gif](#output-animation-in-gif)
-* [Integrators](#available-integrators)
+* [Default systems](#default-systems)
+* [Integrators](#integrators)
     - [Simple methods](#simple-methods)
     - [Embedded Runge-Kutta methods](#embdedded-runge-kutta-methods)
     - [IAS15](#IAS15)
     - [WHFast](#whfast)
+* [Make changes to saved systems](#make-changes-to-saved-systems)
+* [Saving the results](#saving-the-results)
+* [Output animations in .gif](#output-animations-in-gif)
 * [Compensated summation](#compensated-summation)
 * [Feedback and Bugs](#feedback-and-bugs)
 * [Data Sources](#data-sources)
@@ -68,7 +68,6 @@ more flexible and provides more options.
 * The default unit for this project is solar masses, AU and days, with G = 0.00029591220828411956.
 It is possible to change this value in the API by changing `system.G`.
 * Animations, simulation results, etc. will be stored to `gravity_sim/result` by default, unless a file path is specified.
-* This project is still in early development, and will undergo many changes. Backward capability may not be guaranteed until later versions
 * Complex animations like the asteroid belt cannot be done solely with the API functions. Sample scripts are provided in this repository (e.g. See `asteroid_belt_animation.py`)
 
 ## GravitySimulator API

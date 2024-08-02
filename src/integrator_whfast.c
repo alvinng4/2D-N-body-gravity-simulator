@@ -400,6 +400,7 @@ WIN32DLL_API int whfast(
                 {
                     kepler_failed_bool_array[i] = false;
                     kepler_remove_count++;
+                    printf("kepler_auto_remove: Object %d with mass %f removed\n", i, m[i]);
                 }
                 else if (kepler_remove_count > 0)
                 {
@@ -414,7 +415,7 @@ WIN32DLL_API int whfast(
             {
                 eta[i] = eta[i - 1] + m[i];
             }
-            printf("Kepler_auto_remove: %d object(s) removed. Remaining objects: %d\n", kepler_remove_count, objects_count);
+            printf("%d object(s) removed in total. Remaining objects: %d\n", kepler_remove_count, objects_count);
         }
         jacobi_to_cartesian(objects_count, jacobi_x, jacobi_v, x, v, m, eta);
         whfast_acceleration(objects_count, jacobi_x, x, a, m, eta, G);

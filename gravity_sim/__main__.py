@@ -34,6 +34,21 @@ class GravitySimulatorCLI:
         "ias15": "IAS15",
         "whfast": "WHFast",
     }
+    SOLAR_SYSTEM_COLORS = {
+        "Sun": "orange",
+        "Mercury": "slategrey",
+        "Venus": "wheat",
+        "Earth": "skyblue",
+        "Mars": "red",
+        "Jupiter": "darkgoldenrod",
+        "Saturn": "gold",
+        "Uranus": "paleturquoise",
+        "Neptune": "blue",
+        "Moon": "grey",
+        "Pluto": None,
+        "Ceres": None,
+        "Vesta": None,
+    }
 
     def __init__(self):
         # --------------------Read command line arguments--------------------
@@ -77,21 +92,6 @@ class GravitySimulatorCLI:
             "solar_system",
             "solar_system_plus",
         ]
-        self.solar_like_systems_colors = {
-            "Sun": "orange",
-            "Mercury": "slategrey",
-            "Venus": "wheat",
-            "Earth": "skyblue",
-            "Mars": "red",
-            "Jupiter": "darkgoldenrod",
-            "Saturn": "gold",
-            "Uranus": "paleturquoise",
-            "Neptune": "blue",
-            "Moon": "grey",
-            "Pluto": None,
-            "Ceres": None,
-            "Vesta": None,
-        }
         self.recommended_settings = {
             # "template": ["tf", "tf unit", "tolerance", "store_every_n"],
             "circular_binary_orbit": [50, "days", 1e-9, 1],
@@ -432,7 +432,7 @@ class GravitySimulatorCLI:
         # tf = 0 is allowed as user may want to plot the
         # initial position of the system
         while True:
-            self.tf = input("Enter tf (d/yr): ")
+            self.tf = input("Enter tf (days/year) (e.g. 200y): ")
             if matches := re.search(
                 r"([0-9]*\.?[0-9]*)(?:\.|\W*)*(day|year|d|y)?", self.tf, re.IGNORECASE
             ):
@@ -461,7 +461,7 @@ class GravitySimulatorCLI:
         # --------------------Input dt--------------------
         if self.integrator in self.simulator.FIXED_STEP_SIZE_INTEGRATORS:
             while True:
-                self.dt = input("Enter dt (d/yr): ")
+                self.dt = input("Enter dt (days/year) (e.g. 1d): ")
                 if matches := re.search(
                     r"([0-9]*\.?[0-9]*)(?:\.|\W*)*(day|year|d|y)?\s*",
                     self.dt,
@@ -731,7 +731,7 @@ class GravitySimulatorCLI:
 
         for objects_name in self.gravitational_system.objects_names:
             try:
-                colors.append(self.solar_like_systems_colors[objects_name])
+                colors.append(self.SOLAR_SYSTEM_COLORS[objects_name])
                 legend = True  # Show legend if one of the name is recognized
             except:
                 colors.append(None)
@@ -756,7 +756,7 @@ class GravitySimulatorCLI:
 
         for objects_name in self.gravitational_system.objects_names:
             try:
-                colors.append(self.solar_like_systems_colors[objects_name])
+                colors.append(self.SOLAR_SYSTEM_COLORS[objects_name])
                 legend = True  # Show legend if one of the name is recognized
             except:
                 colors.append(None)
@@ -804,7 +804,7 @@ class GravitySimulatorCLI:
                 "Enter file name without extension (carefully, the program cannot check the validity of the filename): "
             )
             dpi = common.get_float(
-                "Enter dots per inch (dpi) (recommended value is 200): ",
+                "Enter dots per inch (dpi) (recommended: 200): ",
                 larger_than=0,
             )
             traj_len = common.get_int(
@@ -868,7 +868,7 @@ class GravitySimulatorCLI:
 
         for objects_name in self.gravitational_system.objects_names:
             try:
-                colors.append(self.solar_like_systems_colors[objects_name])
+                colors.append(self.SOLAR_SYSTEM_COLORS[objects_name])
                 legend = True  # Show legend if one of the name is recognized
             except:
                 colors.append(None)
@@ -904,13 +904,13 @@ class GravitySimulatorCLI:
         if not is_cancel:
             print("Animating 3D trajectory in .gif...")
 
-            colors = []
+        colors = []
         labels = []
         legend = False
 
         for objects_name in self.gravitational_system.objects_names:
             try:
-                colors.append(self.solar_like_systems_colors[objects_name])
+                colors.append(self.SOLAR_SYSTEM_COLORS[objects_name])
                 legend = True  # Show legend if one of the name is recognized
             except:
                 colors.append(None)
@@ -979,7 +979,7 @@ class GravitySimulatorCLI:
 
         for objects_name in self.gravitational_system.objects_names[1:]:
             try:
-                colors.append(self.solar_like_systems_colors[objects_name])
+                colors.append(self.SOLAR_SYSTEM_COLORS[objects_name])
                 legend = True  # Show legend if one of the name is recognized
             except:
                 colors.append(None)
@@ -1008,7 +1008,7 @@ class GravitySimulatorCLI:
 
         for objects_name in self.gravitational_system.objects_names[1:]:
             try:
-                colors.append(self.solar_like_systems_colors[objects_name])
+                colors.append(self.SOLAR_SYSTEM_COLORS[objects_name])
                 legend = True  # Show legend if one of the name is recognized
             except:
                 colors.append(None)

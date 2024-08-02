@@ -270,16 +270,14 @@ def main():
                 # we need to count the number of asteroids every row
                 asteroids_count = int(len(row) // 6) - massive_objects_count
                 sun_x = np.array(row[:3])
-                asteroids_x = (
-                    np.array(
-                        row[
-                            (inner_objects_count * 3) : (
-                                inner_objects_count + asteroids_count
-                            )
-                            * 3
-                        ]
-                    ).reshape(asteroids_count, 3)
-                )
+                asteroids_x = np.array(
+                    row[
+                        (inner_objects_count * 3) : (
+                            inner_objects_count + asteroids_count
+                        )
+                        * 3
+                    ]
+                ).reshape(asteroids_count, 3)
 
                 # Plotting the sun
                 ax2.plot(
