@@ -8,14 +8,14 @@ It aims to be lightweight and easy to use.
 Other packages such as REBOUND are recommended for better 
 accuracy and efficiency.
 
-<img src="./examples/solar_plus_3d.gif" alt="Image" width="300">
-<img src="./examples/asteroid_belt_added_star_2.gif" alt="Image" width="300">
-<img src="./examples/rel_energy.png" alt="Image" width="300">
+<img src="./examples/media/solar_plus_3d.gif" alt="Image" width="300">
+<img src="./examples/media/asteroid_belt_added_star_2.gif" alt="Image" width="300">
+<img src="./examples/media/rel_energy.png" alt="Image" width="300">
 
 ## Interactive simulator: 
 Checkout the interactive simulator at https://www.github.com/alvinng4/OrbitSim
 
-<img src="./examples/OrbitSim.png" alt="Image" width="400">
+<img src="./examples/media/OrbitSim.png" alt="Image" width="400">
 
 ## Documentation
 * [Quick Start](#quick-start)
@@ -73,7 +73,7 @@ It is possible to change this value in the API by changing `system.G`.
 ## GravitySimulator API
 
 You may import the GravitySimulator API from `gravity_sim` to perform gravity simulation.
-See `tutorial.ipynb` or `asteroid_belt_animation.py` for some example usage.
+See `tutorial.ipynb` or [Sample projects](#sample-projects) for some example usage.
 ```
 from gravity_sim immport GravitySimulator
 
@@ -93,6 +93,19 @@ grav_sim.launch_simulation(
 grav_sim.plot_2d_trajectory()
 grav_sim.save_results()
 ```
+
+## Sample projects
+
+Some projects are done with the API. The scripts are stored at the `examples` folder.
+
+#### Simulating the asteroid belt
+
+<img src="./examples/media/asteroid_belt.gif" alt="Image" width="300">
+
+#### Simulating the formation of Kirkwood gap
+
+<img src="./examples/media/Kirkwood_gap_semi_major_axes.png" alt="Image" width="300">
+<img src="./examples/media/Kirkwood_gap_visualization.png" alt="Image" width="225">
 
 ## Running the program in terminal
 
