@@ -23,9 +23,9 @@ import matplotlib.pyplot as plt
 from gravity_sim import GravitySimulator
 from gravity_sim.common import get_bool
 
-N = 5
+N = 50000
 FPS = 30
-DPI = 300
+DPI = 200
 
 
 def main():

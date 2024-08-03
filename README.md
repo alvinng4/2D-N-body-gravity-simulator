@@ -98,11 +98,11 @@ grav_sim.save_results()
 
 Some projects are done with the API. The scripts are stored at the `examples` folder.
 
-#### Simulating the asteroid belt
+#### Asteroid belt animation
 
 <img src="./examples/media/asteroid_belt.gif" alt="Image" width="300">
 
-#### Simulating the formation of Kirkwood gap
+#### Formation of Kirkwood gap
 
 <img src="./examples/media/Kirkwood_gap_semi_major_axes.png" alt="Image" width="300">
 <img src="./examples/media/Kirkwood_gap_visualization.png" alt="Image" width="225">
