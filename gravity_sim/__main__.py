@@ -773,7 +773,7 @@ class GravitySimulatorCLI:
 
         print()
 
-    def _animation_get_user_input(self, dim: int):
+    def _animation_get_user_input(self: int):
         while True:
             fps = common.get_float("Enter FPS: ", larger_than=0)
 
@@ -800,9 +800,8 @@ class GravitySimulatorCLI:
             print(f"Estimated time length: {(frame_size / fps):.1f} s")
             print()
 
-            file_name = input(
-                "Enter file name without extension (carefully, the program cannot check the validity of the filename): "
-            )
+            file_name = input("Enter file name: ").strip()
+
             dpi = common.get_float(
                 "Enter dots per inch (dpi) (recommended: 200): ",
                 larger_than=0,
@@ -858,38 +857,34 @@ class GravitySimulatorCLI:
             traj_len,
             is_dynamic_axes,
             is_cancel,
-        ) = self._animation_get_user_input(dim=2)
+        ) = self._animation_get_user_input()
         if not is_cancel:
             print("Animating 2D trajectory (xy plane) in .gif...")
 
-            colors = []
-        labels = []
-        legend = False
+        try:
+            colors = [self.SOLAR_SYSTEM_COLORS[objects_name] for objects_name in self.gravitational_system.objects_names]
+            labels = [objects_name for objects_name in self.gravitational_system.objects_names]
+            legend = True
+        except KeyError:
+            colors = None
+            labels = None
+            legend = False
 
-        for objects_name in self.gravitational_system.objects_names:
-            try:
-                colors.append(self.SOLAR_SYSTEM_COLORS[objects_name])
-                legend = True  # Show legend if one of the name is recognized
-            except:
-                colors.append(None)
-
-            labels.append(objects_name)
-
-            plotting.animate_2d_traj_gif(
-                self.simulator.objects_count,
-                self.simulator.sol_state,
-                fps,
-                plot_every_nth_point,
-                dpi,
-                traj_len=traj_len,
-                is_dynamic_axes=is_dynamic_axes,
-                colors=colors,
-                labels=labels,
-                legend=legend,
-                file_name=file_name,
-                sol_time=self.simulator.sol_time,
-            )
-            print()
+        plotting.animate_2d_traj_gif(
+            self.simulator.objects_count,
+            self.simulator.sol_state,
+            fps,
+            plot_every_nth_point,
+            dpi,
+            traj_len=traj_len,
+            is_dynamic_axes=is_dynamic_axes,
+            colors=colors,
+            labels=labels,
+            legend=legend,
+            file_name=file_name,
+            sol_time=self.simulator.sol_time,
+        )
+        print()
 
     def _animate_3d_trajectory_wrapper(self):
         (
@@ -900,38 +895,34 @@ class GravitySimulatorCLI:
             traj_len,
             is_dynamic_axes,
             is_cancel,
-        ) = self._animation_get_user_input(dim=3)
+        ) = self._animation_get_user_input()
         if not is_cancel:
             print("Animating 3D trajectory in .gif...")
 
-        colors = []
-        labels = []
-        legend = False
+        try:
+            colors = [self.SOLAR_SYSTEM_COLORS[objects_name] for objects_name in self.gravitational_system.objects_names]
+            labels = [objects_name for objects_name in self.gravitational_system.objects_names]
+            legend = True
+        except KeyError:
+            colors = None
+            labels = None
+            legend = False
 
-        for objects_name in self.gravitational_system.objects_names:
-            try:
-                colors.append(self.SOLAR_SYSTEM_COLORS[objects_name])
-                legend = True  # Show legend if one of the name is recognized
-            except:
-                colors.append(None)
-
-            labels.append(objects_name)
-
-            plotting.animate_3d_traj_gif(
-                self.simulator.objects_count,
-                self.simulator.sol_state,
-                fps,
-                plot_every_nth_point,
-                dpi,
-                traj_len=traj_len,
-                is_dynamic_axes=is_dynamic_axes,
-                colors=colors,
-                labels=labels,
-                legend=legend,
-                file_name=file_name,
-                sol_time=self.simulator.sol_time,
-            )
-            print()
+        plotting.animate_3d_traj_gif(
+            self.simulator.objects_count,
+            self.simulator.sol_state,
+            fps,
+            plot_every_nth_point,
+            dpi,
+            traj_len=traj_len,
+            is_dynamic_axes=is_dynamic_axes,
+            colors=colors,
+            labels=labels,
+            legend=legend,
+            file_name=file_name,
+            sol_time=self.simulator.sol_time,
+        )
+        print()
 
     def _plot_rel_energy_wrapper(self):
         if not self.computed_energy:
@@ -973,18 +964,14 @@ class GravitySimulatorCLI:
             self.simulator.compute_eccentricity()
             self.computed_eccentricity = True
 
-        colors = []
-        labels = []
-        legend = False
-
-        for objects_name in self.gravitational_system.objects_names[1:]:
-            try:
-                colors.append(self.SOLAR_SYSTEM_COLORS[objects_name])
-                legend = True  # Show legend if one of the name is recognized
-            except:
-                colors.append(None)
-
-            labels.append(objects_name)
+        try:
+            colors = [self.SOLAR_SYSTEM_COLORS[objects_name] for objects_name in self.gravitational_system.objects_names]
+            labels = [objects_name for objects_name in self.gravitational_system.objects_names]
+            legend = True
+        except KeyError:
+            colors = None
+            labels = None
+            legend = False
 
         print("Plotting eccentricity...(Please check the window)")
         plotting.plot_eccentricity(
@@ -1002,18 +989,14 @@ class GravitySimulatorCLI:
             self.simulator.compute_inclination()
             self.computed_inclination = True
 
-        colors = []
-        labels = []
-        legend = False
-
-        for objects_name in self.gravitational_system.objects_names[1:]:
-            try:
-                colors.append(self.SOLAR_SYSTEM_COLORS[objects_name])
-                legend = True  # Show legend if one of the name is recognized
-            except:
-                colors.append(None)
-
-            labels.append(objects_name)
+        try:
+            colors = [self.SOLAR_SYSTEM_COLORS[objects_name] for objects_name in self.gravitational_system.objects_names]
+            labels = [objects_name for objects_name in self.gravitational_system.objects_names]
+            legend = True
+        except KeyError:
+            colors = None
+            labels = None
+            legend = False
 
         print("Plotting inclination...(Please check the window)")
         plotting.plot_inclination(

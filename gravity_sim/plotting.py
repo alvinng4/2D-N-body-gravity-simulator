@@ -22,9 +22,9 @@ def plot_2d_trajectory(
     marker="o",
     markersize=6,
 ):
-    if colors is None:
+    if colors is None or len(colors) == 0:
         colors = [None for _ in range(objects_count)]
-    if labels is None:
+    if labels is None or len(labels) == 0:
         labels = [None for _ in range(objects_count)]
 
     fig = plt.figure()
@@ -68,9 +68,9 @@ def plot_3d_trajectory(
     marker="o",
     markersize=6,
 ):
-    if colors is None:
+    if colors is None or len(colors) == 0:
         colors = [None for _ in range(objects_count)]
-    if labels is None:
+    if labels is None or len(labels) == 0:
         labels = [None for _ in range(objects_count)]
 
     fig = plt.figure()
@@ -132,9 +132,9 @@ def animate_2d_traj_gif(
     file_path=None,
     sol_time=None,
 ):
-    if colors is None:
+    if colors is None or len(colors) == 0:
         colors = [None for _ in range(objects_count)]
-    if labels is None:
+    if labels is None or len(labels) == 0:
         labels = [None for _ in range(objects_count)]
 
     fig = plt.figure()
@@ -301,9 +301,9 @@ def animate_3d_traj_gif(
     file_path=None,
     sol_time=None,
 ) -> None:
-    if colors is None:
+    if colors is None or len(colors) == 0:
         colors = [None for _ in range(objects_count)]
-    if labels is None:
+    if labels is None or len(labels) == 0:
         labels = [None for _ in range(objects_count)]
 
     fig = plt.figure()
@@ -713,9 +713,9 @@ def plot_eccentricity(
     ylabel: str = "Eccentricity",
 ) -> None:
     objects_count = len(eccentricity[0])
-    if colors is None:
+    if colors is None or len(colors) == 0:
         colors = [None for _ in range(objects_count)]
-    if labels is None:
+    if labels is None or len(labels) == 0:
         labels = [None for _ in range(objects_count)]
 
     fig = plt.figure()
@@ -744,9 +744,9 @@ def plot_inclination(
     ylabel: str = "Inclination (radians)",
 ) -> None:
     objects_count = len(inclination[0])
-    if colors is None:
+    if colors is None or len(colors) == 0:
         colors = [None for _ in range(objects_count)]
-    if labels is None:
+    if labels is None or len(labels) == 0:
         labels = [None for _ in range(objects_count)]
 
     fig = plt.figure()
