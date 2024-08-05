@@ -7,6 +7,9 @@ Warning: This script will take a lot of storage space on your computer (probably
          You may reduce the frame sizes or integration time if you run out of memory.
          It will ask user's permission to erase the data after the video is generated.
 
+         Do not run multiple instances of this program at the same time, unless you made copies
+         of the whole directory. Otherwise, the final data may overwrite each other.
+
 Note: Technically you can also create nice looking solar system animations by setting N = 0 and 
       expanding the axes limits.
 """

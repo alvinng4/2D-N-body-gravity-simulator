@@ -68,7 +68,7 @@ more flexible and provides more options.
 * The default unit for this project is solar masses, AU and days, with G = 0.00029591220828411956.
 It is possible to change this value in the API by changing `system.G`.
 * Animations, simulation results, etc. will be stored to `gravity_sim/result` by default, unless a file path is specified.
-* Complex animations like the asteroid belt cannot be done solely with the API functions. Sample scripts are provided in this repository (e.g. See `asteroid_belt_animation.py`)
+* Complex animations like the asteroid belt cannot be done solely with the API functions. Sample scripts are provided in this repository (See [Sample projects](#sample-projects))
 
 ## GravitySimulator API
 
@@ -106,6 +106,10 @@ Some projects are done with the API. The scripts are stored at the `examples` fo
 
 <img src="./examples/media/Kirkwood_gap_semi_major_axes.png" alt="Image" width="300">
 <img src="./examples/media/Kirkwood_gap_visualization.png" alt="Image" width="225">
+
+Videos: 
+* https://www.youtube.com/watch?v=AEyjIF-8zT0
+* https://www.youtube.com/watch?v=jHLLr7ACvDQ
 
 ## Running the program in terminal
 
