@@ -613,9 +613,8 @@ WIN32DLL_API int ias15(
                 sol_time = temp_sol_time;
                 sol_dt = temp_sol_dt;
             }
-
-            count++;
         }
+        count++;
     
         // Check if user sends KeyboardInterrupt in main thread
         if (*is_exit)

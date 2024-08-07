@@ -1,8 +1,8 @@
 # Gravity Simulator
 Newtonian N-body gravity simulator accelerated with C library
 
-* Ten integrators including WHFast and IAS15 
-* Barnes-Hut algorithm (prototype)
+* Ten integrators including WHFast and IAS15 are implemented
+* Barnes-Hut algorithm (prototype) are available but optimization is needed
 * CUDA acceleration will be implemented in the future
 
 This is a student project developed for learning purpose.
@@ -13,11 +13,6 @@ accuracy and efficiency.
 <img src="./examples/media/solar_plus_3d.gif" alt="Image" width="300">
 <img src="./examples/media/asteroid_belt_added_star_2.gif" alt="Image" width="300">
 <img src="./examples/media/rel_energy.png" alt="Image" width="300">
-
-## Interactive simulator: 
-Checkout the interactive simulator at https://www.github.com/alvinng4/OrbitSim
-
-<img src="./examples/media/OrbitSim.png" alt="Image" width="400">
 
 ## Documentation
 * [Quick Start](#quick-start)
@@ -77,12 +72,13 @@ It is possible to change this value in the API by changing `system.G`.
 You may import the GravitySimulator API from `gravity_sim` to perform gravity simulation.
 See `tutorial.ipynb` or [Sample projects](#sample-projects) for some example usage.
 ```
-from gravity_sim immport GravitySimulator
+from gravity_sim import GravitySimulator
 
 grav_sim = GravitySimulator()
-gravity_sim.integration_mode = "c_lib"  # "numpy" is also available
+grav_sim.integration_mode = "c_lib"  # "numpy" is also available
 
 system = grav_sim.create_system()
+grav_sim.set_current_system(system)
 system.load("solar_system")
 
 grav_sim.launch_simulation(
@@ -93,12 +89,12 @@ grav_sim.launch_simulation(
 )
 
 grav_sim.plot_2d_trajectory()
+grav_sim.plot_rel_energy()
 grav_sim.save_results()
 ```
 
 #### launch_simulation
 launch_simulation() is the main method for initiating the simulation.
-Certainly! Here's a table documenting the parameters for the `launch_simulation` function:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -136,7 +132,7 @@ Certainly! Here's a table documenting the parameters for the `launch_simulation`
 - `flush`
     * Flush intermediate results into a csv file in `gravity_sim/results` to reduce memory pressure.
 - `no_store`
-    * Do not store any result, typically used for benchmarking.
+    * To not store any result, typically used for benchmarking.
 
 ## Sample projects
 
