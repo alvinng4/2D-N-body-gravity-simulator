@@ -44,7 +44,7 @@ class WHFast:
         G: float,
         dt: float,
         tf: float,
-        acceleration: str,
+        acceleration_method: str,
         flush: bool = False,
         flush_path: str = None,
         no_progress_bar: bool = False,
@@ -97,6 +97,11 @@ class WHFast:
                 ("sol_time", ctypes.POINTER(ctypes.c_double)),
                 ("sol_dt", ctypes.POINTER(ctypes.c_double)),
             ]
+
+        if acceleration_method not in ["pairwise", "massless", "barnes-hut"]:
+            raise ValueError("Invalid acceleration method")
+        elif acceleration_method == "barnes-hut":
+            raise NotImplementedError("Barnes-Hut is not implemented for WHFast")
 
         self.c_lib.whfast.restype = ctypes.c_int
 

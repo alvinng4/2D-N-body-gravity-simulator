@@ -50,10 +50,8 @@ class IAS15:
         """
         Recommended tolerance: 1e-9
         """
-        if acceleration_method not in ["pairwise", "massless", "barnes_hut"]:
+        if acceleration_method not in ["pairwise", "massless", "barnes-hut"]:
             raise ValueError("Invalid acceleration method")
-        if acceleration_method == "barnes_hut":
-            raise NotImplementedError
 
         class Solutions(ctypes.Structure):
             _fields_ = [

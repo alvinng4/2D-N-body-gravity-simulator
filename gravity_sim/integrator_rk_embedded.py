@@ -63,10 +63,8 @@ class RKEmbedded:
         flush_path: str = "",
         no_progress_bar: bool = False,
     ):
-        if acceleration_method not in ["pairwise", "massless", "barnes_hut"]:
+        if acceleration_method not in ["pairwise", "massless", "barnes-hut"]:
             raise ValueError("Invalid acceleration method")
-        if acceleration_method == "barnes_hut":
-            raise NotImplementedError
 
         class Solutions(ctypes.Structure):
             _fields_ = [

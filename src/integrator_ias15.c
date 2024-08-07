@@ -393,6 +393,10 @@ WIN32DLL_API int ias15(
     {
         acceleration = acceleration_massless;
     }
+    else if (strcmp(acceleration_method, "barnes-hut") == 0)
+    {
+        acceleration = acceleration_barnes_hut;
+    }
     else
     {
         fprintf(stderr, "Error: acceleration method not recognized\n");

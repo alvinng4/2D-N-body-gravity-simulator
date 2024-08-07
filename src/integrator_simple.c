@@ -64,6 +64,10 @@ WIN32DLL_API int euler(
     {
         acceleration = acceleration_massless;
     }
+    else if (strcmp(acceleration_method, "barnes-hut") == 0)
+    {
+        acceleration = acceleration_barnes_hut;
+    }
     else
     {
         fprintf(stderr, "Error: acceleration method not recognized\n");
@@ -279,6 +283,10 @@ WIN32DLL_API int euler_cromer(
     {
         acceleration = acceleration_massless;
     }
+    else if (strcmp(acceleration_method, "barnes-hut") == 0)
+    {
+        acceleration = acceleration_barnes_hut;
+    }
     else
     {
         fprintf(stderr, "Error: acceleration method not recognized\n");
@@ -492,6 +500,10 @@ WIN32DLL_API int rk4(
     else if (strcmp(acceleration_method, "massless") == 0)
     {
         acceleration = acceleration_massless;
+    }
+    else if (strcmp(acceleration_method, "barnes-hut") == 0)
+    {
+        acceleration = acceleration_barnes_hut;
     }
     else
     {
@@ -765,6 +777,10 @@ WIN32DLL_API int leapfrog(
     else if (strcmp(acceleration_method, "massless") == 0)
     {
         acceleration = acceleration_massless;
+    }
+    else if (strcmp(acceleration_method, "barnes-hut") == 0)
+    {
+        acceleration = acceleration_barnes_hut;
     }
     else
     {

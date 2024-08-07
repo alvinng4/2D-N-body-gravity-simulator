@@ -8,6 +8,7 @@
  *         including NPTS, int64, etc.
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -18,6 +19,7 @@
 #endif
 
 #define BUFFER_SIZE 50000
+#define BARNES_HUT_THETA 0.5
 
 typedef int64_t int64;
 typedef double real;
@@ -29,47 +31,15 @@ typedef struct Solutions
     double* sol_dt;
 } Solutions;
 
-
-/**
- * \brief Pairwise computation of acceleration based on Newton's law of gravitational. 
- * \param objects_count Number of objects in the system
- * \param x Array of position vectors of all objects
- * \param a Array of acceleration vectors of all objects.
- *                   Values inside this array will be replaced
- *                   by the computed acceleration.
- * \param m Array of masses for all objects
- * \param G Gravitational constant
- * 
- * \return None
- */
-void acceleration_pairwise(
-    int objects_count,
-    real *restrict x,
-    real *restrict a,
-    const real *restrict m,
-    real G
-);
-
-/**
- * \brief Compute acceleration based on Newton's law of gravitational,
- *        separating the calculation of massive and massless objects.
- * \param objects_count Number of objects in the system
- * \param x Array of position vectors of all objects
- * \param a Array of acceleration vectors of all objects.
- *                   Values inside this array will be replaced
- *                   by the computed acceleration.
- * \param m Array of masses for all objects
- * \param G Gravitational constant
- * 
- * \return None
- */
-void acceleration_massless(
-    int objects_count,
-    real *restrict x,
-    real *restrict a,
-    const real *restrict m,
-    real G
-);
+typedef struct BarnesHutTreeNode
+{
+    bool is_leaf;
+    int index;
+    real total_mass;
+    real center_of_mass[3];
+    real box_width;
+    struct BarnesHutTreeNode *children[8];
+} BarnesHutTreeNode;
 
 /**
  * \brief Find the max absolute value in a 1D array
@@ -112,6 +82,93 @@ void vec_cross(
     const real *restrict vec_2,
     real *restrict result
 );
+
+/**
+ * \brief Pairwise computation of acceleration based on Newton's law of gravitational. 
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors of all objects
+ * \param a Array of acceleration vectors of all objects.
+ *                   Values inside this array will be replaced
+ *                   by the computed acceleration.
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
+ * 
+ * \return None
+ */
+void acceleration_pairwise(
+    int objects_count,
+    real *restrict x,
+    real *restrict a,
+    const real *restrict m,
+    real G
+);
+
+/**
+ * \brief Compute acceleration based on Newton's law of gravitational,
+ *        separating the calculation of massive and massless objects.
+ * \param objects_count Number of objects in the system
+ * \param x Array of position vectors of all objects
+ * \param a Array of acceleration vectors of all objects.
+ *                   Values inside this array will be replaced
+ *                   by the computed acceleration.
+ * \param m Array of masses for all objects
+ * \param G Gravitational constant
+ * 
+ * \return None
+ */
+void acceleration_massless(
+    int objects_count,
+    real *restrict x,
+    real *restrict a,
+    const real *restrict m,
+    real G
+);
+
+void acceleration_barnes_hut(
+    int objects_count,
+    real *restrict x,
+    real *restrict a,
+    const real *restrict m,
+    real G
+);
+
+int _barnes_hut_check_quadrant(
+    real x,
+    real y,
+    real z,
+    real center_x,
+    real center_y,
+    real center_z
+);
+
+int _barnes_hut_construct_octree(
+    int objects_count,
+    const real *restrict x,
+    const real *restrict m,
+    real width,
+    BarnesHutTreeNode *root
+);
+
+int _barnes_hut_compute_center_of_mass(BarnesHutTreeNode *root);
+
+int _barnes_hut_acceleration(
+    real theta,
+    int objects_count,
+    real *restrict a,
+    real G,
+    BarnesHutTreeNode *root
+);
+
+void _barnes_hut_helper_acceleration_pair(
+    BarnesHutTreeNode *current_acc_leaf,
+    BarnesHutTreeNode *current_obj_leaf,
+    real *restrict a,
+    real G,
+    real *restrict R,
+    real R_norm
+);
+
+WIN32DLL_API int _barnes_hut_free_octree(BarnesHutTreeNode *restrict root);
 
 /**
  * \brief Store the state of the system at a given time

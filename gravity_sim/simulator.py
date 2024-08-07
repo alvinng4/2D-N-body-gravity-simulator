@@ -116,6 +116,12 @@ class Simulator:
         self.dt = dt
         self.tolerance = tolerance
 
+        if acceleration_method == "barnes-hut" and (self.m == 0).any():
+            warnings.warn(
+                "Barnes-Hut: Massless particles detected, adding m=1e-30 to massless particles."
+            )
+            self.m[self.m == 0] = 1e-30
+
         if flush:
             file_path = Path(__file__).parent / "results"
             file_path.mkdir(parents=True, exist_ok=True)
