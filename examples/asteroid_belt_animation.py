@@ -114,8 +114,8 @@ def main():
         grav_sim.years_to_days(5.0),
         dt=grav_sim.years_to_days(0.0001),
         store_every_n=100,
-        acceleration="massless",
-        flush=True,
+        acceleration_method="massless",
+        storing_method="flush",
         flush_results_path=str(data_path),
         no_print=True,
     )

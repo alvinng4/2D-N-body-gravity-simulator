@@ -219,7 +219,7 @@ void propagate_kepler(
  *                           that failed to converge in Kepler's equation
  * \param kepler_actual_objects_count Pointer to the actual number of objects
  *                                    after clearing objects
- * \param flush Flag to indicate whether to store solution into data file directly
+ * \param storing_method Integer flag to indicate method of storing solution
  * \param flush_path Path to the file to store the solution
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
@@ -246,7 +246,7 @@ WIN32DLL_API int whfast(
     bool kepler_auto_remove,
     real kepler_auto_remove_tol,
     int *restrict kepler_actual_objects_count,
-    const bool flush,
+    const int storing_method,
     const char *restrict flush_path,
     Solutions *restrict solution,
     bool *restrict is_exit
@@ -314,7 +314,7 @@ WIN32DLL_API int whfast(
     double *sol_state = NULL;
     double *sol_time = NULL;
     double *sol_dt = NULL;
-    if (flush)
+    if (storing_method == 1)
     {
         flush_file = fopen(flush_path, "w");
 
@@ -327,7 +327,7 @@ WIN32DLL_API int whfast(
         // Initial value
         write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
     } 
-    else
+    else if (storing_method == 0)
     {
         sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
         sol_time = malloc(store_npts * sizeof(double));
@@ -422,11 +422,11 @@ WIN32DLL_API int whfast(
             whfast_kick(objects_count, temp_jacobi_v, a, -0.5 * dt);
             jacobi_to_cartesian(objects_count, jacobi_x, temp_jacobi_v, x, v, m, eta);
             
-            if (flush)
+            if (storing_method == 1)
             {
                 write_to_csv_file(flush_file, dt * count, dt, objects_count, x, v, m, G);
             }
-            else
+            else if (storing_method == 0)
             {
                 memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 3 * sizeof(double));
                 memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 3 * sizeof(double));
@@ -455,11 +455,11 @@ WIN32DLL_API int whfast(
         free(kepler_failed_bool_array);
     }
 
-    if (flush)
+    if (storing_method == 1)
     {
         fclose(flush_file);
     }
-    else
+    else if (storing_method == 0)
     {
         solution->sol_state = sol_state;
         solution->sol_time = sol_time;
@@ -471,11 +471,11 @@ WIN32DLL_API int whfast(
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_flush_file:
 err_sol_output_memory:
-    if (flush)
+    if (storing_method == 1)
     {
         fclose(flush_file);
     }
-    else
+    else if (storing_method == 0)
     {
         free(sol_state);
         free(sol_time);

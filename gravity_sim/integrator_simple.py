@@ -42,7 +42,7 @@ class SimpleIntegrator:
         dt: float,
         tf: float,
         acceleration_method: str,
-        flush: bool = False,
+        storing_method: int = 0,
         flush_path: str = "",
         no_progress_bar: bool = False,
     ):
@@ -102,7 +102,7 @@ class SimpleIntegrator:
                         ctypes.c_int(store_npts),
                         ctypes.c_int(self.store_every_n),
                         ctypes.byref(store_count),
-                        ctypes.c_bool(flush),
+                        ctypes.c_int(storing_method),
                         flush_path.encode("utf-8"),
                         ctypes.byref(solution),
                         ctypes.byref(self.is_exit_ctypes_bool),
@@ -125,7 +125,7 @@ class SimpleIntegrator:
                         ctypes.c_int(store_npts),
                         ctypes.c_int(self.store_every_n),
                         ctypes.byref(store_count),
-                        ctypes.c_bool(flush),
+                        ctypes.c_int(storing_method),
                         flush_path.encode("utf-8"),
                         ctypes.byref(solution),
                         ctypes.byref(self.is_exit_ctypes_bool),
@@ -148,7 +148,7 @@ class SimpleIntegrator:
                         ctypes.c_int(store_npts),
                         ctypes.c_int(self.store_every_n),
                         ctypes.byref(store_count),
-                        ctypes.c_bool(flush),
+                        ctypes.c_int(storing_method),
                         flush_path.encode("utf-8"),
                         ctypes.byref(solution),
                         ctypes.byref(self.is_exit_ctypes_bool),
@@ -171,7 +171,7 @@ class SimpleIntegrator:
                         ctypes.c_int(store_npts),
                         ctypes.c_int(self.store_every_n),
                         ctypes.byref(store_count),
-                        ctypes.c_bool(flush),
+                        ctypes.c_int(storing_method),
                         flush_path.encode("utf-8"),
                         ctypes.byref(solution),
                         ctypes.byref(self.is_exit_ctypes_bool),
@@ -210,7 +210,8 @@ class SimpleIntegrator:
             progress_bar_thread.join()
             store_count.value = temp_store_count
 
-        if not flush:
+        # Default storing
+        if storing_method == 0:
             # Convert C arrays to numpy arrays
             return_sol_state = np.ctypeslib.as_array(
                 solution.sol_state,
@@ -254,12 +255,14 @@ class SimpleIntegrator:
         G,
         dt,
         tf,
-        flush: bool = False,
+        storing_method: int = 0,
         flush_path: str = "",
         no_progress_bar: bool = False,
     ):
-        if flush:
+        if storing_method == 1:
             raise NotImplementedError("Flush is not implemented for numpy")
+        if storing_method == 2:
+            raise NotImplementedError("no_store is not implemented for numpy")
 
         npts = math.ceil(tf / dt)
         if self.store_every_n != 1:

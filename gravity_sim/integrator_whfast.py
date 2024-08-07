@@ -45,7 +45,7 @@ class WHFast:
         dt: float,
         tf: float,
         acceleration_method: str,
-        flush: bool = False,
+        storing_method: int = 0,
         flush_path: str = None,
         no_progress_bar: bool = False,
         kepler_tol: float = 1e-12,
@@ -142,7 +142,7 @@ class WHFast:
                 m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 ctypes.c_double(G),
                 ctypes.c_double(dt),
-                acceleration.encode("utf-8"),
+                acceleration_method.encode("utf-8"),
                 ctypes.c_int64(npts),
                 ctypes.c_int(store_npts),
                 ctypes.c_int(self.store_every_n),
@@ -152,7 +152,7 @@ class WHFast:
                 ctypes.c_bool(kepler_auto_remove),
                 ctypes.c_double(kepler_auto_remove_tol),
                 ctypes.byref(kepler_actual_objects_count),
-                ctypes.c_bool(flush),
+                ctypes.c_int(storing_method),
                 flush_path.encode("utf-8"),
                 ctypes.byref(solution),
                 ctypes.byref(self.is_exit_ctypes_bool),
@@ -188,8 +188,9 @@ class WHFast:
             if store_count.value < store_npts:
                 store_count.value = store_npts
             progress_bar_thread.join()
-
-        if not flush:
+            
+        # Default storing
+        if storing_method == 0:
             # Convert C arrays to numpy arrays
             return_sol_state = np.ctypeslib.as_array(
                 solution.sol_state,
@@ -232,7 +233,7 @@ class WHFast:
         G,
         dt,
         tf,
-        flush: bool = False,
+        storing_method: int = 0,
         flush_path: str = "",
         no_progress_bar: bool = False,
         kepler_tol: float = 1e-12,
@@ -240,8 +241,10 @@ class WHFast:
         kepler_auto_remove: bool = False,
         kepler_auto_remove_tol: float = 1e-8,
     ):
-        if flush:
-            raise NotImplementedError("Flush is not implemented for NumPy")
+        if storing_method == 1:
+            raise NotImplementedError("Flush is not implemented for numpy")
+        if storing_method == 2:
+            raise NotImplementedError("no_store is not implemented for numpy")
 
         if kepler_auto_remove:
             raise NotImplementedError("kepler_auto_remove is not implemented for NumPy")

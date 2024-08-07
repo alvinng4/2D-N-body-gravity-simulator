@@ -21,7 +21,7 @@
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
- * \param flush Flag to indicate whether to store solution into data file directly
+ * \param storing_method Integer flag to indicate method of storing solution
  * \param flush_path Path to the file to store the solution
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
@@ -43,7 +43,7 @@ WIN32DLL_API int euler(
     int store_npts,
     int store_every_n,
     int *restrict store_count,
-    const bool flush,
+    const int storing_method,
     const char *restrict flush_path,
     Solutions *restrict solution,
     bool *restrict is_exit
@@ -94,7 +94,7 @@ WIN32DLL_API int euler(
     double *sol_state = NULL;
     double *sol_time = NULL;
     double *sol_dt = NULL;
-    if (flush)
+    if (storing_method == 1)
     {
         flush_file = fopen(flush_path, "w");
 
@@ -107,7 +107,7 @@ WIN32DLL_API int euler(
         // Initial value
         write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
     } 
-    else
+    else if (storing_method == 0)
     {
         sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
         sol_time = malloc(store_npts * sizeof(double));
@@ -156,11 +156,11 @@ WIN32DLL_API int euler(
         // Store solution
         if (count % store_every_n == 0)
         {
-            if (flush)
+            if (storing_method == 1)
             {
                 write_to_csv_file(flush_file, dt * count, dt, objects_count, x, v, m, G);
             }
-            else
+            else if (storing_method == 0)
             {
                 memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 3 * sizeof(double));
                 memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 3 * sizeof(double));
@@ -183,11 +183,11 @@ WIN32DLL_API int euler(
     free(x_err_comp_sum);
     free(v_err_comp_sum);
 
-    if (flush)
+    if (storing_method == 1)
     {
         fclose(flush_file);
     }
-    else
+    else if (storing_method == 0)
     {
         solution->sol_state = sol_state;
         solution->sol_time = sol_time;
@@ -199,11 +199,11 @@ WIN32DLL_API int euler(
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_flush_file:
 err_sol_output_memory:
-    if (flush)
+    if (storing_method == 1)
     {
         fclose(flush_file);
     }
-    else
+    else if (storing_method == 0)
     {
         free(sol_state);
         free(sol_time);
@@ -240,7 +240,7 @@ err_acc_method:
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
- * \param flush Flag to indicate whether to store solution into data file directly
+ * \param storing_method Integer flag to indicate method of storing solution
  * \param flush_path Path to the file to store the solution
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
@@ -262,7 +262,7 @@ WIN32DLL_API int euler_cromer(
     int store_npts,
     int store_every_n,
     int *restrict store_count,
-    const bool flush,
+    const int storing_method,
     const char *restrict flush_path,
     Solutions *restrict solution,
     bool *restrict is_exit
@@ -313,7 +313,7 @@ WIN32DLL_API int euler_cromer(
     double *sol_state = NULL;
     double *sol_time = NULL;
     double *sol_dt = NULL;
-    if (flush)
+    if (storing_method == 1)
     {
         flush_file = fopen(flush_path, "w");
 
@@ -326,7 +326,7 @@ WIN32DLL_API int euler_cromer(
         // Initial value
         write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
     } 
-    else
+    else if (storing_method == 0)
     {
         sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
         sol_time = malloc(store_npts * sizeof(double));
@@ -374,11 +374,11 @@ WIN32DLL_API int euler_cromer(
         // Store solution
         if (count % store_every_n == 0)
         {
-            if (flush)
+            if (storing_method == 1)
             {
                 write_to_csv_file(flush_file, dt * count, dt, objects_count, x, v, m, G);
             }
-            else
+            else if (storing_method == 0)
             {
                 memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 3 * sizeof(double));
                 memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 3 * sizeof(double));
@@ -401,11 +401,11 @@ WIN32DLL_API int euler_cromer(
     free(x_err_comp_sum);
     free(v_err_comp_sum);
 
-    if (flush)
+    if (storing_method == 1)
     {
         fclose(flush_file);
     }
-    else
+    else if (storing_method == 0)
     {
         solution->sol_state = sol_state;
         solution->sol_time = sol_time;
@@ -417,11 +417,11 @@ WIN32DLL_API int euler_cromer(
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_flush_file:
 err_sol_output_memory:
-    if (flush)
+    if (storing_method == 1)
     {
         fclose(flush_file);
     }
-    else
+    else if (storing_method == 0)
     {
         free(sol_state);
         free(sol_time);
@@ -458,7 +458,7 @@ err_acc_method:
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
- * \param flush Flag to indicate whether to store solution into data file directly
+ * \param storing_method Integer flag to indicate method of storing solution
  * \param flush_path Path to the file to store the solution
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
@@ -480,7 +480,7 @@ WIN32DLL_API int rk4(
     int store_npts,
     int store_every_n,
     int *restrict store_count,
-    const bool flush,
+    const int storing_method,
     const char *restrict flush_path,
     Solutions *restrict solution,
     int *restrict is_exit
@@ -539,7 +539,7 @@ WIN32DLL_API int rk4(
     double *sol_state = NULL;
     double *sol_time = NULL;
     double *sol_dt = NULL;
-    if (flush)
+    if (storing_method == 1)
     {
         flush_file = fopen(flush_path, "w");
 
@@ -552,7 +552,7 @@ WIN32DLL_API int rk4(
         // Initial value
         write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
     } 
-    else
+    else if (storing_method == 0)
     {
         sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
         sol_time = malloc(store_npts * sizeof(double));
@@ -635,11 +635,11 @@ WIN32DLL_API int rk4(
         // Store solution
         if (count % store_every_n == 0)
         {
-            if (flush)
+            if (storing_method == 1)
             {
                 write_to_csv_file(flush_file, dt * count, dt, objects_count, x, v, m, G);
             }
-            else
+            else if (storing_method == 0)
             {
                 memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 3 * sizeof(double));
                 memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 3 * sizeof(double));
@@ -670,11 +670,11 @@ WIN32DLL_API int rk4(
     free(x_err_comp_sum);
     free(v_err_comp_sum);
 
-    if (flush)
+    if (storing_method == 1)
     {
         fclose(flush_file);
     }
-    else
+    else if (storing_method == 0)
     {
         solution->sol_state = sol_state;
         solution->sol_time = sol_time;
@@ -686,11 +686,11 @@ WIN32DLL_API int rk4(
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_flush_file:
 err_sol_output_memory:
-    if (flush)
+    if (storing_method == 1)
     {
         fclose(flush_file);
     }
-    else
+    else if (storing_method == 0)
     {
         free(sol_state);
         free(sol_time);
@@ -735,7 +735,7 @@ err_acc_method:
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
- * \param flush Flag to indicate whether to store solution into data file directly
+ * \param storing_method Integer flag to indicate method of storing solution
  * \param flush_path Path to the file to store the solution
  * \param solution Pointer to a Solution struct, in order to store the solution
  * \param is_exit Pointer to flag that indicates whether user sent 
@@ -757,7 +757,7 @@ WIN32DLL_API int leapfrog(
     int store_npts,
     int store_every_n,
     int *restrict store_count,
-    const bool flush,
+    const int storing_method,
     const char *restrict flush_path,
     Solutions *restrict solution,
     int *restrict is_exit
@@ -809,7 +809,7 @@ WIN32DLL_API int leapfrog(
     double *sol_state = NULL;
     double *sol_time = NULL;
     double *sol_dt = NULL;
-    if (flush)
+    if (storing_method == 1)
     {
         flush_file = fopen(flush_path, "w");
 
@@ -822,7 +822,7 @@ WIN32DLL_API int leapfrog(
         // Initial value
         write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
     } 
-    else
+    else if (storing_method == 0)
     {
         sol_state = malloc(store_npts * objects_count * 6 * sizeof(double));
         sol_time = malloc(store_npts * sizeof(double));
@@ -879,11 +879,11 @@ WIN32DLL_API int leapfrog(
         // Store solution
         if (count % store_every_n == 0)
         {
-            if (flush)
+            if (storing_method == 1)
             {
                 write_to_csv_file(flush_file, dt * count, dt, objects_count, x, v, m, G);
             }
-            else
+            else if (storing_method == 0)
             {
                 memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 3 * sizeof(double));
                 memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 3 * sizeof(double));
@@ -907,11 +907,11 @@ WIN32DLL_API int leapfrog(
     free(x_err_comp_sum);
     free(v_err_comp_sum);
 
-    if (flush)
+    if (storing_method == 1)
     {
         fclose(flush_file);
     }
-    else
+    else if (storing_method == 0)
     {
         solution->sol_state = sol_state;
         solution->sol_time = sol_time;
@@ -923,11 +923,11 @@ WIN32DLL_API int leapfrog(
 err_user_exit: // User sends KeyboardInterrupt in main thread
 err_flush_file:
 err_sol_output_memory:
-    if (flush)
+    if (storing_method == 1)
     {
         fclose(flush_file);
     }
-    else
+    else if (storing_method == 0)
     {
         free(sol_state);
         free(sol_time);

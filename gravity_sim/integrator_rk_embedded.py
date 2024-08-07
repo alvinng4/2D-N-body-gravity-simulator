@@ -59,7 +59,7 @@ class RKEmbedded:
         abs_tolerance: float,
         rel_tolerance: float,
         acceleration_method: str,
-        flush: bool = False,
+        storing_method: int = 0,
         flush_path: str = "",
         no_progress_bar: bool = False,
     ):
@@ -111,7 +111,7 @@ class RKEmbedded:
                 acceleration_method.encode("utf-8"),
                 ctypes.c_int(self.store_every_n),
                 ctypes.byref(store_count),
-                ctypes.c_bool(flush),
+                ctypes.c_int(storing_method),
                 flush_path.encode("utf-8"),
                 ctypes.byref(solution),
                 ctypes.byref(self.is_exit_ctypes_bool),
@@ -146,7 +146,8 @@ class RKEmbedded:
             t.value = tf
             progress_bar_thread.join()
 
-        if not flush:
+        # Default storing
+        if storing_method == 0:
             # Convert C arrays to numpy arrays
             return_sol_state = np.ctypeslib.as_array(
                 solution.sol_state,
@@ -190,12 +191,14 @@ class RKEmbedded:
         tf,
         abs_tolerance,
         rel_tolerance,
-        flush: bool = False,
+        storing_method: int = 0,
         flush_path: str = "",
         no_progress_bar: bool = False,
     ):
-        if flush:
+        if storing_method == 1:
             raise NotImplementedError("Flush is not implemented for numpy")
+        if storing_method == 2:
+            raise NotImplementedError("no_store is not implemented for numpy")
 
         (
             self.power,

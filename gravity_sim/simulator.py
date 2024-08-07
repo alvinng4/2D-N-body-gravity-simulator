@@ -67,7 +67,7 @@ class Simulator:
         tolerance: float = None,
         store_every_n: int = 1,
         acceleration_method: str = "pairwise",
-        flush: bool = False,
+        storing_method: str = "default",
         flush_results_path: str = None,
         no_progress_bar: bool = False,
         no_print: bool = False,
@@ -116,13 +116,22 @@ class Simulator:
         self.dt = dt
         self.tolerance = tolerance
 
-        if acceleration_method == "barnes-hut" and (self.m == 0).any():
+        if acceleration_method == "barnes-hut" and (self.m == 0.0).any():
             warnings.warn(
                 "Barnes-Hut: Massless particles detected, adding m=1e-30 to massless particles."
             )
-            self.m[self.m == 0] = 1e-30
+            self.m[self.m == 0.0] = 1e-30
 
-        if flush:
+        match storing_method:
+            case "default":
+                storing_method = 0
+            case "flush":
+                storing_method = 1
+            case "no_store":
+                storing_method = 2
+
+        # Flush                  
+        if storing_method == 1:
             file_path = Path(__file__).parent / "results"
             file_path.mkdir(parents=True, exist_ok=True)
             flush_path = (
@@ -166,7 +175,7 @@ class Simulator:
                         self.dt,
                         self.tf,
                         acceleration_method,
-                        flush,
+                        storing_method,
                         str(flush_path),
                         no_progress_bar,
                     )
@@ -195,7 +204,7 @@ class Simulator:
                         self.tolerance,
                         self.tolerance,
                         acceleration_method,
-                        flush,
+                        storing_method,
                         str(flush_path),
                         no_progress_bar,
                     )
@@ -218,7 +227,7 @@ class Simulator:
                         self.tf,
                         self.tolerance,
                         acceleration_method,
-                        flush,
+                        storing_method,
                         str(flush_path),
                         no_progress_bar,
                     )
@@ -243,7 +252,7 @@ class Simulator:
                         self.dt,
                         self.tf,
                         acceleration_method,
-                        flush,
+                        storing_method,
                         str(flush_path),
                         no_progress_bar,
                         **kwargs,
@@ -271,7 +280,7 @@ class Simulator:
                         self.G,
                         self.dt,
                         self.tf,
-                        flush,
+                        storing_method,
                         str(flush_path),
                         no_progress_bar,
                     )
@@ -298,7 +307,7 @@ class Simulator:
                         self.tf,
                         self.tolerance,
                         self.tolerance,
-                        flush,
+                        storing_method,
                         str(flush_path),
                         no_progress_bar,
                     )
@@ -322,7 +331,7 @@ class Simulator:
                         self.G,
                         self.tf,
                         self.tolerance,
-                        flush,
+                        storing_method,
                         str(flush_path),
                         no_progress_bar,
                     )
@@ -345,7 +354,7 @@ class Simulator:
                         self.G,
                         self.dt,
                         self.tf,
-                        flush,
+                        storing_method,
                         str(flush_path),
                         no_progress_bar,
                     )
@@ -357,7 +366,8 @@ class Simulator:
             print(f"Run time: {self.run_time:.3f} s")
             print("")
 
-        if flush:
+        # Flush
+        if storing_method == 1:
             if flush_results_path is None:
                 file_path = (
                     Path(__file__).parent
