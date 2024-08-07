@@ -2,7 +2,7 @@ CFLAGS = -O3 -std=gnu99 -Wall -Wextra -Wpedantic
 LDFLAGS = -shared
 LIBS = -lm
 
-SRCS = tools.c integrator_whfast.c integrator_ias15.c integrator_rk_embedded.c integrator_simple.c common.c
+SRCS = tools.c integrator_whfast.c integrator_ias15.c integrator_rk_embedded.c integrator_simple.c acceleration.c common.c
 OBJS = $(SRCS:.c=.o)
 
 ifeq ($(OS),Windows_NT)

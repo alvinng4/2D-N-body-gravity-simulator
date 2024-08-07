@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "common.h"
+#include "acceleration.h"
 
 
 /**
@@ -18,6 +19,7 @@
  * \param dt Time step of the system
  * \param npts Number of time steps to be integrated
  * \param acceleration_method Method to calculate acceleration
+ * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
@@ -39,6 +41,7 @@ WIN32DLL_API int euler(
     real G,
     double dt,
     const char *restrict acceleration_method,
+    real barnes_hut_theta,
     int64 npts,
     int store_npts,
     int store_every_n,
@@ -49,24 +52,18 @@ WIN32DLL_API int euler(
     bool *restrict is_exit
 )
 {   
-    void (*acceleration)(
-        int objects_count,
-        real *restrict x,
-        real *restrict a,
-        const real *restrict m,
-        real G
-    );
+    int acceleration_method_flag;
     if (strcmp(acceleration_method, "pairwise") == 0)
     {
-        acceleration = acceleration_pairwise;
+        acceleration_method_flag = 0;
     }
     else if (strcmp(acceleration_method, "massless") == 0)
     {
-        acceleration = acceleration_massless;
+        acceleration_method_flag = 1;
     }
     else if (strcmp(acceleration_method, "barnes-hut") == 0)
     {
-        acceleration = acceleration_barnes_hut;
+        acceleration_method_flag = 2;
     }
     else
     {
@@ -132,7 +129,7 @@ WIN32DLL_API int euler(
     // Main Loop
     for (int64 count = 1; count <= npts; count++)
     {
-        acceleration(objects_count, x, a, m, G);
+        acceleration(acceleration_method_flag, objects_count, x, v, a, m, G, barnes_hut_theta);
 
         memcpy(temp_x, x, objects_count * 3 * sizeof(real));
         memcpy(temp_v, v, objects_count * 3 * sizeof(real));
@@ -236,6 +233,7 @@ err_acc_method:
  * \param G Gravitational constant
  * \param dt Time step of the system
  * \param acceleration_method Method to calculate acceleration
+ * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
@@ -258,6 +256,7 @@ WIN32DLL_API int euler_cromer(
     real G,
     double dt,
     const char *restrict acceleration_method,
+    real barnes_hut_theta,
     int64 npts,
     int store_npts,
     int store_every_n,
@@ -268,24 +267,18 @@ WIN32DLL_API int euler_cromer(
     bool *restrict is_exit
 )
 {   
-    void (*acceleration)(
-        int objects_count,
-        real *restrict x,
-        real *restrict a,
-        const real *restrict m,
-        real G
-    );
+    int acceleration_method_flag;
     if (strcmp(acceleration_method, "pairwise") == 0)
     {
-        acceleration = acceleration_pairwise;
+        acceleration_method_flag = 0;
     }
     else if (strcmp(acceleration_method, "massless") == 0)
     {
-        acceleration = acceleration_massless;
+        acceleration_method_flag = 1;
     }
     else if (strcmp(acceleration_method, "barnes-hut") == 0)
     {
-        acceleration = acceleration_barnes_hut;
+        acceleration_method_flag = 2;
     }
     else
     {
@@ -351,7 +344,7 @@ WIN32DLL_API int euler_cromer(
     // Main Loop
     for (int64 count = 1; count <= npts; count++)
     {
-        acceleration(objects_count, x, a, m, G);
+        acceleration(acceleration_method_flag, objects_count, x, v, a, m, G, barnes_hut_theta);
 
         memcpy(temp_x, x, objects_count * 3 * sizeof(real));
         memcpy(temp_v, v, objects_count * 3 * sizeof(real));
@@ -454,6 +447,7 @@ err_acc_method:
  * \param G Gravitational constant
  * \param dt Time step of the system
  * \param acceleration_method Method to calculate acceleration
+ * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
@@ -476,6 +470,7 @@ WIN32DLL_API int rk4(
     real G,
     double dt,
     const char *restrict acceleration_method,
+    real barnes_hut_theta,
     int64 npts,
     int store_npts,
     int store_every_n,
@@ -486,24 +481,18 @@ WIN32DLL_API int rk4(
     int *restrict is_exit
 )
 {
-    void (*acceleration)(
-        int objects_count,
-        real *restrict x,
-        real *restrict a,
-        const real *restrict m,
-        real G
-    );
+    int acceleration_method_flag;
     if (strcmp(acceleration_method, "pairwise") == 0)
     {
-        acceleration = acceleration_pairwise;
+        acceleration_method_flag = 0;
     }
     else if (strcmp(acceleration_method, "massless") == 0)
     {
-        acceleration = acceleration_massless;
+        acceleration_method_flag = 1;
     }
     else if (strcmp(acceleration_method, "barnes-hut") == 0)
     {
-        acceleration = acceleration_barnes_hut;
+        acceleration_method_flag = 2;
     }
     else
     {
@@ -577,7 +566,7 @@ WIN32DLL_API int rk4(
     // Main Loop
     for (int64 count = 1; count <= npts; count++)
     {   
-        acceleration(objects_count, x, vk1, m, G);
+        acceleration(acceleration_method_flag, objects_count, x, v, vk1, m, G, barnes_hut_theta);
         memcpy(xk1, v, objects_count * 3 * sizeof(real));
 
         for (int j = 0; j < objects_count; j++)
@@ -588,7 +577,7 @@ WIN32DLL_API int rk4(
                 temp_v[j * 3 + k] = v[j * 3 + k] + 0.5 * vk1[j * 3 + k] * dt;
             }
         }
-        acceleration(objects_count, temp_x, vk2, m, G);
+        acceleration(acceleration_method_flag, objects_count, temp_x, v, vk2, m, G, barnes_hut_theta);
         memcpy(xk2, temp_v, objects_count * 3 * sizeof(real));
 
         for (int j = 0; j < objects_count; j++)
@@ -599,7 +588,7 @@ WIN32DLL_API int rk4(
                 temp_v[j * 3 + k] = v[j * 3 + k] + 0.5 * vk2[j * 3 + k] * dt;
             }
         }
-        acceleration(objects_count, temp_x, vk3, m, G);
+        acceleration(acceleration_method_flag, objects_count, temp_x, v, vk3, m, G, barnes_hut_theta);
         memcpy(xk3, temp_v, objects_count * 3 * sizeof(real));
 
         for (int j = 0; j < objects_count; j++)
@@ -610,7 +599,7 @@ WIN32DLL_API int rk4(
                 temp_v[j * 3 + k] = v[j * 3 + k] + vk3[j * 3 + k] * dt;
             }
         }
-        acceleration(objects_count, temp_x, vk4, m, G);
+        acceleration(acceleration_method_flag, objects_count, temp_x, v, vk4, m, G, barnes_hut_theta);
         memcpy(xk4, temp_v, objects_count * 3 * sizeof(real));
 
         memcpy(temp_v, v, objects_count * 3 * sizeof(real));
@@ -731,6 +720,7 @@ err_acc_method:
  * \param G Gravitational constant
  * \param dt Time step of the system
  * \param acceleration_method Method to calculate acceleration
+ * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
  * \param npts Number of time steps to be integrated
  * \param store_npts Number of points to be stored
  * \param store_every_n Store every nth point
@@ -753,6 +743,7 @@ WIN32DLL_API int leapfrog(
     real G,
     double dt,
     const char *restrict acceleration_method,
+    real barnes_hut_theta,
     int64 npts,
     int store_npts,
     int store_every_n,
@@ -763,24 +754,18 @@ WIN32DLL_API int leapfrog(
     int *restrict is_exit
 )
 {   
-    void (*acceleration)(
-        int objects_count,
-        real *restrict x,
-        real *restrict a,
-        const real *restrict m,
-        real G
-    );
+    int acceleration_method_flag;
     if (strcmp(acceleration_method, "pairwise") == 0)
     {
-        acceleration = acceleration_pairwise;
+        acceleration_method_flag = 0;
     }
     else if (strcmp(acceleration_method, "massless") == 0)
     {
-        acceleration = acceleration_massless;
+        acceleration_method_flag = 1;
     }
     else if (strcmp(acceleration_method, "barnes-hut") == 0)
     {
-        acceleration = acceleration_barnes_hut;
+        acceleration_method_flag = 2;
     }
     else
     {
@@ -845,7 +830,7 @@ WIN32DLL_API int leapfrog(
     }
 
     // Main Loop
-    acceleration(objects_count, x, a_1, m, G);
+    acceleration(acceleration_method_flag, objects_count, x, v, a_1, m, G, barnes_hut_theta);
     for (int64 count = 1; count <= npts; count++)
     {       
         // Use a_1 from last iteration as a_0
@@ -864,7 +849,7 @@ WIN32DLL_API int leapfrog(
         }
 
         // Calculate v
-        acceleration(objects_count, x, a_1, m, G);
+        acceleration(acceleration_method_flag, objects_count, x, v, a_1, m, G, barnes_hut_theta);
         memcpy(temp_v, v, objects_count * 3 * sizeof(real));
         for (int i = 0; i < objects_count; i++)
         {

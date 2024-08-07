@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "common.h"
+#include "acceleration.h"
 
 
 /**
@@ -260,7 +261,8 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
  * \param G Gravitational constant
  * \param abs_tolerance Absolute tolerance of the integrator
  * \param rel_tolerance Relative tolerance of the integrator
- * \param acceleration Pointer to the acceleration function
+ * \param acceleration_method Method to calculate acceleration
+ * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
  * 
  * \warning: Modified to return dt * 1e-2 since this function gives initial dt thats too large
  * 
@@ -277,7 +279,8 @@ WIN32DLL_API real rk_embedded_initial_dt(
     real G,
     real abs_tolerance,
     real rel_tolerance,
-    void (*acceleration)(int, real*, real*, const real*, real)
+    int acceleration_method,
+    real barnes_hut_theta
 )
 {
     real *restrict tolerance_scale_x = malloc(objects_count * 3 * sizeof(real));
@@ -312,7 +315,7 @@ WIN32DLL_API real rk_embedded_initial_dt(
         return -1.0;
     }
 
-    acceleration(objects_count, x, a, m, G);
+    acceleration(acceleration_method, objects_count, x, v, a, m, G, barnes_hut_theta);
 
     // tolerance_scale_x = abs_tol + rel_tol * abs(x)
     // tolerance_scale_v = abs_tol + rel_tol * abs(v)
@@ -359,7 +362,7 @@ WIN32DLL_API real rk_embedded_initial_dt(
         }
     }
     
-    acceleration(objects_count, x_1, a_1, m, G);
+    acceleration(acceleration_method, objects_count, x_1, v_1, a_1, m, G, barnes_hut_theta);
 
     // Calculate d_2 to measure how much the derivatives have changed
 
@@ -406,6 +409,7 @@ WIN32DLL_API real rk_embedded_initial_dt(
  * \param input_abs_tolerance Absolute tolerance of the integrator
  * \param input_rel_tolerance Relative tolerance of the integrator
  * \param acceleration_method Method to calculate acceleration
+ * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
  * \param storing_method Integer flag to indicate method of storing solution
@@ -430,6 +434,7 @@ WIN32DLL_API int rk_embedded(
     double input_abs_tolerance,
     double input_rel_tolerance,
     const char *restrict acceleration_method,
+    real barnes_hut_theta,
     int store_every_n,
     int *restrict store_count,
     const int storing_method,
@@ -438,24 +443,18 @@ WIN32DLL_API int rk_embedded(
     bool *restrict is_exit
 )
 {   
-    void (*acceleration)(
-        int objects_count,
-        real *restrict x,
-        real *restrict a,
-        const real *restrict m,
-        real G
-    );
+    int acceleration_method_flag;
     if (strcmp(acceleration_method, "pairwise") == 0)
     {
-        acceleration = acceleration_pairwise;
+        acceleration_method_flag = 0;
     }
     else if (strcmp(acceleration_method, "massless") == 0)
     {
-        acceleration = acceleration_massless;
+        acceleration_method_flag = 1;
     }
     else if (strcmp(acceleration_method, "barnes-hut") == 0)
     {
-        acceleration = acceleration_barnes_hut;
+        acceleration_method_flag = 2;
     }
     else
     {
@@ -556,7 +555,8 @@ WIN32DLL_API int rk_embedded(
         G,
         abs_tolerance,
         rel_tolerance,
-        acceleration
+        acceleration_method_flag,
+        barnes_hut_theta
     );
 
     FILE *flush_file = NULL;
@@ -610,7 +610,7 @@ WIN32DLL_API int rk_embedded(
     while (*t < tf)
     {
         // Calculate xk and vk
-        acceleration(objects_count, x, vk, m, G);
+        acceleration(acceleration_method_flag, objects_count, x, v, vk, m, G, barnes_hut_theta);
         memcpy(xk, v, objects_count * 3 * sizeof(real));
         for (int stage = 1; stage < stages; stage++)
         {
@@ -645,7 +645,7 @@ WIN32DLL_API int rk_embedded(
                     temp_x[i * 3 + j] = x[i * 3 + j] + dt * temp_x[i * 3 + j] + x_err_comp_sum[i * 3 + j];
                 }
             }
-            acceleration(objects_count, temp_x, &vk[stage * objects_count * 3], m, G);
+            acceleration(acceleration_method_flag, objects_count, temp_x, v, &vk[stage * objects_count * 3], m, G, barnes_hut_theta);
             memcpy(&xk[stage * objects_count * 3], temp_v, objects_count * 3 * sizeof(real));
         }
 

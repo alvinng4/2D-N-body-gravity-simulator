@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "common.h"
+#include "acceleration.h"
 
 /**
  * \brief IAS15 integrator
@@ -18,6 +19,7 @@
  * \param tf Total time to be integrated
  * \param input_tolerance Tolerance of the integrator
  * \param acceleration_method Method to calculate acceleration
+ * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
  * \param store_every_n Store every nth point
  * \param store_count Pointer to the store count
  * \param storing_method Integer flag to indicate method of storing solution
@@ -40,6 +42,7 @@ int ias15(
     double tf, 
     double input_tolerance,
     const char *restrict acceleration_method,
+    real barnes_hut_theta,
     int store_every_n,
     int *restrict store_count,
     const int storing_method,
@@ -85,7 +88,8 @@ void ias15_aux_r(real *aux_r);
  * \param a Array of acceleration vectors of all objects
  * \param m Array of masses for all objects
  * \param G Gravitational constant
- * \param acceleration Pointer to the acceleration function
+ * \param acceleration_method_flag Method to calculate acceleration (int flag)
+ * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
  * 
  * \return initial dt for IAS15 integrator
  * \retval -1.0 If failed to allocate memory for calculation
@@ -98,7 +102,8 @@ real ias15_initial_dt(
     real *restrict a,
     const real *m,
     real G,
-    void (*acceleration)(int, real*, real*, const real*, real)
+    int acceleration_method_flag,
+    real barnes_hut_theta
 );
 
 /**
@@ -144,7 +149,8 @@ real ias15_initial_dt(
  * \param v_err_comp_sum Array of round off errors of velocity vectors
  * \param temp_x_err_comp_sum Temporary array of round off errors of position vectors
  * \param temp_v_err_comp_sum Temporary array of round off errors of velocity vectors
- * \param acceleration Pointer to the acceleration function
+ * \param acceleration_method_flag Method to calculate acceleration (int flag)
+ * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
  * 
  * \return None
  */
@@ -185,7 +191,8 @@ void ias15_step(
     real *restrict v_err_comp_sum,
     real *restrict temp_x_err_comp_sum,
     real *restrict temp_v_err_comp_sum,
-    void (*acceleration)(int, real*, real*, const real*, real)
+    int acceleration_method_flag,
+    real barnes_hut_theta
 );
 
 /**
@@ -370,6 +377,7 @@ WIN32DLL_API int ias15(
     double tf, 
     double input_tolerance,
     const char *restrict acceleration_method,
+    real barnes_hut_theta,
     int store_every_n,
     int *restrict store_count,
     const int storing_method,
@@ -378,24 +386,18 @@ WIN32DLL_API int ias15(
     bool *restrict is_exit
 )
 {   
-    void (*acceleration)(
-        int objects_count,
-        real *restrict x,
-        real *restrict a,
-        const real *restrict m,
-        real G
-    );
+    int acceleration_method_flag;
     if (strcmp(acceleration_method, "pairwise") == 0)
     {
-        acceleration = acceleration_pairwise;
+        acceleration_method_flag = 0;
     }
     else if (strcmp(acceleration_method, "massless") == 0)
     {
-        acceleration = acceleration_massless;
+        acceleration_method_flag = 1;
     }
     else if (strcmp(acceleration_method, "barnes-hut") == 0)
     {
-        acceleration = acceleration_barnes_hut;
+        acceleration_method_flag = 2;
     }
     else
     {
@@ -484,7 +486,7 @@ WIN32DLL_API int ias15(
 
     // Allocate memory for solution output
     int64 count = 1;    // 1 for t0
-    real dt_old = ias15_initial_dt(objects_count, 15, x, v, a, m, G, acceleration);
+    real dt_old = ias15_initial_dt(objects_count, 15, x, v, a, m, G, acceleration_method_flag, barnes_hut_theta);
     real dt = dt_old;
 
     FILE *flush_file = NULL;
@@ -573,7 +575,8 @@ WIN32DLL_API int ias15(
             v_err_comp_sum,
             temp_x_err_comp_sum,
             temp_v_err_comp_sum,
-            acceleration
+            acceleration_method_flag,
+            barnes_hut_theta
         );
 
         // Store step
@@ -794,10 +797,11 @@ WIN32DLL_API real ias15_initial_dt(
     real *restrict a,
     const real *m,
     real G,
-    void (*acceleration)(int, real*, real*, const real*, real)
+    int acceleration_method_flag,
+    real barnes_hut_theta
 )
 {
-    acceleration(objects_count, x, a, m, G);
+    acceleration(acceleration_method_flag, objects_count, x, v, a, m, G, barnes_hut_theta);
 
     real d_0 = abs_max_vec(x, objects_count * 3);
     real d_1 = abs_max_vec(a, objects_count * 3);
@@ -830,7 +834,7 @@ WIN32DLL_API real ias15_initial_dt(
         x_1[i * 3 + 1] = x[i * 3 + 1] + dt_0 * v[i * 3 + 1];
         x_1[i * 3 + 2] = x[i * 3 + 2] + dt_0 * v[i * 3 + 2];
     }
-    acceleration(objects_count, x_1, a_1, m, G);
+    acceleration(acceleration_method_flag, objects_count, x_1, v, a_1, m, G, barnes_hut_theta);
 
     for (int i = 0; i < objects_count; i++)
     {
@@ -892,7 +896,8 @@ WIN32DLL_API void ias15_step(
     real *restrict v_err_comp_sum,
     real *restrict temp_x_err_comp_sum,
     real *restrict temp_v_err_comp_sum,
-    void (*acceleration)(int, real*, real*, const real*, real)
+    int acceleration_method_flag,
+    real barnes_hut_theta
 )
 {
     real error, error_b7, dt_new;
@@ -912,7 +917,7 @@ WIN32DLL_API void ias15_step(
                 ias15_approx_vel_pc(objects_count, v, v0, a0, nodes[i], aux_b, *dt, v_err_comp_sum);
 
                 // Evaluate force function and store result
-                acceleration(objects_count, x, &aux_a[i * objects_count * 3], m, G);
+                acceleration(acceleration_method_flag, objects_count, x, v, &aux_a[i * objects_count * 3], m, G, barnes_hut_theta);
 
                 ias15_compute_aux_g(objects_count, dim_nodes, aux_g, aux_r, aux_a, i, F);
                 ias15_compute_aux_b(objects_count, dim_nodes_minus_1, aux_b, aux_g, aux_c, i);
@@ -939,7 +944,7 @@ WIN32DLL_API void ias15_step(
 
         ias15_approx_pos_step(objects_count, x, x0, v0, a0, aux_b, *dt, temp_x_err_comp_sum);
         ias15_approx_vel_step(objects_count, v, v0, a0, aux_b, *dt, temp_v_err_comp_sum);
-        acceleration(objects_count, x, a, m, G);
+        acceleration(acceleration_method_flag, objects_count, x, v, a, m, G, barnes_hut_theta);
 
         // Estimate relative error
         error_b7 = abs_max_vec(&aux_b[dim_nodes_minus_2 * objects_count * 3], objects_count * 3) / abs_max_vec(a, objects_count * 3);

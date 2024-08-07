@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "common.h"
+#include "acceleration.h"
 
 /**
  * \brief Compute the velocity kick

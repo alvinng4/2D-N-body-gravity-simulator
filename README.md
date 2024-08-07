@@ -127,7 +127,7 @@ Certainly! Here's a table documenting the parameters for the `launch_simulation`
 - `barnes-hut`
     * Calculate gravitational acceleration with barnes-hut algorithm
     * Time complexity: $O(N \log{N})$
-    * `**kwargs`: `barnes-hut-theta`
+    * `**kwargs`: `barnes_hut_theta`
         * Threshold for Barnes-hut algorithm, default = 0.5
 
 #### storing_method

@@ -71,6 +71,7 @@ class Simulator:
         flush_results_path: str = None,
         no_progress_bar: bool = False,
         no_print: bool = False,
+        barnes_hut_theta: float = 0.5,
         **kwargs,
     ) -> None:
         """
@@ -118,7 +119,7 @@ class Simulator:
 
         if acceleration_method == "barnes-hut" and (self.m == 0.0).any():
             warnings.warn(
-                "Barnes-Hut: Massless particles detected, adding m=1e-30 to massless particles."
+                "barnes-hut: Massless particles detected, adding m=1e-30 to massless particles."
             )
             self.m[self.m == 0.0] = 1e-30
 
@@ -175,6 +176,7 @@ class Simulator:
                         self.dt,
                         self.tf,
                         acceleration_method,
+                        barnes_hut_theta,
                         storing_method,
                         str(flush_path),
                         no_progress_bar,
@@ -204,6 +206,7 @@ class Simulator:
                         self.tolerance,
                         self.tolerance,
                         acceleration_method,
+                        barnes_hut_theta,
                         storing_method,
                         str(flush_path),
                         no_progress_bar,
@@ -227,6 +230,7 @@ class Simulator:
                         self.tf,
                         self.tolerance,
                         acceleration_method,
+                        barnes_hut_theta,
                         storing_method,
                         str(flush_path),
                         no_progress_bar,
@@ -252,6 +256,7 @@ class Simulator:
                         self.dt,
                         self.tf,
                         acceleration_method,
+                        barnes_hut_theta,
                         storing_method,
                         str(flush_path),
                         no_progress_bar,
