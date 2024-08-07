@@ -280,6 +280,7 @@ WIN32DLL_API real rk_embedded_initial_dt(
     real abs_tolerance,
     real rel_tolerance,
     int acceleration_method,
+    real softening_length,
     real barnes_hut_theta
 )
 {
@@ -315,7 +316,7 @@ WIN32DLL_API real rk_embedded_initial_dt(
         return -1.0;
     }
 
-    acceleration(acceleration_method, objects_count, x, v, a, m, G, barnes_hut_theta);
+    acceleration(acceleration_method, objects_count, x, v, a, m, G, softening_length, barnes_hut_theta);
 
     // tolerance_scale_x = abs_tol + rel_tol * abs(x)
     // tolerance_scale_v = abs_tol + rel_tol * abs(v)
@@ -362,7 +363,7 @@ WIN32DLL_API real rk_embedded_initial_dt(
         }
     }
     
-    acceleration(acceleration_method, objects_count, x_1, v_1, a_1, m, G, barnes_hut_theta);
+    acceleration(acceleration_method, objects_count, x_1, v_1, a_1, m, G, softening_length, barnes_hut_theta);
 
     // Calculate d_2 to measure how much the derivatives have changed
 
@@ -434,6 +435,7 @@ WIN32DLL_API int rk_embedded(
     double input_abs_tolerance,
     double input_rel_tolerance,
     const char *restrict acceleration_method,
+    real softening_length,
     real barnes_hut_theta,
     int store_every_n,
     int *restrict store_count,
@@ -446,22 +448,21 @@ WIN32DLL_API int rk_embedded(
     int acceleration_method_flag;
     if (strcmp(acceleration_method, "pairwise") == 0)
     {
-        acceleration_method_flag = 0;
+        acceleration_method_flag = ACCELERATION_METHOD_PAIRWISE;
     }
     else if (strcmp(acceleration_method, "massless") == 0)
     {
-        acceleration_method_flag = 1;
+        acceleration_method_flag = ACCELERATION_METHOD_MASSLESS;
     }
     else if (strcmp(acceleration_method, "barnes-hut") == 0)
     {
-        acceleration_method_flag = 2;
+        acceleration_method_flag = ACCELERATION_METHOD_BARNES_HUT;
     }
     else
     {
         fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;
     }
-
     // Initialization
     int power;
     int power_test;
@@ -556,6 +557,7 @@ WIN32DLL_API int rk_embedded(
         abs_tolerance,
         rel_tolerance,
         acceleration_method_flag,
+        softening_length,
         barnes_hut_theta
     );
 
@@ -610,7 +612,7 @@ WIN32DLL_API int rk_embedded(
     while (*t < tf)
     {
         // Calculate xk and vk
-        acceleration(acceleration_method_flag, objects_count, x, v, vk, m, G, barnes_hut_theta);
+        acceleration(acceleration_method_flag, objects_count, x, v, vk, m, G, softening_length, barnes_hut_theta);
         memcpy(xk, v, objects_count * 3 * sizeof(real));
         for (int stage = 1; stage < stages; stage++)
         {
@@ -645,7 +647,7 @@ WIN32DLL_API int rk_embedded(
                     temp_x[i * 3 + j] = x[i * 3 + j] + dt * temp_x[i * 3 + j] + x_err_comp_sum[i * 3 + j];
                 }
             }
-            acceleration(acceleration_method_flag, objects_count, temp_x, v, &vk[stage * objects_count * 3], m, G, barnes_hut_theta);
+            acceleration(acceleration_method_flag, objects_count, temp_x, v, &vk[stage * objects_count * 3], m, G, softening_length, barnes_hut_theta);
             memcpy(&xk[stage * objects_count * 3], temp_v, objects_count * 3 * sizeof(real));
         }
 

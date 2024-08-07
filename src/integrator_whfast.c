@@ -79,7 +79,8 @@ void whfast_acceleration_pairwise(
     real *restrict a,
     const real *restrict m,
     const real *restrict eta,
-    real G
+    real G,
+    real softening_length
 );
 
 /**
@@ -106,7 +107,8 @@ void whfast_acceleration_massless(
     real *restrict a,
     const real *restrict m,
     const real *restrict eta,
-    real G
+    real G,
+    real softening_length
 );
 
 /**
@@ -238,6 +240,7 @@ WIN32DLL_API int whfast(
     real G,
     double dt,
     const char *restrict acceleration_method,
+    real softening_length,
     int64 npts,
     int store_npts,
     int store_every_n,
@@ -260,7 +263,8 @@ WIN32DLL_API int whfast(
         real *restrict a,
         const real *restrict m,
         const real *restrict eta,
-        real G
+        real G,
+        real softening_length
     );
 
     if (strcmp(acceleration_method, "pairwise") == 0)
@@ -356,7 +360,7 @@ WIN32DLL_API int whfast(
         eta[i] = eta[i - 1] + m[i];
     }
     cartesian_to_jacobi(objects_count, jacobi_x, jacobi_v, x, v, m, eta);
-    whfast_acceleration(objects_count, jacobi_x, x, a, m, eta, G);
+    whfast_acceleration(objects_count, jacobi_x, x, a, m, eta, G, softening_length);
     whfast_kick(objects_count, jacobi_v, a, 0.5 * dt);
 
     // Main Loop
@@ -413,7 +417,7 @@ WIN32DLL_API int whfast(
             fprintf(stderr, "%d object(s) removed in total. Remaining objects: %d\n", kepler_remove_count, objects_count);
         }
         jacobi_to_cartesian(objects_count, jacobi_x, jacobi_v, x, v, m, eta);
-        whfast_acceleration(objects_count, jacobi_x, x, a, m, eta, G);
+        whfast_acceleration(objects_count, jacobi_x, x, a, m, eta, G, softening_length);
         whfast_kick(objects_count, jacobi_v, a, dt);
 
         // Store solution
@@ -561,7 +565,8 @@ void whfast_acceleration_pairwise(
     real *restrict a,
     const real *restrict m,
     const real *restrict eta,
-    real G
+    real G,
+    real softening_length
 )
 {
     real aux[3];
@@ -570,6 +575,7 @@ void whfast_acceleration_pairwise(
     real temp_vec_norm_cube;
     real temp_jacobi_norm;
     real temp_jacobi_norm_cube;
+    real softening_length_cube = softening_length * softening_length * softening_length;
     for (int i = 1; i < objects_count; i++)
     {
         // Calculate x_0i
@@ -578,9 +584,9 @@ void whfast_acceleration_pairwise(
         temp_vec[2] = x[i * 3 + 2] - x[2];
 
         temp_vec_norm = vec_norm(temp_vec, 3);
-        temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+        temp_vec_norm_cube = (temp_vec_norm * temp_vec_norm * temp_vec_norm) + softening_length_cube;
         temp_jacobi_norm = vec_norm(&jacobi_x[i * 3], 3);
-        temp_jacobi_norm_cube = temp_jacobi_norm * temp_jacobi_norm * temp_jacobi_norm;
+        temp_jacobi_norm_cube = (temp_jacobi_norm * temp_jacobi_norm * temp_jacobi_norm) + softening_length_cube;
         for (int j = 0; j < 3; j++)
         {
             a[i * 3 + j] = G * m[0] * eta[i] / eta[i - 1]
@@ -598,7 +604,7 @@ void whfast_acceleration_pairwise(
             temp_vec[2] = x[i * 3 + 2] - x[j * 3 + 2];
 
             temp_vec_norm = vec_norm(temp_vec, 3);
-            temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+            temp_vec_norm_cube = (temp_vec_norm * temp_vec_norm * temp_vec_norm) + softening_length_cube;
 
             aux[0] += G * m[j] * temp_vec[0] / temp_vec_norm_cube;
             aux[1] += G * m[j] * temp_vec[1] / temp_vec_norm_cube;
@@ -620,7 +626,7 @@ void whfast_acceleration_pairwise(
             temp_vec[2] = x[j * 3 + 2] - x[i * 3 + 2];
 
             temp_vec_norm = vec_norm(temp_vec, 3);
-            temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+            temp_vec_norm_cube = (temp_vec_norm * temp_vec_norm * temp_vec_norm) + softening_length_cube;
 
             aux[0] += G * m[j] * temp_vec[0] / temp_vec_norm_cube;
             aux[1] += G * m[j] * temp_vec[1] / temp_vec_norm_cube;
@@ -644,7 +650,7 @@ void whfast_acceleration_pairwise(
                 temp_vec[2] = x[k * 3 + 2] - x[j * 3 + 2];
 
                 temp_vec_norm = vec_norm(temp_vec, 3);
-                temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+                temp_vec_norm_cube = (temp_vec_norm * temp_vec_norm * temp_vec_norm) + softening_length_cube;
 
                 aux[0] += G * m[j] * m[k] * temp_vec[0] / temp_vec_norm_cube;
                 aux[1] += G * m[j] * m[k] * temp_vec[1] / temp_vec_norm_cube;
@@ -668,7 +674,8 @@ void whfast_acceleration_massless(
     real *restrict a,
     const real *restrict m,
     const real *restrict eta,
-    real G
+    real G,
+    real softening_length
 )
 {
     real aux[3];
@@ -677,6 +684,7 @@ void whfast_acceleration_massless(
     real temp_vec_norm_cube;
     real temp_jacobi_norm;
     real temp_jacobi_norm_cube;
+    real softening_length_cube = softening_length * softening_length * softening_length;
 
     int *restrict massive_indices = calloc(objects_count, sizeof(int));
     int *restrict massless_indices = calloc(objects_count, sizeof(int));
@@ -711,9 +719,9 @@ void whfast_acceleration_massless(
         temp_vec[2] = x[idx_i * 3 + 2] - x[2];
 
         temp_vec_norm = vec_norm(temp_vec, 3);
-        temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+        temp_vec_norm_cube = (temp_vec_norm * temp_vec_norm * temp_vec_norm) + softening_length_cube;
         temp_jacobi_norm = vec_norm(&jacobi_x[idx_i * 3], 3);
-        temp_jacobi_norm_cube = temp_jacobi_norm * temp_jacobi_norm * temp_jacobi_norm;
+        temp_jacobi_norm_cube = (temp_jacobi_norm * temp_jacobi_norm * temp_jacobi_norm) + softening_length_cube;
         for (int j = 0; j < 3; j++)
         {
             a[idx_i * 3 + j] = G * m[0] * eta[idx_i] / eta[idx_i - 1]
@@ -733,7 +741,7 @@ void whfast_acceleration_massless(
             temp_vec[2] = x[idx_i * 3 + 2] - x[idx_j * 3 + 2];
 
             temp_vec_norm = vec_norm(temp_vec, 3);
-            temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+            temp_vec_norm_cube = (temp_vec_norm * temp_vec_norm * temp_vec_norm) + softening_length_cube;
 
             aux[0] += G * m[idx_j] * temp_vec[0] / temp_vec_norm_cube;
             aux[1] += G * m[idx_j] * temp_vec[1] / temp_vec_norm_cube;
@@ -757,7 +765,7 @@ void whfast_acceleration_massless(
             temp_vec[2] = x[idx_j * 3 + 2] - x[idx_i * 3 + 2];
 
             temp_vec_norm = vec_norm(temp_vec, 3);
-            temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+            temp_vec_norm_cube = (temp_vec_norm * temp_vec_norm * temp_vec_norm) + softening_length_cube;
 
             aux[0] += G * m[idx_j] * temp_vec[0] / temp_vec_norm_cube;
             aux[1] += G * m[idx_j] * temp_vec[1] / temp_vec_norm_cube;
@@ -785,7 +793,7 @@ void whfast_acceleration_massless(
                 temp_vec[2] = x[idx_k * 3 + 2] - x[idx_j * 3 + 2];
 
                 temp_vec_norm = vec_norm(temp_vec, 3);
-                temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+                temp_vec_norm_cube = (temp_vec_norm * temp_vec_norm * temp_vec_norm) + softening_length_cube;
 
                 aux[0] += G * m[idx_j] * m[idx_k] * temp_vec[0] / temp_vec_norm_cube;
                 aux[1] += G * m[idx_j] * m[idx_k] * temp_vec[1] / temp_vec_norm_cube;
@@ -816,9 +824,9 @@ void whfast_acceleration_massless(
         temp_vec[2] = x[idx_i * 3 + 2] - x[2];
 
         temp_vec_norm = vec_norm(temp_vec, 3);
-        temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+        temp_vec_norm_cube = (temp_vec_norm * temp_vec_norm * temp_vec_norm) + softening_length_cube;
         temp_jacobi_norm = vec_norm(&jacobi_x[idx_i * 3], 3);
-        temp_jacobi_norm_cube = temp_jacobi_norm * temp_jacobi_norm * temp_jacobi_norm;
+        temp_jacobi_norm_cube = (temp_jacobi_norm * temp_jacobi_norm * temp_jacobi_norm) + softening_length_cube;
         for (int j = 0; j < 3; j++)
         {
             a[idx_i * 3 + j] = G * m[0]
@@ -842,7 +850,7 @@ void whfast_acceleration_massless(
             temp_vec[2] = x[idx_i * 3 + 2] - x[idx_j * 3 + 2];
 
             temp_vec_norm = vec_norm(temp_vec, 3);
-            temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+            temp_vec_norm_cube = (temp_vec_norm * temp_vec_norm * temp_vec_norm) + softening_length_cube;
 
             aux[0] += G * m[idx_j] * temp_vec[0] / temp_vec_norm_cube;
             aux[1] += G * m[idx_j] * temp_vec[1] / temp_vec_norm_cube;
@@ -870,7 +878,7 @@ void whfast_acceleration_massless(
             temp_vec[2] = x[idx_j * 3 + 2] - x[idx_i * 3 + 2];
 
             temp_vec_norm = vec_norm(temp_vec, 3);
-            temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+            temp_vec_norm_cube = (temp_vec_norm * temp_vec_norm * temp_vec_norm) + softening_length_cube;
 
             aux[0] += G * m[idx_j] * temp_vec[0] / temp_vec_norm_cube;
             aux[1] += G * m[idx_j] * temp_vec[1] / temp_vec_norm_cube;
@@ -906,7 +914,7 @@ void whfast_acceleration_massless(
                 temp_vec[2] = x[idx_k * 3 + 2] - x[idx_j * 3 + 2];
 
                 temp_vec_norm = vec_norm(temp_vec, 3);
-                temp_vec_norm_cube = temp_vec_norm * temp_vec_norm * temp_vec_norm;
+                temp_vec_norm_cube = (temp_vec_norm * temp_vec_norm * temp_vec_norm) + softening_length_cube;
 
                 aux[0] += G * m[idx_j] * m[idx_k] * temp_vec[0] / temp_vec_norm_cube;
                 aux[1] += G * m[idx_j] * m[idx_k] * temp_vec[1] / temp_vec_norm_cube;

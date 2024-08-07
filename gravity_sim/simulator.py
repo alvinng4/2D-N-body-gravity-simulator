@@ -71,6 +71,7 @@ class Simulator:
         flush_results_path: str = None,
         no_progress_bar: bool = False,
         no_print: bool = False,
+        softening_length: float = 0.0,
         barnes_hut_theta: float = 0.5,
         **kwargs,
     ) -> None:
@@ -99,6 +100,10 @@ class Simulator:
             Disable progress bar
         no_print : bool, optional
             Disable print statements
+        softening_length : float, optional
+            Softening length for acceleration acceleration
+        barnes_hut_theta : float, optional
+            Theta parameter for Barnes-Hut algorithm
         """
         self.system_name = gravitational_system.name
         self.x = gravitational_system.x.copy()
@@ -142,11 +147,18 @@ class Simulator:
         else:
             flush_path = None
 
-        if (self.integration_mode == "numpy") and acceleration_method != "pairwise":
-            warnings.warn(
-                "Only pairwise acceleration is available for numpy integrators. "
-                + 'Setting acceleration method to "pairwise".'
-            )
+        if (self.integration_mode == "numpy"):
+            if acceleration_method != "pairwise":
+                warnings.warn(
+                    "Only pairwise acceleration is available for NumPy. "
+                    + 'Setting acceleration method to "pairwise".'
+                )
+
+            if softening_length != 0.0:
+                warnings.warn(
+                    "Softening length is not available for NumPy. "
+                    + "Ignoring the provided softening length."
+                )
 
         if not no_print:
             print("Simulating the system...")
@@ -176,6 +188,7 @@ class Simulator:
                         self.dt,
                         self.tf,
                         acceleration_method,
+                        softening_length,
                         barnes_hut_theta,
                         storing_method,
                         str(flush_path),
@@ -206,6 +219,7 @@ class Simulator:
                         self.tolerance,
                         self.tolerance,
                         acceleration_method,
+                        softening_length,
                         barnes_hut_theta,
                         storing_method,
                         str(flush_path),
@@ -230,6 +244,7 @@ class Simulator:
                         self.tf,
                         self.tolerance,
                         acceleration_method,
+                        softening_length,
                         barnes_hut_theta,
                         storing_method,
                         str(flush_path),
@@ -256,6 +271,7 @@ class Simulator:
                         self.dt,
                         self.tf,
                         acceleration_method,
+                        softening_length,
                         barnes_hut_theta,
                         storing_method,
                         str(flush_path),

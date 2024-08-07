@@ -17,23 +17,24 @@ WIN32DLL_API void acceleration(
     real *restrict a,
     const real *restrict m,
     real G,
+    real softening_length,
     real barnes_hut_theta
 )
 {
-    (void) v;
+    (void) v;   // To suppress the warning of unused variable
     switch (acceleration_method_flag)
     {
         // Pairwise acceleration
-        case 0:
-            acceleration_pairwise(objects_count, x, a, m, G);
+        case ACCELERATION_METHOD_PAIRWISE:
+            acceleration_pairwise(objects_count, x, a, m, G, softening_length);
             break;
         // Massless acceleration
-        case 1:
-            acceleration_massless(objects_count, x, a, m, G);
+        case ACCELERATION_METHOD_MASSLESS:
+            acceleration_massless(objects_count, x, a, m, G, softening_length);
             break;
         // Barnes-Hut acceleration
-        case 2:
-            acceleration_barnes_hut(objects_count, x, a, m, G, barnes_hut_theta);
+        case ACCELERATION_METHOD_BARNES_HUT:
+            acceleration_barnes_hut(objects_count, x, a, m, G, softening_length, barnes_hut_theta);
             break;
         default:
             fprintf(stderr, "Warning: Invalid acceleration method detected. Ignoring acceleration calculation.\n");
@@ -46,7 +47,8 @@ WIN32DLL_API void acceleration_pairwise(
     real *restrict x,
     real *restrict a,
     const real *restrict m,
-    real G
+    real G,
+    real softening_length
 )
 {   
     real R_norm;
@@ -73,7 +75,7 @@ WIN32DLL_API void acceleration_pairwise(
             R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2]);
 
             // Calculate the acceleration
-            temp_value = G / (R_norm * R_norm * R_norm);
+            temp_value = G / (R_norm * R_norm * R_norm + softening_length * softening_length);
             temp_vec[0] = temp_value * R[0];
             temp_vec[1] = temp_value * R[1];
             temp_vec[2] = temp_value * R[2];
@@ -92,7 +94,8 @@ WIN32DLL_API void acceleration_massless(
     real *restrict x,
     real *restrict a,
     const real *restrict m,
-    real G
+    real G,
+    real softening_length
 )
 {   
     real R_norm;
@@ -141,7 +144,7 @@ WIN32DLL_API void acceleration_massless(
             R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2]);
 
             // Calculate the acceleration
-            temp_value = G / (R_norm * R_norm * R_norm);
+            temp_value = G / (R_norm * R_norm * R_norm + softening_length * softening_length);
             temp_vec[0] = temp_value * R[0];
             temp_vec[1] = temp_value * R[1];
             temp_vec[2] = temp_value * R[2];
@@ -169,7 +172,7 @@ WIN32DLL_API void acceleration_massless(
             R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2]);
 
             // Calculate the acceleration
-            temp_value = G / (R_norm * R_norm * R_norm);
+            temp_value = G / (R_norm * R_norm * R_norm + softening_length * softening_length);
             a[idx_j * 3 + 0] += temp_value * R[0] * m[i];
             a[idx_j * 3 + 1] += temp_value * R[1] * m[i];
             a[idx_j * 3 + 2] += temp_value * R[2] * m[i];
@@ -180,27 +183,33 @@ WIN32DLL_API void acceleration_massless(
     free(massless_indices);
 }
 
-void visualize_octree_nodes(BarnesHutTreeNode *node, int depth) {
-    if (node == NULL) {
-        return;
-    }
 
-    // Indentation for better visualization
-    for (int i = 0; i < depth; i++) {
-        printf("  ");
-    }
+// // For debug
+// void visualize_octree_nodes(BarnesHutTreeNode *node, int depth) 
+// {
+//     if (node == NULL) 
+//     {
+//         return;
+//     }
 
-    // Print node information
-    printf("Node (depth %d): is_leaf=%s, index=%d, mass=%.10f, center=(%.10f, %.10f, %.10f), width=%.2f\n",
-           depth, node->is_leaf ? "true" : "false", node->index, node->total_mass,
-           node->center_of_mass[0], node->center_of_mass[1], node->center_of_mass[2],
-           node->box_width);
+//     // Indentation for better visualization
+//     for (int i = 0; i < depth; i++) 
+//     {
+//         printf("  ");
+//     }
 
-    // Recursively visualize children
-    for (int i = 0; i < 8; i++) {
-        visualize_octree_nodes(node->children[i], depth + 1);
-    }
-}
+//     // Print node information
+//     printf("Node (depth %d): is_leaf=%s, index=%d, mass=%.10f, center=(%.10f, %.10f, %.10f), width=%.2f\n",
+//            depth, node->index >= 0 ? "true" : "false", node->index, node->total_mass,
+//            node->center_of_mass[0], node->center_of_mass[1], node->center_of_mass[2],
+//            node->box_width);
+
+//     // Recursively visualize children
+//     for (int i = 0; i < 8; i++) 
+//     {
+//         visualize_octree_nodes(node->children[i], depth + 1);
+//     }
+// }
 
 WIN32DLL_API void acceleration_barnes_hut(
     int objects_count,
@@ -208,6 +217,7 @@ WIN32DLL_API void acceleration_barnes_hut(
     real *restrict a,
     const real *restrict m,
     real G,
+    real softening_length,
     real barnes_hut_theta
 )
 {
@@ -263,7 +273,6 @@ WIN32DLL_API void acceleration_barnes_hut(
     BarnesHutTreeNode *restrict root = malloc(sizeof(BarnesHutTreeNode));
     if (root != NULL) 
     {
-        root->is_leaf = false;
         root->index = -1;
         root->total_mass = 0.0;
         root->center_of_mass[0] = (max_x + min_x) / 2.0;
@@ -311,7 +320,7 @@ WIN32DLL_API void acceleration_barnes_hut(
 
     // start = clock();
     /* Calculate the acceleration */
-    if(_barnes_hut_acceleration(barnes_hut_theta, objects_count, a, G, root) == 1)
+    if(_barnes_hut_acceleration(barnes_hut_theta, objects_count, a, G, softening_length, root) == 1)
     {
         goto err_memory;
     }
@@ -405,7 +414,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
     const real *restrict x,
     const real *restrict m,
     real width,
-    BarnesHutTreeNode *root
+    BarnesHutTreeNode *restrict root
 )
 {
     for (int i = 0; i < objects_count; i++)
@@ -418,7 +427,6 @@ WIN32DLL_API int _barnes_hut_construct_octree(
             goto err_memory;
         }
 
-        child_node->is_leaf = true;
         child_node->index = i;
         child_node->total_mass = m[i];
         child_node->center_of_mass[0] = x[i * 3 + 0];
@@ -445,7 +453,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     current_node->children[quadrant] = child_node;
                     break;
                 }
-                else if (current_node->children[quadrant]->is_leaf)
+                else if ((current_node->children[quadrant]->index) >= 0)  // >= 0 means it is a leaf
                 {
                     collider_leaf = current_node->children[quadrant];
                     BarnesHutTreeNode *new_node = malloc(sizeof(BarnesHutTreeNode));
@@ -454,7 +462,6 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                         goto err_memory;
                     }
 
-                    new_node->is_leaf = false;
                     new_node->index = -1;
                     new_node->total_mass = collider_leaf->total_mass + m[i];
                     new_node->box_width = width / (pow(2.0, depth));
@@ -532,7 +539,6 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                         goto err_memory;
                     }
 
-                    new_node->is_leaf = false;
                     new_node->index = -1;
                     new_node->total_mass = current_node->total_mass;
                     new_node->center_of_mass[0] = current_node->center_of_mass[0];
@@ -590,7 +596,7 @@ err_memory:
     return 1;
 }
 
-WIN32DLL_API int _barnes_hut_compute_center_of_mass(BarnesHutTreeNode *root)
+WIN32DLL_API int _barnes_hut_compute_center_of_mass(BarnesHutTreeNode *restrict root)
 {
     typedef struct BarnesHutStack
     {
@@ -623,7 +629,7 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(BarnesHutTreeNode *root)
                 stack->processed_quadrant = i;
                 continue;
             }
-            else if (child_i->is_leaf)
+            else if (child_i->index >= 0)   // >= 0 means it is a leaf
             {
                 real child_mass = child_i->total_mass;
                 stack->sum_of_mass_times_distance[0] += child_mass * child_i->center_of_mass[0];
@@ -689,7 +695,8 @@ WIN32DLL_API int _barnes_hut_acceleration(
     int objects_count,
     real *restrict a,
     real G,
-    BarnesHutTreeNode *root
+    real softening_length,
+    BarnesHutTreeNode *restrict root
 )
 {
     typedef struct BarnesHutStack
@@ -740,7 +747,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
                 acc_stack->processed_quadrant = i;
                 continue;
             }
-            else if (child_i->is_leaf)
+            else if (child_i->index >= 0)   // >= 0 means it is a leaf
             {
                 current_acc_leaf = child_i;
                 acc_object_index = current_acc_leaf->index;
@@ -815,11 +822,12 @@ WIN32DLL_API int _barnes_hut_acceleration(
 
                         if (
                             ((child_j->box_width / R_norm) < theta && (!is_acc_branch_node)) ||
-                            (child_j->is_leaf))
+                            (child_j->index >= 0)   // >= 0 means it is a leaf
+                        )
                         {
                             if (child_j->index != acc_object_index)
                             {
-                                _barnes_hut_helper_acceleration_pair(current_acc_leaf, child_j, a, G, R, R_norm);
+                                _barnes_hut_helper_acceleration_pair(current_acc_leaf, child_j, a, G, softening_length, R, R_norm);
                             }
                             obj_stack->processed_quadrant = j;
                             break;
@@ -879,10 +887,11 @@ err_memory:
 }
 
 WIN32DLL_API void _barnes_hut_helper_acceleration_pair(
-    BarnesHutTreeNode *current_acc_leaf,
-    BarnesHutTreeNode *current_obj_leaf,
+    BarnesHutTreeNode *restrict current_acc_leaf,
+    BarnesHutTreeNode *restrict current_obj_leaf,
     real *restrict a,
     real G,
+    real softening_length,
     real *restrict R,
     real R_norm
 )
@@ -892,7 +901,7 @@ WIN32DLL_API void _barnes_hut_helper_acceleration_pair(
     // Calculate the acceleration
     int acc_object_index = current_acc_leaf->index;
     real object_2_mass = current_obj_leaf->total_mass;
-    temp_value = G * object_2_mass / (R_norm * R_norm * R_norm);
+    temp_value = G * object_2_mass / (R_norm * R_norm * R_norm + softening_length * softening_length);
     a[acc_object_index * 3 + 0] -= temp_value * R[0];
     a[acc_object_index * 3 + 1] -= temp_value * R[1];
     a[acc_object_index * 3 + 2] -= temp_value * R[2];
@@ -927,7 +936,7 @@ WIN32DLL_API int _barnes_hut_free_octree(BarnesHutTreeNode *restrict root)
                 stack->processed_quadrant = i;
                 continue;
             }
-            else if (child_i->is_leaf)
+            else if (child_i->index >= 0)   // >= 0 means it is a leaf
             {
                 free(child_i);
                 stack->processed_quadrant = i;

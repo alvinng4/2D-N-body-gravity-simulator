@@ -131,6 +131,7 @@ class GravitySimulator:
         flush_results_path: str = None,
         no_progress_bar: bool = False,
         no_print: bool = False,
+        softening_length: float = 0.0,
         **kwargs,
     ) -> None:
         try:
@@ -146,6 +147,7 @@ class GravitySimulator:
                 flush_results_path,
                 no_progress_bar,
                 no_print,
+                softening_length,
                 **kwargs,
             )
         except KeyboardInterrupt:

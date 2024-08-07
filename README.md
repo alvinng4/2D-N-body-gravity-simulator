@@ -108,6 +108,7 @@ launch_simulation() is the main method for initiating the simulation.
 | `flush_results_path` | str | None | Path to flush intermediate results. |
 | `no_progress_bar` | bool | False | If True, disables the progress bar. |
 | `no_print` | bool | False | If True, disables some printing to console |
+| `softening_length` | float | 0.0 | Softening length for acceleration calculation |
 | `**kwargs` | dict | - | Additional keyword arguments. |
 
 #### integrators 

@@ -9,10 +9,12 @@
 
 #include "common.h"
 
+#define ACCELERATION_METHOD_PAIRWISE 0
+#define ACCELERATION_METHOD_MASSLESS 1
+#define ACCELERATION_METHOD_BARNES_HUT 2
 
 typedef struct BarnesHutTreeNode
 {
-    bool is_leaf;
     int index;
     real total_mass;
     real center_of_mass[3];
@@ -40,6 +42,7 @@ void acceleration(
     real *restrict a,
     const real *restrict m,
     real G,
+    real softening_length,
     real barnes_hut_theta
 );
 
@@ -58,7 +61,8 @@ void acceleration_pairwise(
     real *restrict x,
     real *restrict a,
     const real *restrict m,
-    real G
+    real G,
+    real softening_length
 );
 
 /**
@@ -77,7 +81,8 @@ void acceleration_massless(
     real *restrict x,
     real *restrict a,
     const real *restrict m,
-    real G
+    real G,
+    real softening_length
 );
 
 /**
@@ -96,6 +101,7 @@ void acceleration_barnes_hut(
     real *restrict a,
     const real *restrict m,
     real G,
+    real softening_length,
     real barnes_hut_theta
 );
 
@@ -113,7 +119,7 @@ int _barnes_hut_construct_octree(
     const real *restrict x,
     const real *restrict m,
     real width,
-    BarnesHutTreeNode *root
+    BarnesHutTreeNode *restrict root
 );
 
 int _barnes_hut_compute_center_of_mass(BarnesHutTreeNode *root);
@@ -123,14 +129,16 @@ int _barnes_hut_acceleration(
     int objects_count,
     real *restrict a,
     real G,
-    BarnesHutTreeNode *root
+    real softening_length,
+    BarnesHutTreeNode *restrict root
 );
 
 void _barnes_hut_helper_acceleration_pair(
-    BarnesHutTreeNode *current_acc_leaf,
-    BarnesHutTreeNode *current_obj_leaf,
+    BarnesHutTreeNode *restrict current_acc_leaf,
+    BarnesHutTreeNode *restrict current_obj_leaf,
     real *restrict a,
     real G,
+    real softening_length,
     real *restrict R,
     real R_norm
 );

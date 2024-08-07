@@ -42,6 +42,7 @@ int ias15(
     double tf, 
     double input_tolerance,
     const char *restrict acceleration_method,
+    real softening_length,
     real barnes_hut_theta,
     int store_every_n,
     int *restrict store_count,
@@ -103,6 +104,7 @@ real ias15_initial_dt(
     const real *m,
     real G,
     int acceleration_method_flag,
+    real softening_length,
     real barnes_hut_theta
 );
 
@@ -192,6 +194,7 @@ void ias15_step(
     real *restrict temp_x_err_comp_sum,
     real *restrict temp_v_err_comp_sum,
     int acceleration_method_flag,
+    real softening_length,
     real barnes_hut_theta
 );
 
@@ -377,6 +380,7 @@ WIN32DLL_API int ias15(
     double tf, 
     double input_tolerance,
     const char *restrict acceleration_method,
+    real softening_length,
     real barnes_hut_theta,
     int store_every_n,
     int *restrict store_count,
@@ -389,15 +393,15 @@ WIN32DLL_API int ias15(
     int acceleration_method_flag;
     if (strcmp(acceleration_method, "pairwise") == 0)
     {
-        acceleration_method_flag = 0;
+        acceleration_method_flag = ACCELERATION_METHOD_PAIRWISE;
     }
     else if (strcmp(acceleration_method, "massless") == 0)
     {
-        acceleration_method_flag = 1;
+        acceleration_method_flag = ACCELERATION_METHOD_MASSLESS;
     }
     else if (strcmp(acceleration_method, "barnes-hut") == 0)
     {
-        acceleration_method_flag = 2;
+        acceleration_method_flag = ACCELERATION_METHOD_BARNES_HUT;
     }
     else
     {
@@ -486,7 +490,7 @@ WIN32DLL_API int ias15(
 
     // Allocate memory for solution output
     int64 count = 1;    // 1 for t0
-    real dt_old = ias15_initial_dt(objects_count, 15, x, v, a, m, G, acceleration_method_flag, barnes_hut_theta);
+    real dt_old = ias15_initial_dt(objects_count, 15, x, v, a, m, G, acceleration_method_flag, softening_length, barnes_hut_theta);
     real dt = dt_old;
 
     FILE *flush_file = NULL;
@@ -576,6 +580,7 @@ WIN32DLL_API int ias15(
             temp_x_err_comp_sum,
             temp_v_err_comp_sum,
             acceleration_method_flag,
+            softening_length,
             barnes_hut_theta
         );
 
@@ -797,10 +802,11 @@ WIN32DLL_API real ias15_initial_dt(
     const real *m,
     real G,
     int acceleration_method_flag,
+    real softening_length,
     real barnes_hut_theta
 )
 {
-    acceleration(acceleration_method_flag, objects_count, x, v, a, m, G, barnes_hut_theta);
+    acceleration(acceleration_method_flag, objects_count, x, v, a, m, G, softening_length, barnes_hut_theta);
 
     real d_0 = abs_max_vec(x, objects_count * 3);
     real d_1 = abs_max_vec(a, objects_count * 3);
@@ -833,7 +839,7 @@ WIN32DLL_API real ias15_initial_dt(
         x_1[i * 3 + 1] = x[i * 3 + 1] + dt_0 * v[i * 3 + 1];
         x_1[i * 3 + 2] = x[i * 3 + 2] + dt_0 * v[i * 3 + 2];
     }
-    acceleration(acceleration_method_flag, objects_count, x_1, v, a_1, m, G, barnes_hut_theta);
+    acceleration(acceleration_method_flag, objects_count, x_1, v, a_1, m, G, softening_length, barnes_hut_theta);
 
     for (int i = 0; i < objects_count; i++)
     {
@@ -896,6 +902,7 @@ WIN32DLL_API void ias15_step(
     real *restrict temp_x_err_comp_sum,
     real *restrict temp_v_err_comp_sum,
     int acceleration_method_flag,
+    real softening_length,
     real barnes_hut_theta
 )
 {
@@ -916,7 +923,7 @@ WIN32DLL_API void ias15_step(
                 ias15_approx_vel_pc(objects_count, v, v0, a0, nodes[i], aux_b, *dt, v_err_comp_sum);
 
                 // Evaluate force function and store result
-                acceleration(acceleration_method_flag, objects_count, x, v, &aux_a[i * objects_count * 3], m, G, barnes_hut_theta);
+                acceleration(acceleration_method_flag, objects_count, x, v, &aux_a[i * objects_count * 3], m, G, softening_length, barnes_hut_theta);
 
                 ias15_compute_aux_g(objects_count, dim_nodes, aux_g, aux_r, aux_a, i, F);
                 ias15_compute_aux_b(objects_count, dim_nodes_minus_1, aux_b, aux_g, aux_c, i);
@@ -943,7 +950,7 @@ WIN32DLL_API void ias15_step(
 
         ias15_approx_pos_step(objects_count, x, x0, v0, a0, aux_b, *dt, temp_x_err_comp_sum);
         ias15_approx_vel_step(objects_count, v, v0, a0, aux_b, *dt, temp_v_err_comp_sum);
-        acceleration(acceleration_method_flag, objects_count, x, v, a, m, G, barnes_hut_theta);
+        acceleration(acceleration_method_flag, objects_count, x, v, a, m, G, softening_length, barnes_hut_theta);
 
         // Estimate relative error
         error_b7 = abs_max_vec(&aux_b[dim_nodes_minus_2 * objects_count * 3], objects_count * 3) / abs_max_vec(a, objects_count * 3);
