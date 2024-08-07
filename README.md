@@ -1,7 +1,9 @@
 # Gravity Simulator
 Newtonian N-body gravity simulator accelerated with C library
-* Ten integrators including WHFast and IAS15 are implemented
-* Barnes-Hut algorithm and CUDA acceleration will be implemented in the future
+
+* Ten integrators including WHFast and IAS15 
+* Barnes-Hut algorithm (prototype)
+* CUDA acceleration will be implemented in the future
 
 This is a student project developed for learning purpose.
 It aims to be lightweight and easy to use. 
@@ -93,6 +95,48 @@ grav_sim.launch_simulation(
 grav_sim.plot_2d_trajectory()
 grav_sim.save_results()
 ```
+
+#### launch_simulation
+launch_simulation() is the main method for initiating the simulation.
+Certainly! Here's a table documenting the parameters for the `launch_simulation` function:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `integrator` | str | Required | Name of the integrator |
+| `tf` | float | Required | Simulation time (days) |
+| `dt` | float | None | Time step (days) |
+| `tolerance` | float | None | Tolerance for adaptive step integrators |
+| `store_every_n` | int | 1 | Store results every n steps |
+| `acceleration_method` | str | `pairwise` | Method for calculating accelerations |
+| `storing_method` | str | `default` | Method for storing simulation results |
+| `flush_results_path` | str | None | Path to flush intermediate results. |
+| `no_progress_bar` | bool | False | If True, disables the progress bar. |
+| `no_print` | bool | False | If True, disables some printing to console |
+| `**kwargs` | dict | - | Additional keyword arguments. |
+
+#### integrators 
+`euler`, `euler_cromer`, `rk4`, `leapfrog`, `rkf45`, `dopri`, `dverk`, `rkf78`, `ias15`, `whfast`
+
+#### acceleration_method
+- `pairwise`
+    * Brute force pairwise calculations for gravitational acceleration
+    * Time complexity: $O(N^2)$
+- `massless`
+    * Similar to `pairwise`, but seperate the calculations for massive and massless particles
+    * Time complexity: $O(M^2 + MN)$, where $M$ and $N$ are the number of massive and massless particles respectively
+- `barnes-hut`
+    * Calculate gravitational acceleration with barnes-hut algorithm
+    * Time complexity: $O(N \log{N})$
+    * `**kwargs`: `barnes-hut-theta`
+        * Threshold for Barnes-hut algorithm, default = 0.5
+
+#### storing_method
+- `default`
+    * Store solutions directly into memory
+- `flush`
+    * Flush intermediate results into a csv file in `gravity_sim/results` to reduce memory pressure.
+- `no_store`
+    * Do not store any result, typically used for benchmarking.
 
 ## Sample projects
 
