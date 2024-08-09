@@ -19,8 +19,8 @@ accuracy and efficiency.
     - [Python version](#python-version)
     - [Installation](#installation)
     - [Important note](#important-note)
+* [Running the program in terminal](#running-the-program-in-terminal)
 * [GravitySimulator API](#gravitysimulator-api)
-* [Running the program](#running-the-program)
 * [Default systems](#default-systems)
 * [Integrators](#integrators)
     - [Simple methods](#simple-methods)
@@ -66,6 +66,14 @@ more flexible and provides more options.
 It is possible to change this value in the API by changing `system.G`.
 * Animations, simulation results, etc. will be stored to `gravity_sim/result` by default, unless a file path is specified.
 * Complex animations like the asteroid belt cannot be done solely with the API functions. Sample scripts are provided in this repository (See [Sample projects](#sample-projects))
+
+## Running the program in terminal
+
+Once you have downloaded the source files, navigate to the source directory in terminal and run
+```
+python gravity_sim [-n|--numpy]
+```
+`-n, --numpy`: run the program with NumPy instead of C library
 
 ## GravitySimulator API
 
@@ -151,14 +159,6 @@ Some projects are done with the API. The scripts are stored at the `examples` fo
 Videos: 
 * https://www.youtube.com/watch?v=AEyjIF-8zT0
 * https://www.youtube.com/watch?v=jHLLr7ACvDQ
-
-## Running the program in terminal
-
-Once you have downloaded the source files, navigate to the source directory in terminal and run
-```
-python gravity_sim [-n|--numpy]
-```
-`-n, --numpy`: run the program with NumPy instead of C library
 
 ## Default systems
 Some systems are available by default.

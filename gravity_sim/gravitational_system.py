@@ -230,7 +230,10 @@ class GravitationalSystem:
         longitude_of_ascending_node: float,
         true_anomaly: float,
         m: float,
-        primary_object_name: str,
+        primary_object_name: str=None,
+        primary_object_x: np.ndarray = np.array([0.0, 0.0, 0.0]),
+        primary_object_v: np.ndarray = np.array([0.0, 0.0, 0.0]),
+        primary_object_m: float = 0.0,
         object_name: str = None,
     ):
         """
@@ -257,13 +260,21 @@ class GravitationalSystem:
             Mass
         primary_object : float
             Name of the primary object
+        primary_x : np.ndarray
+            Position vector of the primary object
+        primary_v : np.ndarray
+            Velocity vector of the primary object
+        primary_m : float
+            Mass of the primary object
         object_name : str
             Name of the new object
         """
-        primary_object_idx = self.objects_names.index(primary_object_name)
+        if primary_object_name is not None:
+            primary_object_idx = self.objects_names.index(primary_object_name)
+            primary_object_x = self.x[primary_object_idx]
+            primary_object_v = self.v[primary_object_idx]
+            primary_object_m = self.m[primary_object_idx]
 
-        primary_object_x = self.x[primary_object_idx]
-        primary_object_v = self.v[primary_object_idx]
         x, v = common.keplerian_to_cartesian(
             semi_major_axis=semi_major_axis,
             eccentricity=eccentricity,
@@ -271,7 +282,7 @@ class GravitationalSystem:
             argument_of_periapsis=argument_of_periapsis,
             longitude_of_ascending_node=longitude_of_ascending_node,
             true_anomaly=true_anomaly,
-            total_mass=(self.m[primary_object_idx] + m),
+            total_mass=(primary_object_m + m),
             G=self.G,
         )
         self.add(x + primary_object_x, v + primary_object_v, m, object_name)

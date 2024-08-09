@@ -221,55 +221,73 @@ WIN32DLL_API void acceleration_barnes_hut(
     real barnes_hut_theta
 )
 {
-    // clock_t start, end;
+    /* Find the width and center of the bounding box */
+    real center[3];
+    real width;
+    _calculate_bounding_box(objects_count, x, center, &width);
 
-    // start = clock();
-    /* Find the width of the bounding box */
-    real min_x = x[0];
-    real max_x = x[0];
-    real min_y = x[1];
-    real max_y = x[1];
-    real min_z = x[2];
-    real max_z = x[2];
-
-    for (int i = 1; i < objects_count; i++)
+    /* Construct the octree */
+    BarnesHutTreeNode *restrict root = malloc(sizeof(BarnesHutTreeNode));
+    if (root != NULL) 
     {
-        if (x[i * 3 + 0] < min_x)
-        {
-            min_x = x[i * 3 + 0];
-        }
-        if (x[i * 3 + 0] > max_x)
-        {
-            max_x = x[i * 3 + 0];
-        }
-        if (x[i * 3 + 1] < min_y)
-        {
-            min_y = x[i * 3 + 1];
-        }
-        if (x[i * 3 + 1] > max_y)
-        {
-            max_y = x[i * 3 + 1];
-        }
-        if (x[i * 3 + 2] < min_z)
-        {
-            min_z = x[i * 3 + 2];
-        }
-        if (x[i * 3 + 2] > max_z)
-        {
-            max_z = x[i * 3 + 2];
-        }
+        root->index = -1;
+        root->total_mass = 0.0;
+        root->center_of_mass[0] = center[0];
+        root->center_of_mass[1] = center[1];
+        root->center_of_mass[2] = center[2];
+        root->box_width = width;
+        root->children[0] = NULL;
+        root->children[1] = NULL;
+        root->children[2] = NULL;
+        root->children[3] = NULL;
+        root->children[4] = NULL;
+        root->children[5] = NULL;
+        root->children[6] = NULL;
+        root->children[7] = NULL;
+    }
+    else
+    {
+        fprintf(stderr, "Error: Failed to allocate memory for the root node in acceleration_barnes_hut.\n");
+        goto err_root_memory;
     }
 
-    real width_x = max_x - min_x;
-    real width_y = max_y - min_y;
-    real width_z = max_z - min_z;
+    if (_barnes_hut_construct_octree(objects_count, x, m, width, root) == 1)
+    {
+        goto err_memory;
+    }
 
-    real width = fmax(width_x, fmax(width_y, width_z));
-    // end = clock();
-    // printf("Time elapsed for finding the width: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+    /* Calculate the center of mass */
+    if (_barnes_hut_compute_center_of_mass(root) == 1)
+    {
+        goto err_memory;
+    }
 
-    // start = clock();
-    /* Construct the octree */
+    /* Calculate the acceleration */
+    if (_barnes_hut_acceleration(barnes_hut_theta, objects_count, a, G, softening_length, root) == 1)
+    {
+        goto err_memory;
+    }
+
+    /* Free the memory */
+    if (_barnes_hut_free_octree(root) == 1)
+    {
+        goto err_memory;
+    }
+
+    /* For debug / optimization
+    clock_t start, end;
+
+    start = clock();
+    // Find the width of the bounding box
+    real center[3];
+    real width;
+    _calculate_bounding_box(objects_count, x, center, &width);
+
+    end = clock();
+    printf("Time elapsed for finding the width: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+
+    start = clock();
+    // Construct the octree
     BarnesHutTreeNode *restrict root = malloc(sizeof(BarnesHutTreeNode));
     if (root != NULL) 
     {
@@ -290,6 +308,7 @@ WIN32DLL_API void acceleration_barnes_hut(
     }
     else
     {
+        fprintf(stderr, "Error: Failed to allocate memory for the root node in acceleration_barnes_hut.\n");
         goto err_root_memory;
     }
 
@@ -301,12 +320,12 @@ WIN32DLL_API void acceleration_barnes_hut(
     // visualize_octree_nodes(root, 0);
     // exit(1);
 
-    // end = clock();
-    // printf("Time elapsed for constructing the octree: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+    end = clock();
+    printf("Time elapsed for constructing the octree: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
 
-    // start = clock();
+    start = clock();
 
-    /* Calculate the center of mass */
+    // Calculate the center of mass
     if (_barnes_hut_compute_center_of_mass(root) == 1)
     {
         goto err_memory;
@@ -315,40 +334,76 @@ WIN32DLL_API void acceleration_barnes_hut(
     // visualize_octree_nodes(root, 0);
     // exit(1);
 
-    // end = clock();
-    // printf("Time elapsed for computing the center of mass: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+    end = clock();
+    printf("Time elapsed for computing the center of mass: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
 
-    // start = clock();
-    /* Calculate the acceleration */
+    start = clock();
+    // Calculate the acceleration
     if(_barnes_hut_acceleration(barnes_hut_theta, objects_count, a, G, softening_length, root) == 1)
     {
         goto err_memory;
     }
 
-    // end = clock();
-    // printf("Time elapsed for calculating the acceleration: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+    end = clock();
+    printf("Time elapsed for calculating the acceleration: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
 
-    // start = clock();
+    start = clock();
 
-    /* Free the memory */
+    // Free the memory
     if (_barnes_hut_free_octree(root) == 1)
     {
         goto err_memory;
     }
-    // end = clock();
-    // printf("Time elapsed for freeing the memory: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
-
+    end = clock();
+    printf("Time elapsed for freeing the memory: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+    
+    */
+    
     return;
 
 err_memory:
     _barnes_hut_free_octree(root);
 err_root_memory:
-    printf("Some error\n");
     return;
-//     return 1;
+//    return 1;
 }
 
-WIN32DLL_API int _barnes_hut_check_quadrant(
+WIN32DLL_API void _calculate_bounding_box(
+    int objects_count,
+    const real *restrict x,
+    real *restrict center,
+    real *restrict width
+)
+{
+    /* Find the width of the bounding box */
+    real min_x = x[0];
+    real max_x = x[0];
+    real min_y = x[1];
+    real max_y = x[1];
+    real min_z = x[2];
+    real max_z = x[2];
+
+    for (int i = 1; i < objects_count; i++)
+    {
+        min_x = fmin(min_x, x[i * 3 + 0]);
+        max_x = fmax(max_x, x[i * 3 + 0]);
+        min_y = fmin(min_y, x[i * 3 + 1]);
+        max_y = fmax(max_y, x[i * 3 + 1]);
+        min_z = fmin(min_z, x[i * 3 + 2]);
+        max_z = fmax(max_z, x[i * 3 + 2]);
+    }
+
+    center[0] = (max_x + min_x) / 2.0;
+    center[1] = (max_y + min_y) / 2.0;
+    center[2] = (max_z + min_z) / 2.0;
+
+    real width_x = max_x - min_x;
+    real width_y = max_y - min_y;
+    real width_z = max_z - min_z;
+    *width = fmax(fmax(width_x, width_y), width_z);
+}
+
+WIN32DLL_API int _barnes_hut_check_region(
     real x,
     real y,
     real z,
@@ -357,56 +412,13 @@ WIN32DLL_API int _barnes_hut_check_quadrant(
     real center_z
 )
 {
-    if (x <= center_x)
-    {
-        if (y <= center_y)
-        {
-            if (z <= center_z)
-            {
-                return 0;
-            }
-            else
-            {
-                return 1;
-            }
-        }
-        else
-        {
-            if (z <= center_z)
-            {
-                return 2;
-            }
-            else
-            {
-                return 3;
-            }
-        }
-    }
-    else
-    {
-        if (y <= center_y)
-        {
-            if (z <= center_z)
-            {
-                return 4;
-            }
-            else
-            {
-                return 5;
-            }
-        }
-        else
-        {
-            if (z <= center_z)
-            {
-                return 6;
-            }
-            else
-            {
-                return 7;
-            }
-        }
-    }
+    int region = 0;
+
+    if (x > center_x) region |= 4;
+    if (y > center_y) region |= 2;
+    if (z > center_z) region |= 1;
+
+    return region;
 }
 
 WIN32DLL_API int _barnes_hut_construct_octree(
@@ -437,7 +449,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
         
         while (true)
         {
-            int quadrant = _barnes_hut_check_quadrant(
+            int region = _barnes_hut_check_region(
                 x[i * 3 + 0],
                 x[i * 3 + 1],
                 x[i * 3 + 2],
@@ -448,14 +460,14 @@ WIN32DLL_API int _barnes_hut_construct_octree(
             
             if (collider_leaf == NULL)
             {
-                if (current_node->children[quadrant] == NULL)
+                if (current_node->children[region] == NULL)
                 {
-                    current_node->children[quadrant] = child_node;
+                    current_node->children[region] = child_node;
                     break;
                 }
-                else if ((current_node->children[quadrant]->index) >= 0)  // >= 0 means it is a leaf
+                else if ((current_node->children[region]->index) >= 0)  // >= 0 means it is a leaf
                 {
-                    collider_leaf = current_node->children[quadrant];
+                    collider_leaf = current_node->children[region];
                     BarnesHutTreeNode *new_node = malloc(sizeof(BarnesHutTreeNode));
                     if (new_node == NULL)
                     {
@@ -476,7 +488,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
 
                     // Calculate the center of the node when constructing the octree
                     // It will be replaced with the center of mass later
-                    if (quadrant < 4)
+                    if (region < 4)
                     {
                         new_node->center_of_mass[0] = current_node->center_of_mass[0] - width / (pow(2.0, depth + 1));
                     }
@@ -484,7 +496,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     {
                         new_node->center_of_mass[0] = current_node->center_of_mass[0] + width / (pow(2.0, depth + 1));
                     }
-                    if (quadrant == 0 || quadrant == 1 || quadrant == 4 || quadrant == 5)
+                    if (region == 0 || region == 1 || region == 4 || region == 5)
                     {
                         new_node->center_of_mass[1] = current_node->center_of_mass[1] - width / (pow(2.0, depth + 1));
                     }
@@ -492,7 +504,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     {
                         new_node->center_of_mass[1] = current_node->center_of_mass[1] + width / (pow(2.0, depth + 1));
                     }
-                    if (quadrant % 2 == 0)
+                    if (region % 2 == 0)
                     {
                         new_node->center_of_mass[2] = current_node->center_of_mass[2] - width / (pow(2.0, depth + 1));
                     }
@@ -501,20 +513,20 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                         new_node->center_of_mass[2] = current_node->center_of_mass[2] + width / (pow(2.0, depth + 1));
                     }
 
-                    current_node->children[quadrant] = new_node;
+                    current_node->children[region] = new_node;
                     current_node = new_node;
                     depth++;
                 }
                 else
                 {   
-                    current_node = current_node->children[quadrant];
+                    current_node = current_node->children[region];
                     current_node->total_mass += m[i];
                     depth++;
                 }
             }
             else
             {
-                int collider_quadrant = _barnes_hut_check_quadrant(
+                int collider_region = _barnes_hut_check_region(
                     collider_leaf->center_of_mass[0],
                     collider_leaf->center_of_mass[1],
                     collider_leaf->center_of_mass[2],
@@ -523,10 +535,10 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     current_node->center_of_mass[2]
                 );
 
-                if (quadrant != collider_quadrant)
+                if (region != collider_region)
                 {
-                    current_node->children[quadrant] = child_node;
-                    current_node->children[collider_quadrant] = collider_leaf;
+                    current_node->children[region] = child_node;
+                    current_node->children[collider_region] = collider_leaf;
                     break;
                 }
 
@@ -556,7 +568,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
 
                     // Calculate the center of the node when constructing the octree
                     // It will be replaced with the center of mass later
-                    if (quadrant < 4)
+                    if (region < 4)
                     {
                         new_node->center_of_mass[0] = current_node->center_of_mass[0] - width / (pow(2.0, depth + 1));
                     }
@@ -564,7 +576,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     {
                         new_node->center_of_mass[0] = current_node->center_of_mass[0] + width / (pow(2.0, depth + 1));
                     }
-                    if (quadrant == 0 || quadrant == 1 || quadrant == 4 || quadrant == 5)
+                    if (region == 0 || region == 1 || region == 4 || region == 5)
                     {
                         new_node->center_of_mass[1] = current_node->center_of_mass[1] - width / (pow(2.0, depth + 1));
                     }
@@ -572,7 +584,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     {
                         new_node->center_of_mass[1] = current_node->center_of_mass[1] + width / (pow(2.0, depth + 1));
                     }
-                    if (quadrant % 2 == 0)
+                    if (region % 2 == 0)
                     {
                         new_node->center_of_mass[2] = current_node->center_of_mass[2] - width / (pow(2.0, depth + 1));
                     }
@@ -582,7 +594,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     }
 
                     
-                    current_node->children[quadrant] = new_node;
+                    current_node->children[region] = new_node;
                     current_node = new_node;
                     depth++;
                 }
@@ -603,7 +615,7 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(BarnesHutTreeNode *restrict 
         BarnesHutTreeNode *node;
         struct BarnesHutStack *last;
         real sum_of_mass_times_distance[3];
-        int processed_quadrant;
+        int processed_region;
     } BarnesHutStack;
     
     BarnesHutTreeNode *current_node = root;
@@ -617,16 +629,16 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(BarnesHutTreeNode *restrict 
     stack->sum_of_mass_times_distance[0] = 0.0;
     stack->sum_of_mass_times_distance[1] = 0.0;
     stack->sum_of_mass_times_distance[2] = 0.0;
-    stack->processed_quadrant = -1;
+    stack->processed_region = -1;
 
     while (true)
     {
-        for (int i = (stack->processed_quadrant + 1); i < 8; i++)
+        for (int i = (stack->processed_region + 1); i < 8; i++)
         {
             BarnesHutTreeNode *child_i = current_node->children[i];
             if (child_i == NULL)
             {
-                stack->processed_quadrant = i;
+                stack->processed_region = i;
                 continue;
             }
             else if (child_i->index >= 0)   // >= 0 means it is a leaf
@@ -636,7 +648,7 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(BarnesHutTreeNode *restrict 
                 stack->sum_of_mass_times_distance[1] += child_mass * child_i->center_of_mass[1];
                 stack->sum_of_mass_times_distance[2] += child_mass * child_i->center_of_mass[2];
 
-                stack->processed_quadrant = i;
+                stack->processed_region = i;
                 continue;
             }
             else
@@ -651,7 +663,7 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(BarnesHutTreeNode *restrict 
                 new_item->sum_of_mass_times_distance[0] = 0.0;
                 new_item->sum_of_mass_times_distance[1] = 0.0;
                 new_item->sum_of_mass_times_distance[2] = 0.0;
-                new_item->processed_quadrant = -1;
+                new_item->processed_region = -1;
 
                 stack = new_item;
                 current_node = child_i;
@@ -659,7 +671,7 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(BarnesHutTreeNode *restrict 
             }
         }
     
-        if (stack->processed_quadrant >= 7)
+        if (stack->processed_region >= 7)
         {
             real total_mass = current_node->total_mass;
             current_node->center_of_mass[0] = stack->sum_of_mass_times_distance[0] / total_mass;
@@ -677,7 +689,7 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(BarnesHutTreeNode *restrict 
             parent->sum_of_mass_times_distance[0] += total_mass * current_node->center_of_mass[0];
             parent->sum_of_mass_times_distance[1] += total_mass * current_node->center_of_mass[1];
             parent->sum_of_mass_times_distance[2] += total_mass * current_node->center_of_mass[2];
-            parent->processed_quadrant++;
+            parent->processed_region++;
 
             stack = parent;
             current_node = parent_node;
@@ -703,7 +715,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
     {
         BarnesHutTreeNode *node;
         struct BarnesHutStack *last;
-        int processed_quadrant;
+        int processed_region;
     } BarnesHutStack;
 
     BarnesHutTreeNode *current_acc_node = root;
@@ -714,7 +726,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
     }
     acc_stack->node = current_acc_node;
     acc_stack->last = NULL;
-    acc_stack->processed_quadrant = -1;
+    acc_stack->processed_region = -1;
 
     // Empty the input array
     for (int i = 0; i < objects_count; i++)
@@ -739,12 +751,12 @@ WIN32DLL_API int _barnes_hut_acceleration(
         // Find leaf
         found_leaf = false;
         acc_branch_nodes_count = 0;
-        for (i = (acc_stack->processed_quadrant + 1); i < 8; i++)
+        for (i = (acc_stack->processed_region + 1); i < 8; i++)
         {
             BarnesHutTreeNode *child_i = current_acc_node->children[i];
             if (child_i == NULL)
             {
-                acc_stack->processed_quadrant = i;
+                acc_stack->processed_region = i;
                 continue;
             }
             else if (child_i->index >= 0)   // >= 0 means it is a leaf
@@ -752,7 +764,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
                 current_acc_leaf = child_i;
                 acc_object_index = current_acc_leaf->index;
                 found_leaf = true;
-                acc_stack->processed_quadrant = i;
+                acc_stack->processed_region = i;
                 break;
             }
             else
@@ -764,7 +776,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
                 }
                 new_item->node = child_i;
                 new_item->last = acc_stack;
-                new_item->processed_quadrant = -1;
+                new_item->processed_region = -1;
 
                 acc_stack = new_item;
                 current_acc_node = child_i;
@@ -785,17 +797,17 @@ WIN32DLL_API int _barnes_hut_acceleration(
             }
             obj_stack->node = root;
             obj_stack->last = NULL;
-            obj_stack->processed_quadrant = -1;
+            obj_stack->processed_region = -1;
 
             // Calculate acceleration
             while (true)
             {
-                for (int j = (obj_stack->processed_quadrant + 1); j < 8; j++)
+                for (int j = (obj_stack->processed_region + 1); j < 8; j++)
                 {
                     BarnesHutTreeNode *child_j = current_obj_node->children[j];
                     if (child_j == NULL)
                     {
-                        obj_stack->processed_quadrant = j;
+                        obj_stack->processed_region = j;
                         continue;
                     }
                     else 
@@ -829,7 +841,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
                             {
                                 _barnes_hut_helper_acceleration_pair(current_acc_leaf, child_j, a, G, softening_length, R, R_norm);
                             }
-                            obj_stack->processed_quadrant = j;
+                            obj_stack->processed_region = j;
                             break;
                         }
                         else
@@ -841,7 +853,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
                             }
                             new_item->node = child_j;
                             new_item->last = obj_stack;
-                            new_item->processed_quadrant = -1;
+                            new_item->processed_region = -1;
 
                             obj_stack = new_item;
                             current_obj_node = child_j;
@@ -850,7 +862,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
                     }
                 }
                 
-                if (obj_stack->processed_quadrant >= 7)
+                if (obj_stack->processed_region >= 7)
                 {
                     BarnesHutStack *parent = obj_stack->last;
                     free(obj_stack);
@@ -858,14 +870,14 @@ WIN32DLL_API int _barnes_hut_acceleration(
                     {
                         break;
                     }
-                    parent->processed_quadrant++;
+                    parent->processed_region++;
                     obj_stack = parent;
                     current_obj_node = parent->node;
                 }   
             }
         }
 
-        if (acc_stack->processed_quadrant >= 7)
+        if (acc_stack->processed_region >= 7)
         {
             BarnesHutStack *parent = acc_stack->last;
             free(acc_stack);
@@ -873,7 +885,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
             {
                 break;
             }
-            parent->processed_quadrant++;
+            parent->processed_region++;
             acc_stack = parent;
             current_acc_node = parent->node;
         }
@@ -913,7 +925,7 @@ WIN32DLL_API int _barnes_hut_free_octree(BarnesHutTreeNode *restrict root)
     {
         BarnesHutTreeNode *node;
         struct BarnesHutStack *last;
-        int processed_quadrant;
+        int processed_region;
     } BarnesHutStack;
     
     BarnesHutTreeNode *current_node = root;
@@ -924,22 +936,22 @@ WIN32DLL_API int _barnes_hut_free_octree(BarnesHutTreeNode *restrict root)
     }
     stack->node = current_node;
     stack->last = NULL;
-    stack->processed_quadrant = -1;
+    stack->processed_region = -1;
 
     while (true)
     {   
-        for (int i = (stack->processed_quadrant + 1); i < 8; i++)
+        for (int i = (stack->processed_region + 1); i < 8; i++)
         {
             BarnesHutTreeNode *child_i = current_node->children[i];
             if (child_i == NULL)
             {
-                stack->processed_quadrant = i;
+                stack->processed_region = i;
                 continue;
             }
             else if (child_i->index >= 0)   // >= 0 means it is a leaf
             {
                 free(child_i);
-                stack->processed_quadrant = i;
+                stack->processed_region = i;
                 continue;
             }
             else
@@ -951,7 +963,7 @@ WIN32DLL_API int _barnes_hut_free_octree(BarnesHutTreeNode *restrict root)
                 }
                 new_item->node = child_i;
                 new_item->last = stack;
-                new_item->processed_quadrant = -1;
+                new_item->processed_region = -1;
 
                 stack = new_item;
                 current_node = child_i;
@@ -959,7 +971,7 @@ WIN32DLL_API int _barnes_hut_free_octree(BarnesHutTreeNode *restrict root)
             }
         }
     
-        if (stack->processed_quadrant >= 7)
+        if (stack->processed_region >= 7)
         {
             BarnesHutStack *parent = stack->last;
             free(current_node);
@@ -969,7 +981,7 @@ WIN32DLL_API int _barnes_hut_free_octree(BarnesHutTreeNode *restrict root)
                 break;
             }
 
-            parent->processed_quadrant++;
+            parent->processed_region++;
             current_node = parent->node;
             stack = parent;
         }

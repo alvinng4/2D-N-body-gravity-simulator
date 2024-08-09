@@ -88,10 +88,10 @@ void acceleration_massless(
 /**
  * \brief Compute acceleration with Barnes-Hut algorithm
  * 
- * \param objects_count Number of objects in the system
- * \param x Array of position vectors of all objects
+ * \param objects_count Number of objects
+ * \param x Array of position vectors
  * \param a Array of acceleration vectors to be modifed
- * \param m Array of masses for all objects
+ * \param m Array of masses
  * \param G Gravitational constant
  * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
  */
@@ -105,7 +105,32 @@ void acceleration_barnes_hut(
     real barnes_hut_theta
 );
 
-int _barnes_hut_check_quadrant(
+/**
+ * \brief Calculate the bounding box of the system
+ * 
+ * \param objects_count Number of objects
+ * \param x Array of position vectors
+ */
+void _calculate_bounding_box(
+    int objects_count,
+    const real *restrict x,
+    real *restrict center,
+    real *restrict width
+);
+
+/**
+ * \brief Check the region relative to the center
+ *  
+ * \param x x-coordinate
+ * \param y y-coordinate
+ * \param z z-coordinate
+ * \param center_x x-coordinate of the center
+ * \param center_y y-coordinate of the center
+ * \param center_z z-coordinate of the center
+ * 
+ * \return Region index
+ */
+int _barnes_hut_check_region(
     real x,
     real y,
     real z,
