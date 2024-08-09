@@ -221,12 +221,12 @@ WIN32DLL_API void acceleration_barnes_hut(
     real barnes_hut_theta
 )
 {
-    /* Find the width and center of the bounding box */
+    // Find the width and center of the bounding box
     real center[3];
     real width;
     _calculate_bounding_box(objects_count, x, center, &width);
 
-    /* Construct the octree */
+    // Construct the octree
     BarnesHutTreeNode *restrict root = malloc(sizeof(BarnesHutTreeNode));
     if (root != NULL) 
     {
@@ -251,28 +251,36 @@ WIN32DLL_API void acceleration_barnes_hut(
         goto err_root_memory;
     }
 
-    if (_barnes_hut_construct_octree(objects_count, x, m, width, root) == 1)
+    BarnesHutTreeNode *restrict child_node_pool = malloc(objects_count * sizeof(BarnesHutTreeNode));
+    if (child_node_pool == NULL)
+    {
+        fprintf(stderr, "Error: Failed to allocate memory for child nodes in acceleration_barnes_hut.\n");
+        goto err_memory;
+    }
+    if (_barnes_hut_construct_octree(objects_count, x, m, width, child_node_pool, root) == 1)
     {
         goto err_memory;
     }
 
-    /* Calculate the center of mass */
+    // Calculate the center of mass
     if (_barnes_hut_compute_center_of_mass(root) == 1)
     {
         goto err_memory;
     }
 
-    /* Calculate the acceleration */
+    // Calculate the acceleration
     if (_barnes_hut_acceleration(barnes_hut_theta, objects_count, a, G, softening_length, root) == 1)
     {
         goto err_memory;
     }
 
-    /* Free the memory */
-    if (_barnes_hut_free_octree(root) == 1)
+    // Free the memory
+    if (_barnes_hut_free_octree(child_node_pool, root) == 1)
     {
-        goto err_memory;
+        fprintf(stderr, "Error: Failed to free memory of octree in acceleration_barnes_hut.\n");
+        goto err_free_octree;
     }
+    
 
     /* For debug / optimization
     clock_t start, end;
@@ -293,9 +301,9 @@ WIN32DLL_API void acceleration_barnes_hut(
     {
         root->index = -1;
         root->total_mass = 0.0;
-        root->center_of_mass[0] = (max_x + min_x) / 2.0;
-        root->center_of_mass[1] = (max_y + min_y) / 2.0;
-        root->center_of_mass[2] = (max_z + min_z) / 2.0;
+        root->center_of_mass[0] = center[0];
+        root->center_of_mass[1] = center[1];
+        root->center_of_mass[2] = center[2];
         root->box_width = width;
         root->children[0] = NULL;
         root->children[1] = NULL;
@@ -312,7 +320,13 @@ WIN32DLL_API void acceleration_barnes_hut(
         goto err_root_memory;
     }
 
-    if ( _barnes_hut_construct_octree(objects_count, x, m, width, root) == 1)
+    BarnesHutTreeNode *restrict child_node_pool = malloc(objects_count * sizeof(BarnesHutTreeNode));
+    if (child_node_pool == NULL)
+    {
+        fprintf(stderr, "Error: Failed to allocate memory for child nodes in acceleration_barnes_hut.\n");
+        goto err_memory;
+    }
+    if (_barnes_hut_construct_octree(objects_count, x, m, width, child_node_pool, root) == 1)
     {
         goto err_memory;
     }
@@ -350,19 +364,21 @@ WIN32DLL_API void acceleration_barnes_hut(
     start = clock();
 
     // Free the memory
-    if (_barnes_hut_free_octree(root) == 1)
+    if (_barnes_hut_free_octree(child_node_pool, root) == 1)
     {
-        goto err_memory;
+        fprintf(stderr, "Error: Failed to free memory of octree in acceleration_barnes_hut.\n");
+        goto err_free_octree;
     }
     end = clock();
     printf("Time elapsed for freeing the memory: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
-    
+    exit(0);
     */
     
     return;
 
 err_memory:
-    _barnes_hut_free_octree(root);
+    _barnes_hut_free_octree(child_node_pool, root);
+err_free_octree:
 err_root_memory:
     return;
 //    return 1;
@@ -426,6 +442,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
     const real *restrict x,
     const real *restrict m,
     real width,
+    BarnesHutTreeNode *restrict child_node_pool,
     BarnesHutTreeNode *restrict root
 )
 {
@@ -433,11 +450,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
     {   
         int depth = 1;
         BarnesHutTreeNode *current_node = root;
-        BarnesHutTreeNode *child_node = malloc(sizeof(BarnesHutTreeNode));
-        if (child_node == NULL)
-        {
-            goto err_memory;
-        }
+        BarnesHutTreeNode *child_node = &child_node_pool[i];
 
         child_node->index = i;
         child_node->total_mass = m[i];
@@ -487,7 +500,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     new_node->children[7] = NULL;
 
                     // Calculate the center of the node when constructing the octree
-                    // It will be replaced with the center of mass later
+                    // It will be replaced with the center of mass in the next step
                     if (region < 4)
                     {
                         new_node->center_of_mass[0] = current_node->center_of_mass[0] - width / (pow(2.0, depth + 1));
@@ -496,6 +509,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     {
                         new_node->center_of_mass[0] = current_node->center_of_mass[0] + width / (pow(2.0, depth + 1));
                     }
+
                     if (region == 0 || region == 1 || region == 4 || region == 5)
                     {
                         new_node->center_of_mass[1] = current_node->center_of_mass[1] - width / (pow(2.0, depth + 1));
@@ -504,6 +518,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     {
                         new_node->center_of_mass[1] = current_node->center_of_mass[1] + width / (pow(2.0, depth + 1));
                     }
+
                     if (region % 2 == 0)
                     {
                         new_node->center_of_mass[2] = current_node->center_of_mass[2] - width / (pow(2.0, depth + 1));
@@ -576,6 +591,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     {
                         new_node->center_of_mass[0] = current_node->center_of_mass[0] + width / (pow(2.0, depth + 1));
                     }
+
                     if (region == 0 || region == 1 || region == 4 || region == 5)
                     {
                         new_node->center_of_mass[1] = current_node->center_of_mass[1] - width / (pow(2.0, depth + 1));
@@ -584,6 +600,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     {
                         new_node->center_of_mass[1] = current_node->center_of_mass[1] + width / (pow(2.0, depth + 1));
                     }
+                    
                     if (region % 2 == 0)
                     {
                         new_node->center_of_mass[2] = current_node->center_of_mass[2] - width / (pow(2.0, depth + 1));
@@ -593,7 +610,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                         new_node->center_of_mass[2] = current_node->center_of_mass[2] + width / (pow(2.0, depth + 1));
                     }
 
-                    
+
                     current_node->children[region] = new_node;
                     current_node = new_node;
                     depth++;
@@ -919,7 +936,10 @@ WIN32DLL_API void _barnes_hut_helper_acceleration_pair(
     a[acc_object_index * 3 + 2] -= temp_value * R[2];
 }
 
-WIN32DLL_API int _barnes_hut_free_octree(BarnesHutTreeNode *restrict root)
+WIN32DLL_API int _barnes_hut_free_octree(
+    BarnesHutTreeNode *restrict child_node_pool,
+    BarnesHutTreeNode *restrict root
+)
 {
     typedef struct BarnesHutStack
     {
@@ -932,6 +952,7 @@ WIN32DLL_API int _barnes_hut_free_octree(BarnesHutTreeNode *restrict root)
     BarnesHutStack *stack = malloc(sizeof(BarnesHutStack));
     if (stack == NULL)
     {
+        fprintf(stderr, "Error: Failed to allocate memory for the stack in _barnes_hut_free_octree.\n");
         goto err_memory;
     }
     stack->node = current_node;
@@ -943,14 +964,8 @@ WIN32DLL_API int _barnes_hut_free_octree(BarnesHutTreeNode *restrict root)
         for (int i = (stack->processed_region + 1); i < 8; i++)
         {
             BarnesHutTreeNode *child_i = current_node->children[i];
-            if (child_i == NULL)
+            if (child_i == NULL || child_i->index >= 0) // >= 0 means it is a leaf
             {
-                stack->processed_region = i;
-                continue;
-            }
-            else if (child_i->index >= 0)   // >= 0 means it is a leaf
-            {
-                free(child_i);
                 stack->processed_region = i;
                 continue;
             }
@@ -986,6 +1001,7 @@ WIN32DLL_API int _barnes_hut_free_octree(BarnesHutTreeNode *restrict root)
             stack = parent;
         }
     }
+    free(child_node_pool);
 
     return 0;
 

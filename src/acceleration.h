@@ -144,6 +144,7 @@ int _barnes_hut_construct_octree(
     const real *restrict x,
     const real *restrict m,
     real width,
+    BarnesHutTreeNode *restrict child_node_pool,
     BarnesHutTreeNode *restrict root
 );
 
@@ -168,6 +169,9 @@ void _barnes_hut_helper_acceleration_pair(
     real R_norm
 );
 
-WIN32DLL_API int _barnes_hut_free_octree(BarnesHutTreeNode *restrict root);
+int _barnes_hut_free_octree(
+    BarnesHutTreeNode *restrict child_node_pool,
+    BarnesHutTreeNode *restrict root
+);
 
 #endif
