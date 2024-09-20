@@ -1,14 +1,12 @@
 # Gravity Simulator
 Newtonian N-body gravity simulator accelerated with C library
 
-* Ten integrators including WHFast and IAS15 are implemented
-* Barnes-Hut algorithm (prototype) are available but optimization is needed
-* CUDA acceleration will be implemented in the future
+This is a toy project developed for learning purpose.
+Other packages such as REBOUND are recommended for more functionality.
 
-This is a student project developed for learning purpose.
-It aims to be lightweight and easy to use. 
-Other packages such as REBOUND are recommended for better 
-accuracy and efficiency.
+* Ten integrators including WHFast and IAS15 are implemented
+* Barnes-Hut algorithm (prototype) is available but optimization is needed
+* API is available but it is still in early development
 
 <img src="./examples/media/solar_plus_3d.gif" alt="Image" width="300">
 <img src="./examples/media/asteroid_belt_added_star_2.gif" alt="Image" width="300">
@@ -58,10 +56,7 @@ rich==13.7.1
 ```
 
 ## Important note
-* This project offers two user-interface: API and CLI. 
-CLI is good for starters, 
-but API is generally recommended as it is 
-more flexible and provides more options.
+* This project offers two user-interface: API and CLI. API is still in early development.
 * The default unit for this project is solar masses, AU and days, with G = 0.00029591220828411956.
 It is possible to change this value in the API by changing `system.G`.
 * Animations, simulation results, etc. will be stored to `gravity_sim/result` by default, unless a file path is specified.
