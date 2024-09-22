@@ -134,6 +134,24 @@ class GravitySimulator:
         softening_length: float = 0.0,
         **kwargs,
     ) -> None:
+        print("==================================================")
+        print("Simulation information")
+        print("Integration mode: ", self.simulator.integration_mode)
+        print("System: ", self.current_system.name)
+        print("Integrator: ", GravitySimulator.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
+                integrator
+            ])
+        print(f"tf: {tf} days")
+        print(f"dt: {dt} days")
+        print("tolerance: ", tolerance)
+        print("store_every_n: ", store_every_n)
+        print("acceleration_method: ", acceleration_method)
+        print("storing_method: ", storing_method)
+        print("flush_results_path: ", flush_results_path)
+        print("no_progress_bar: ", no_progress_bar)
+        print("no_print: ", no_print)
+        print("softening_length: ", softening_length)
+        print("==================================================")
         try:
             self.simulator.launch_simulation(
                 self.current_system,

@@ -276,7 +276,7 @@ def animate_2d_traj_gif(
             print("Saving the file...")
 
     plt.close("all")
-    print(f"Output completed! Please check {file_path}")
+    print(f"Output completed! Please check \"{file_path}\"")
 
 
 def animate_3d_traj_gif(
@@ -479,7 +479,7 @@ def animate_3d_traj_gif(
             print("Saving the file...")
 
     plt.close("all")
-    print(f"Output completed! Please check {file_path}")
+    print(f"Output completed! Please check \"{file_path}\"")
     print()
 
 

@@ -290,7 +290,14 @@ class GravitySimulatorCLI:
 
         # --------------------Customize system--------------------
         if self.system == "custom":
-            print("\nCustomizing system...")
+            msg = (
+                "\n" +
+                "Note: For command line interface, only Cartesian coordinates are supported!\n" +
+                "If you want to customize a system with orbital elements, please use our API.\n" +
+                "\n" +
+                "Customizing system..."
+            )
+            print(msg)
             custom_sys = GravitationalSystem()
             while True:
                 system_name = input("Enter the name of the system: ")
@@ -316,12 +323,13 @@ class GravitySimulatorCLI:
             while True:
                 try:
                     custom_G = input(
-                        "Enter G (Simply press enter to use default value): "
+                        "Enter G (Simply press enter if you want to use default value): "
                     )
                     if custom_G == "":
                         break
                     else:
                         custom_sys.G = float(custom_G)
+                        break
                 except ValueError:
                     print("Invalid input. Please try again.")
                     print()

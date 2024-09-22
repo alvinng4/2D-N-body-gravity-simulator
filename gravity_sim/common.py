@@ -310,7 +310,7 @@ def save_results(
                     writer.writerow(row.tolist())
 
     if not no_print:
-        print(f"Storing completed. Please check {file_path}")
+        print(f"Storing completed. Please check \"{file_path}\"")
 
 
 def read_results(

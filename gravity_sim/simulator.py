@@ -122,6 +122,18 @@ class Simulator:
         self.dt = dt
         self.tolerance = tolerance
 
+        # if self.integrator == "whfast" and not no_print:
+        #     msg = (
+        #         "For WHFast, we have not implement a automatic sorting procedure." + 
+        #         "Since we use Jacobi coordinates, it will be problematic if " +
+        #         "the order of the objects are not sorted by distance. " +
+        #         "Please make sure that the order of the particles is sorted, and will " +
+        #         "stay sorted during the simulation.\n" +
+        #         "You may use system.sort_by_distance(primary_object_name) " + 
+        #         "or system.sort_by_distance(primary_object_index) to sort the objects."
+        #     )
+        #     warnings.warn(msg, UserWarning)
+
         if acceleration_method == "barnes-hut" and (self.m == 0.0).any():
             warnings.warn(
                 "barnes-hut: Massless particles detected, adding m=1e-30 to massless particles."

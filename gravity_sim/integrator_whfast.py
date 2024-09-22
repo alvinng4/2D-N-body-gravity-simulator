@@ -46,6 +46,7 @@ class WHFast:
         tf: float,
         acceleration_method: str,
         softening_length: float = 0.0,
+        barnes_hut_theta: float = 0.5,
         storing_method: int = 0,
         flush_path: str = None,
         no_progress_bar: bool = False,
@@ -73,10 +74,14 @@ class WHFast:
             Time step
         tf : float
             Simulation time
-        acceleration : str
+        acceleration_method : str
             Acceleration method
-        flush : bool, optional
-            Whether to flush the solution to a file, by default False
+        softening_length : float, optional
+            Softening length, by default 0.0
+        barnes_hut_theta : float, optional
+            Barnes-Hut opening angle, by default 0.5
+        storing_method : int, optional
+            Storing method, by default 0
         flush_path : str, optional
             Path to flush the solution
         no_progress_bar : bool, optional
@@ -132,6 +137,13 @@ class WHFast:
 
         kepler_actual_objects_count = ctypes.c_int(objects_count)
 
+        if kepler_auto_remove:
+            msg = (
+                "Warning: kepler_auto_remove is enabled. Note that after" + 
+                "some objects being removed, the length of the results array will" +
+                "become smaller. This may cause some bugs."
+            )
+            print(msg)
         whfast_thread = threading.Thread(
             target=whfast_wrapper,
             args=(
