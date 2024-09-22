@@ -1,7 +1,7 @@
 # Gravity Simulator
 Newtonian N-body gravity simulator accelerated with C library
 
-This is a toy project developed for learning purpose.
+This is a student project developed for learning purpose.
 Other packages such as REBOUND are recommended for more functionality.
 
 * Ten integrators including WHFast and IAS15 are implemented
@@ -16,8 +16,9 @@ Other packages such as REBOUND are recommended for more functionality.
 * [Quick Start](#quick-start)
     - [Python version](#python-version)
     - [Installation](#installation)
-    - [Important note](#important-note)
+    - [Some notes](#some-notes)
 * [Running the program in terminal](#running-the-program-in-terminal)
+* [Sample projects](#sample-projects)
 * [GravitySimulator API](#gravitysimulator-api)
 * [Default systems](#default-systems)
 * [Integrators](#integrators)
@@ -25,7 +26,7 @@ Other packages such as REBOUND are recommended for more functionality.
     - [Embedded Runge-Kutta methods](#embdedded-runge-kutta-methods)
     - [IAS15](#IAS15)
     - [WHFast](#whfast)
-* [Make changes to saved systems](#make-changes-to-saved-systems)
+* [Making changes to saved systems](#making-changes-to-saved-systems)
 * [Saving the results](#saving-the-results)
 * [Output animations in .gif](#output-animations-in-gif)
 * [Compensated summation](#compensated-summation)
@@ -55,12 +56,13 @@ numpy==1.26.4
 rich==13.7.1
 ```
 
-## Important note
+### Some notes
 * This project offers two user-interface: API and CLI. API is still in early development.
 * The default unit for this project is solar masses, AU and days, with G = 0.00029591220828411956.
 It is possible to change this value in the API by changing `system.G`.
 * Animations, simulation results, etc. will be stored to `gravity_sim/result` by default, unless a file path is specified.
 * Complex animations like the asteroid belt cannot be done solely with the API functions. Sample scripts are provided in this repository (See [Sample projects](#sample-projects))
+* Check the `examples` folder for API tutorial
 
 ## Running the program in terminal
 
@@ -70,10 +72,33 @@ python gravity_sim [-n|--numpy]
 ```
 `-n, --numpy`: run the program with NumPy instead of C library
 
+## Sample projects
+
+Some projects are done with the API. The scripts are stored at the `examples` folder.
+
+#### Simulating the solar system for 1 million years
+
+<img src="./examples/media/eccentricity.png" alt="Image" width="300">
+<img src="./examples/media/inclination.png" alt="Image" width="300">
+
+#### Asteroid belt animation
+
+<img src="./examples/media/asteroid_belt.gif" alt="Image" width="300">
+
+#### Formation of Kirkwood gap
+
+<img src="./examples/media/Kirkwood_gap_semi_major_axes.png" alt="Image" width="300">
+<img src="./examples/media/Kirkwood_gap_visualization.png" alt="Image" width="225">
+
+Videos: 
+* https://www.youtube.com/watch?v=AEyjIF-8zT0
+* https://www.youtube.com/watch?v=jHLLr7ACvDQ
+
 ## GravitySimulator API
 
 You may import the GravitySimulator API from `gravity_sim` to perform gravity simulation.
-See `tutorial.ipynb` or [Sample projects](#sample-projects) for some example usage.
+See `examples/tutorial.ipynb` or [Sample projects](#sample-projects) for some example usage.
+If your computer cannot render jupyter notebook (files end with `.ipynb`), you can view them on github.
 ```
 from gravity_sim import GravitySimulator
 
@@ -97,7 +122,7 @@ grav_sim.save_results()
 ```
 
 #### launch_simulation
-launch_simulation() is the main method for initiating the simulation.
+launch_simulation() is the main method for launching the simulation.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -137,23 +162,6 @@ launch_simulation() is the main method for initiating the simulation.
     * Flush intermediate results into a csv file in `gravity_sim/results` to reduce memory pressure.
 - `no_store`
     * To not store any result, typically used for benchmarking.
-
-## Sample projects
-
-Some projects are done with the API. The scripts are stored at the `examples` folder.
-
-#### Asteroid belt animation
-
-<img src="./examples/media/asteroid_belt.gif" alt="Image" width="300">
-
-#### Formation of Kirkwood gap
-
-<img src="./examples/media/Kirkwood_gap_semi_major_axes.png" alt="Image" width="300">
-<img src="./examples/media/Kirkwood_gap_visualization.png" alt="Image" width="225">
-
-Videos: 
-* https://www.youtube.com/watch?v=AEyjIF-8zT0
-* https://www.youtube.com/watch?v=jHLLr7ACvDQ
 
 ## Default systems
 Some systems are available by default.

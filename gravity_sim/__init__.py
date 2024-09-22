@@ -139,7 +139,7 @@ class GravitySimulator:
         print("Integration mode: ", self.simulator.integration_mode)
         print("System: ", self.current_system.name)
         print("Integrator: ", GravitySimulator.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
-                integrator
+                integrator.lower()
             ])
         print(f"tf: {tf} days")
         print(f"dt: {dt} days")
