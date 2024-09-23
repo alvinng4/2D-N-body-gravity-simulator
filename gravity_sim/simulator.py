@@ -113,14 +113,18 @@ class Simulator:
         self.G = gravitational_system.G
 
         self.integrator = integrator.strip().lower()
-        self.tf = tf
-        self.store_every_n = store_every_n
+        self.tf = float(tf)
+        self.store_every_n = int(store_every_n)
 
         if (dt is None) and (tolerance is None):
             raise ValueError("Either dt or tolerance must be provided.")
 
-        self.dt = dt
-        self.tolerance = tolerance
+        if dt is not None:
+            self.dt = float(dt)
+        else:
+            self.dt = 0.0
+            
+        self.tolerance = float(tolerance)
 
         # if self.integrator == "whfast" and not no_print:
         #     msg = (
@@ -220,6 +224,7 @@ class Simulator:
                         self.sol_time,
                         self.sol_dt,
                         store_count,
+                        self.dt,
                     ) = integrator.simulation_c_lib(
                         integrator.order,
                         self.objects_count,
@@ -227,6 +232,7 @@ class Simulator:
                         self.v,
                         self.m,
                         self.G,
+                        self.dt,
                         self.tf,
                         self.tolerance,
                         self.tolerance,
@@ -247,12 +253,14 @@ class Simulator:
                         self.sol_time,
                         self.sol_dt,
                         store_count,
+                        self.dt,
                     ) = integrator.simulation_c_lib(
                         self.objects_count,
                         self.x,
                         self.v,
                         self.m,
                         self.G,
+                        self.dt,
                         self.tf,
                         self.tolerance,
                         acceleration_method,
@@ -330,6 +338,7 @@ class Simulator:
                         self.sol_state,
                         self.sol_time,
                         self.sol_dt,
+                        self.dt,
                     ) = integrator.simulation_numpy(
                         integrator.order,
                         self.objects_count,
@@ -337,6 +346,7 @@ class Simulator:
                         self.v,
                         self.m,
                         self.G,
+                        self.dt,
                         self.tf,
                         self.tolerance,
                         self.tolerance,
@@ -356,12 +366,14 @@ class Simulator:
                         self.sol_state,
                         self.sol_time,
                         self.sol_dt,
+                        self.dt,
                     ) = integrator.simulation_numpy(
                         self.objects_count,
                         self.x,
                         self.v,
                         self.m,
                         self.G,
+                        self.dt,
                         self.tf,
                         self.tolerance,
                         storing_method,

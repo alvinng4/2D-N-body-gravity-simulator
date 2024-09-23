@@ -16,6 +16,8 @@
  * \param m Array of masses for all objects
  * \param G Gravitational constant
  * \param t Pointer to the current simulation time
+ * \param dt Pointer to time step. Initial dt of
+ *           negative or zero will be ignored
  * \param tf Total time to be integrated
  * \param input_tolerance Tolerance of the integrator
  * \param acceleration_method Method to calculate acceleration
@@ -39,6 +41,7 @@ int ias15(
     real *restrict m,
     real G,
     double *restrict t,
+    double *restrict dt,
     double tf, 
     double input_tolerance,
     const char *restrict acceleration_method,
@@ -377,6 +380,7 @@ WIN32DLL_API int ias15(
     real *restrict m,
     real G,
     double *restrict t,
+    double *restrict dt,
     double tf, 
     double input_tolerance,
     const char *restrict acceleration_method,
@@ -490,8 +494,16 @@ WIN32DLL_API int ias15(
 
     // Allocate memory for solution output
     int64 count = 1;    // 1 for t0
-    real dt_old = ias15_initial_dt(objects_count, 15, x, v, a, m, G, acceleration_method_flag, softening_length, barnes_hut_theta);
-    real dt = dt_old;
+    real dt_old;
+    if (*dt <= 0)
+    {
+        dt_old = ias15_initial_dt(objects_count, 15, x, v, a, m, G, acceleration_method_flag, softening_length, barnes_hut_theta);
+        *dt = dt_old;
+    }
+    else
+    {
+        dt_old = *dt;
+    }
 
     FILE *flush_file = NULL;
     double *sol_state = NULL;
@@ -515,7 +527,7 @@ WIN32DLL_API int ias15(
         }
 
         // Initial value
-        write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
+        write_to_csv_file(flush_file, 0.0, *dt, objects_count, x, v, m, G);
     } 
     else if (storing_method == 0)
     {
@@ -533,11 +545,11 @@ WIN32DLL_API int ias15(
         memcpy(&sol_state[0], x, objects_count * 3 * sizeof(double));
         memcpy(&sol_state[objects_count * 3], v, objects_count * 3 * sizeof(double));
         sol_time[0] = 0.0;
-        if (dt == -1.0)
+        if (*dt == -1.0)
         {
             goto err_initial_dt_memory;
         }
-        sol_dt[0] = dt;
+        sol_dt[0] = *dt;
     }
 
     while (*t < tf)
@@ -553,7 +565,7 @@ WIN32DLL_API int ias15(
             m,
             G,
             t,
-            &dt,
+            dt,
             &dt_old,
             tf,
             nodes,
@@ -589,7 +601,7 @@ WIN32DLL_API int ias15(
         {
             if (storing_method == 1)
             {
-                write_to_csv_file(flush_file, *t, dt, objects_count, x, v, m, G);
+                write_to_csv_file(flush_file, *t, *dt, objects_count, x, v, m, G);
             }
             else if (storing_method == 0)
             {

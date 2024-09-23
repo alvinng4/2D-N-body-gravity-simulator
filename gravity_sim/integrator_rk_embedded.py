@@ -55,6 +55,7 @@ class RKEmbedded:
         v: np.ndarray,
         m: np.ndarray,
         G: float,
+        dt: float,
         tf: float,
         abs_tolerance: float,
         rel_tolerance: float,
@@ -78,6 +79,7 @@ class RKEmbedded:
         self.c_lib.rk_embedded.restype = ctypes.c_int
 
         t = ctypes.c_double(0.0)
+        dt = ctypes.c_double(dt)
         store_count = ctypes.c_int(1)  # 1 for t0
 
         if not no_progress_bar:
@@ -107,6 +109,7 @@ class RKEmbedded:
                 m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 ctypes.c_double(G),
                 ctypes.byref(t),
+                ctypes.byref(dt),
                 ctypes.c_double(tf),
                 ctypes.c_double(abs_tolerance),
                 ctypes.c_double(rel_tolerance),
@@ -175,6 +178,7 @@ class RKEmbedded:
                 return_sol_time,
                 return_sol_dt,
                 store_count.value,
+                dt.value,
             )
         else:
             return (
@@ -182,6 +186,7 @@ class RKEmbedded:
                 None,
                 None,
                 store_count.value,
+                dt.value,
             )
 
     def simulation_numpy(
@@ -192,6 +197,7 @@ class RKEmbedded:
         v,
         m,
         G,
+        dt,
         tf,
         abs_tolerance,
         rel_tolerance,
@@ -213,17 +219,19 @@ class RKEmbedded:
         ) = self.rk_embedded_butcher_tableaus_numpy(order)
 
         a = acceleration(objects_count, x, m, G)
-        initial_dt = self.rk_embedded_initial_dt_numpy(
-            objects_count,
-            self.power,
-            x,
-            v,
-            a,
-            m,
-            G,
-            abs_tolerance,
-            rel_tolerance,
-        )
+
+        if (dt <= 0.0):
+            dt = self.rk_embedded_initial_dt_numpy(
+                objects_count,
+                self.power,
+                x,
+                v,
+                a,
+                m,
+                G,
+                abs_tolerance,
+                rel_tolerance,
+            )
 
         progress_bar = common.Progress_bar_with_data_size()
         with progress_bar:
@@ -234,8 +242,8 @@ class RKEmbedded:
                 v,
                 m,
                 G,
+                dt,
                 tf,
-                initial_dt,
                 self.power,
                 self.power_test,
                 self.coeff,
@@ -251,13 +259,13 @@ class RKEmbedded:
     def simulation(
         progress_bar,
         objects_count: int,
-        x,
-        v,
-        m,
-        G,
+        x: np.ndarray,
+        v: np.ndarray,
+        m: np.ndarray,
+        G: float,
+        dt: float,
         tf: float,
-        initial_dt,
-        power,
+        power: int,
         power_test,
         coeff,
         weights,
@@ -275,7 +283,6 @@ class RKEmbedded:
         """
         # Initialization
         t = 0.0
-        dt = initial_dt
         stages = len(weights)
         min_power = min([power, power_test])
         error_estimation_delta_weights = weights - weights_test
@@ -426,10 +433,12 @@ class RKEmbedded:
 
         if not no_progress_bar:
             progress_bar.update(task, completed=tf, store_count=store_count)
+
         return (
             sol_state[0:store_count],
             sol_time[0:store_count],
             sol_dt[0:store_count],
+            dt,
         )
 
     @staticmethod

@@ -406,6 +406,8 @@ WIN32DLL_API real rk_embedded_initial_dt(
  * \param m Array of masses for all objects
  * \param G Gravitational constant
  * \param t Pointer to the current simulation time
+ * \param dt Pointer to time step. Initial dt of
+ *           negative or zero will be ignored
  * \param tf Total time to be integrated
  * \param input_abs_tolerance Absolute tolerance of the integrator
  * \param input_rel_tolerance Relative tolerance of the integrator
@@ -431,6 +433,7 @@ WIN32DLL_API int rk_embedded(
     real *restrict m,
     real G,
     double *restrict t,
+    double *restrict dt,
     double tf, 
     double input_abs_tolerance,
     double input_rel_tolerance,
@@ -546,20 +549,24 @@ WIN32DLL_API int rk_embedded(
 
     // Allocate memory for solution output
     int64 count = 1;    // 1 for t0
-    real dt = rk_embedded_initial_dt(
-        objects_count,
-        power,
-        x,
-        v,
-        a,
-        m,
-        G,
-        abs_tolerance,
-        rel_tolerance,
-        acceleration_method_flag,
-        softening_length,
-        barnes_hut_theta
-    );
+
+    if (*dt <= 0)
+    {
+        *dt = rk_embedded_initial_dt(
+            objects_count,
+            power,
+            x,
+            v,
+            a,
+            m,
+            G,
+            abs_tolerance,
+            rel_tolerance,
+            acceleration_method_flag,
+            softening_length,
+            barnes_hut_theta
+        );
+    }
 
     FILE *flush_file = NULL;
     double *sol_state = NULL;
@@ -583,7 +590,7 @@ WIN32DLL_API int rk_embedded(
         }
 
         // Initial value
-        write_to_csv_file(flush_file, 0.0, dt, objects_count, x, v, m, G);
+        write_to_csv_file(flush_file, 0.0, *dt, objects_count, x, v, m, G);
     } 
     else if (storing_method == 0)
     {
@@ -601,11 +608,11 @@ WIN32DLL_API int rk_embedded(
         memcpy(&sol_state[0], x, objects_count * 3 * sizeof(double));
         memcpy(&sol_state[objects_count * 3], v, objects_count * 3 * sizeof(double));
         sol_time[0] = 0.0;
-        if (dt == -1.0)
+        if (*dt == -1.0)
         {
             goto err_initial_dt_memory;
         }
-        sol_dt[0] = dt;
+        sol_dt[0] = *dt;
     }
 
     // Main Loop
@@ -643,8 +650,8 @@ WIN32DLL_API int rk_embedded(
             {
                 for (int j = 0; j < 3; j++)
                 {
-                    temp_v[i * 3 + j] = v[i * 3 + j] + dt * temp_v[i * 3 + j] + v_err_comp_sum[i * 3 + j];
-                    temp_x[i * 3 + j] = x[i * 3 + j] + dt * temp_x[i * 3 + j] + x_err_comp_sum[i * 3 + j];
+                    temp_v[i * 3 + j] = v[i * 3 + j] + *dt * temp_v[i * 3 + j] + v_err_comp_sum[i * 3 + j];
+                    temp_x[i * 3 + j] = x[i * 3 + j] + *dt * temp_x[i * 3 + j] + x_err_comp_sum[i * 3 + j];
                 }
             }
             acceleration(acceleration_method_flag, objects_count, temp_x, v, &vk[stage * objects_count * 3], m, G, softening_length, barnes_hut_theta);
@@ -678,8 +685,8 @@ WIN32DLL_API int rk_embedded(
                     temp_v[i * 3 + j] += weights[stage] * vk[stage * objects_count * 3 + i * 3 + j];
                     temp_x[i * 3 + j] += weights[stage] * xk[stage * objects_count * 3 + i * 3 + j];
 
-                    error_estimation_delta_v[i * 3 + j] += dt * error_estimation_delta_weights[stage] * vk[stage * objects_count * 3 + i * 3 + j];
-                    error_estimation_delta_x[i * 3 + j] += dt * error_estimation_delta_weights[stage] * xk[stage * objects_count * 3 + i * 3 + j];
+                    error_estimation_delta_v[i * 3 + j] += *dt * error_estimation_delta_weights[stage] * vk[stage * objects_count * 3 + i * 3 + j];
+                    error_estimation_delta_x[i * 3 + j] += *dt * error_estimation_delta_weights[stage] * xk[stage * objects_count * 3 + i * 3 + j];
                 }
             }
         }
@@ -690,8 +697,8 @@ WIN32DLL_API int rk_embedded(
         {
             for (int j = 0; j < 3; j++)
             {
-                temp_v_err_comp_sum[i * 3 + j] += dt * temp_v[i * 3 + j];
-                temp_x_err_comp_sum[i * 3 + j] += dt * temp_x[i * 3 + j];
+                temp_v_err_comp_sum[i * 3 + j] += *dt * temp_v[i * 3 + j];
+                temp_x_err_comp_sum[i * 3 + j] += *dt * temp_x[i * 3 + j];
 
                 v_1[i * 3 + j] = v[i * 3 + j] + temp_v_err_comp_sum[i * 3 + j];
                 x_1[i * 3 + j] = x[i * 3 + j] + temp_x_err_comp_sum[i * 3 + j];
@@ -727,10 +734,10 @@ WIN32DLL_API int rk_embedded(
         }
         error = sqrt(sum / (objects_count * 3 * 2));
 
-        if (error <= 1 || dt <= tf * 1e-12)
+        if (error <= 1 || *dt <= tf * 1e-12)
         {
             // Advance step
-            *t += dt; 
+            *t += *dt; 
             memcpy(x, x_1, objects_count * 3 * sizeof(real));
             memcpy(v, v_1, objects_count * 3 * sizeof(real));
 
@@ -742,12 +749,12 @@ WIN32DLL_API int rk_embedded(
             {
                 if (storing_method == 1)
                 {
-                    write_to_csv_file(flush_file, *t, dt, objects_count, x, v, m, G);
+                    write_to_csv_file(flush_file, *t, *dt, objects_count, x, v, m, G);
                 }
                 else if (storing_method == 0)
                 {
                     sol_time[*store_count] = *t;
-                    sol_dt[*store_count] = dt;
+                    sol_dt[*store_count] = *dt;
                     memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 3 * sizeof(double));
                     memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 3 * sizeof(double));
                 }
@@ -786,29 +793,29 @@ WIN32DLL_API int rk_embedded(
         {
             error = 1e-10;  // Prevent error from being too small
         }
-        dt_new = dt * safety_fac / pow(error, (1.0 / (1.0 + (real) min_power)));
-        if (dt_new > safety_fac_max * dt) 
+        dt_new = (*dt) * safety_fac / pow(error, (1.0 / (1.0 + (real) min_power)));
+        if (dt_new > safety_fac_max * (*dt)) 
         {
-            dt *= safety_fac_max;
+            (*dt) *= safety_fac_max;
         }
-        else if (dt_new < safety_fac_min * dt)
+        else if (dt_new < safety_fac_min * (*dt))
         {
-            dt *= safety_fac_min;
+            (*dt) *= safety_fac_min;
         }
         else
         {
-            dt = dt_new;
+            (*dt) = dt_new;
         }
 
         if (dt_new / tf < 1e-12)
         {
-            dt = tf * 1e-12;
+            (*dt) = tf * 1e-12;
         }
 
         // Correct overshooting
-        if (*t + dt > tf)
+        if ((*t) + (*dt) > tf)
         {
-            dt = tf - *t;
+            (*dt) = tf - (*t);
         }
     }
 

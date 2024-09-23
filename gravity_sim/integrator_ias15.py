@@ -40,6 +40,7 @@ class IAS15:
         v: np.ndarray,
         m: np.ndarray,
         G: float,
+        dt: float,
         tf: float,
         tolerance: float,
         acceleration_method: str,
@@ -65,6 +66,7 @@ class IAS15:
         self.c_lib.ias15.restype = ctypes.c_int
 
         t = ctypes.c_double(0.0)
+        dt = ctypes.c_double(dt)
         store_count = ctypes.c_int(1)  # 1 for t0
 
         if not no_progress_bar:
@@ -92,6 +94,7 @@ class IAS15:
                 m.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 ctypes.c_double(G),
                 ctypes.byref(t),
+                ctypes.byref(dt),
                 ctypes.c_double(tf),
                 ctypes.c_double(tolerance),
                 acceleration_method.encode("utf-8"),
@@ -159,6 +162,7 @@ class IAS15:
                 return_sol_time,
                 return_sol_dt,
                 store_count.value,
+                dt.value,
             )
         else:
             return (
@@ -166,6 +170,7 @@ class IAS15:
                 None,
                 None,
                 store_count.value,
+                dt.value,
             )
 
     def simulation_numpy(
@@ -175,6 +180,7 @@ class IAS15:
         v,
         m,
         G,
+        dt,
         tf,
         tolerance,
         storing_method: int = 0,
@@ -228,7 +234,8 @@ class IAS15:
 
         a = acceleration(objects_count, x, m, G)
 
-        dt = self.ias15_initial_dt(objects_count, 15, x, v, a, m, G)
+        if (dt <= 0.0):
+            dt = self.ias15_initial_dt(objects_count, 15, x, v, a, m, G)
 
         ias15_refine_flag = 0
         count = 1  # 1 for t0
@@ -308,11 +315,13 @@ class IAS15:
 
             if not no_progress_bar:
                 progress_bar.update(task, completed=tf, store_count=store_count)
-            return (
-                sol_state[0:store_count],
-                sol_time[0:store_count],
-                sol_dt[0:store_count],
-            )
+
+        return (
+            sol_state[0:store_count],
+            sol_time[0:store_count],
+            sol_dt[0:store_count],
+            dt,
+        )
 
     def ias15_step(
         self,
