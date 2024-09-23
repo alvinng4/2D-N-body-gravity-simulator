@@ -133,7 +133,7 @@ launch_simulation() is the main method for launching the simulation.
 | `store_every_n` | int | 1 | Store results every n steps |
 | `acceleration_method` | str | `pairwise` | Method for calculating accelerations |
 | `storing_method` | str | `default` | Method for storing simulation results |
-| `flush_results_path` | str | None | Path to flush intermediate results. |
+| `flush_path` | str | None | Path to flush intermediate results. |
 | `no_progress_bar` | bool | False | If True, disables the progress bar. |
 | `no_print` | bool | False | If True, disables some printing to console |
 | `softening_length` | float | 0.0 | Softening length for acceleration calculation |

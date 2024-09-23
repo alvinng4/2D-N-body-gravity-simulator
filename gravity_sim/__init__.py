@@ -174,6 +174,21 @@ class GravitySimulator:
             self.is_exit.value = True  # Exit simulation in c_lib
             sys.exit(0)
 
+    def resume_simulation(
+        self, tf: float,
+    ):
+        """
+        Resume simulation
+
+        Resume the simulation from the last saved state
+
+        Parameters
+        ----------
+        tf : float
+            Integration time
+        """
+        self.simulator.resume_simulation(tf)
+
     def plot_2d_trajectory(
         self,
         colors: list = None,

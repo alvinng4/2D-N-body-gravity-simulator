@@ -68,7 +68,7 @@ class Simulator:
         store_every_n: int = 1,
         acceleration_method: str = "pairwise",
         storing_method: str = "default",
-        flush_results_path: str = None,
+        flush_path: str = None,
         no_progress_bar: bool = False,
         no_print: bool = False,
         softening_length: float = 0.0,
@@ -94,8 +94,13 @@ class Simulator:
             Acceleration method -- "pairwise", "massless"
                 pairwise: Pairwise acceleration
                 massless: System with massless particles
-        flush : bool, optional
-            Store output into data file directly
+        storing_method : str, optional
+            Storing method -- "default", "flush", "no_store"
+                default: Store output into memory
+                flush : Store output into data file directly
+                no_store : Do not store output
+        flush_path : str, optional
+            Path to store flushed results
         no_progress_bar : bool, optional
             Disable progress bar
         no_print : bool, optional
@@ -104,6 +109,8 @@ class Simulator:
             Softening length for acceleration acceleration
         barnes_hut_theta : float, optional
             Theta parameter for Barnes-Hut algorithm
+        kwargs : dict
+            Additional keyword arguments
         """
         self.system_name = gravitational_system.name
         self.x = gravitational_system.x.copy()
@@ -113,32 +120,29 @@ class Simulator:
         self.G = gravitational_system.G
 
         self.integrator = integrator.strip().lower()
-        self.tf = float(tf)
+        self.tf = tf
         self.store_every_n = int(store_every_n)
+        self.acceleration_method = acceleration_method.strip().lower()
+        self.flush_path = flush_path
+        self.no_progress_bar = no_progress_bar
+        self.no_print = no_print
+        self.softening_length = softening_length
+        self.barnes_hut_theta = barnes_hut_theta
+        self.kwargs = kwargs
 
-        if (dt is None) and (tolerance is None):
-            raise ValueError("Either dt or tolerance must be provided.")
+        if (dt is None) and (self.integrator in self.FIXED_STEP_SIZE_INTEGRATORS):
+            raise ValueError("dt must be provided for fixed step size integrators.")
+        elif (tolerance is None) and (self.integrator in self.ADAPTIVE_STEP_SIZE_INTEGRATORS):
+            raise ValueError("tolerance must be provided for adaptive step size integrators.")
 
         if dt is not None:
-            self.dt = float(dt)
+            self.dt = dt
         else:
             self.dt = 0.0
             
-        self.tolerance = float(tolerance)
+        self.tolerance = tolerance
 
-        # if self.integrator == "whfast" and not no_print:
-        #     msg = (
-        #         "For WHFast, we have not implement a automatic sorting procedure." + 
-        #         "Since we use Jacobi coordinates, it will be problematic if " +
-        #         "the order of the objects are not sorted by distance. " +
-        #         "Please make sure that the order of the particles is sorted, and will " +
-        #         "stay sorted during the simulation.\n" +
-        #         "You may use system.sort_by_distance(primary_object_name) " + 
-        #         "or system.sort_by_distance(primary_object_index) to sort the objects."
-        #     )
-        #     warnings.warn(msg, UserWarning)
-
-        if acceleration_method == "barnes-hut" and (self.m == 0.0).any():
+        if self.acceleration_method == "barnes-hut" and (self.m == 0.0).any():
             warnings.warn(
                 "barnes-hut: Massless particles detected, adding m=1e-30 to massless particles."
             )
@@ -146,37 +150,38 @@ class Simulator:
 
         match storing_method:
             case "default":
-                storing_method = 0
+                self._storing_method = 0
             case "flush":
-                storing_method = 1
+                self._storing_method = 1
             case "no_store":
-                storing_method = 2
+                self._storing_method = 2
 
-        # Flush                  
-        if storing_method == 1:
-            file_path = Path(__file__).parent / "results"
-            file_path.mkdir(parents=True, exist_ok=True)
-            flush_path = (
-                file_path
-                / f"temp_data_{str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))}.csv"
-            )
+        # Flushing           
+        if self._storing_method == 1:
+            if self.flush_path is None:
+                file_path = Path(__file__).parent / "results"
+                file_path.mkdir(parents=True, exist_ok=True)
+                flush_path = (
+                    file_path
+                    / f"temp_data_{str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))}.csv"
+                )
         else:
             flush_path = None
 
         if (self.integration_mode == "numpy"):
-            if acceleration_method != "pairwise":
+            if self.acceleration_method != "pairwise":
                 warnings.warn(
                     "Only pairwise acceleration is available for NumPy. "
                     + 'Setting acceleration method to "pairwise".'
                 )
 
-            if softening_length != 0.0:
+            if self.softening_length != 0.0:
                 warnings.warn(
                     "Softening length is not available for NumPy. "
                     + "Ignoring the provided softening length."
                 )
 
-        if not no_print:
+        if not self.no_print:
             print("Simulating the system...")
         start = timeit.default_timer()
 
@@ -203,12 +208,12 @@ class Simulator:
                         self.G,
                         self.dt,
                         self.tf,
-                        acceleration_method,
-                        softening_length,
-                        barnes_hut_theta,
-                        storing_method,
+                        self.acceleration_method,
+                        self.softening_length,
+                        self.barnes_hut_theta,
+                        self._storing_method,
                         str(flush_path),
-                        no_progress_bar,
+                        self.no_progress_bar,
                     )
 
                 case "rkf45" | "dopri" | "dverk" | "rkf78":
@@ -236,12 +241,12 @@ class Simulator:
                         self.tf,
                         self.tolerance,
                         self.tolerance,
-                        acceleration_method,
-                        softening_length,
-                        barnes_hut_theta,
-                        storing_method,
+                        self.acceleration_method,
+                        self.softening_length,
+                        self.barnes_hut_theta,
+                        self._storing_method,
                         str(flush_path),
-                        no_progress_bar,
+                        self.no_progress_bar,
                     )
 
                 case "ias15":
@@ -263,12 +268,12 @@ class Simulator:
                         self.dt,
                         self.tf,
                         self.tolerance,
-                        acceleration_method,
-                        softening_length,
-                        barnes_hut_theta,
-                        storing_method,
+                        self.acceleration_method,
+                        self.softening_length,
+                        self.barnes_hut_theta,
+                        self._storing_method,
                         str(flush_path),
-                        no_progress_bar,
+                        self.no_progress_bar,
                     )
                 case "whfast":
                     integrator = WHFast(
@@ -290,13 +295,13 @@ class Simulator:
                         self.G,
                         self.dt,
                         self.tf,
-                        acceleration_method,
-                        softening_length,
-                        barnes_hut_theta,
-                        storing_method,
+                        self.acceleration_method,
+                        self.softening_length,
+                        self.barnes_hut_theta,
+                        self._storing_method,
                         str(flush_path),
-                        no_progress_bar,
-                        **kwargs,
+                        self.no_progress_bar,
+                        **self.kwargs,
                     )
 
         else:
@@ -321,9 +326,9 @@ class Simulator:
                         self.G,
                         self.dt,
                         self.tf,
-                        storing_method,
+                        self._storing_method,
                         str(flush_path),
-                        no_progress_bar,
+                        self.no_progress_bar,
                     )
 
                 case "rkf45" | "dopri" | "dverk" | "rkf78":
@@ -350,9 +355,9 @@ class Simulator:
                         self.tf,
                         self.tolerance,
                         self.tolerance,
-                        storing_method,
+                        self._storing_method,
                         str(flush_path),
-                        no_progress_bar,
+                        self.no_progress_bar,
                     )
 
                 case "ias15":
@@ -376,9 +381,9 @@ class Simulator:
                         self.dt,
                         self.tf,
                         self.tolerance,
-                        storing_method,
+                        self._storing_method,
                         str(flush_path),
-                        no_progress_bar,
+                        self.no_progress_bar,
                     )
                 case "whfast":
                     integrator = WHFast(
@@ -399,22 +404,22 @@ class Simulator:
                         self.G,
                         self.dt,
                         self.tf,
-                        storing_method,
+                        self._storing_method,
                         str(flush_path),
-                        no_progress_bar,
+                        self.no_progress_bar,
                     )
 
         stop = timeit.default_timer()
         self.run_time = stop - start
 
-        if not no_print:
+        if not self.no_print:
             print(f"Run time: {self.run_time:.3f} s")
             print("")
 
         # Flush
-        if storing_method == 1:
-            if flush_results_path is None:
-                file_path = (
+        if self._storing_method == 1:
+            if self.flush_path is None:
+                results_path = (
                     Path(__file__).parent
                     / "results"
                     / (
@@ -423,7 +428,7 @@ class Simulator:
                     )
                 )
             else:
-                file_path = Path(flush_results_path)
+                results_path = Path(flush_path)
 
             try:
                 integrator_name = self.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
@@ -433,20 +438,319 @@ class Simulator:
                 integrator_name = None
 
             self.combine_metadata_with_flushed_data(
-                results_file_path=str(file_path),
+                results_file_path=str(results_path),
                 flushed_file_path=str(flush_path),
-                system_name=gravitational_system.name,
+                system_name=self.system_name,
                 integrator_name=integrator_name,
                 objects_count=self.objects_count,
                 G=self.G,
                 tf=self.tf,
-                dt=dt,
-                tolerance=tolerance,
+                dt=self.dt,
+                tolerance=self.tolerance,
                 data_size=store_count,
-                store_every_n=store_every_n,
+                store_every_n=self.store_every_n,
                 run_time=self.run_time,
                 masses=self.m,
-                no_print=no_print,
+                no_print=self.no_print,
+            )
+            flush_path.unlink()
+
+    def resume_simulation(self, tf: float) -> None:
+        """
+        Resume simulation
+
+        Restart the simulation from the last saved state
+
+        Parameters
+        ----------
+        tf : float
+            Integration time
+        """
+        self.tf = tf
+
+        # Flushing           
+        if self._storing_method == 1:
+            if self.flush_path is None:
+                file_path = Path(__file__).parent / "results"
+                file_path.mkdir(parents=True, exist_ok=True)
+                flush_path = (
+                    file_path
+                    / f"temp_data_{str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))}.csv"
+                )
+        else:
+            flush_path = None
+
+        if not self.no_print:
+            print("Simulating the system...")
+        start = timeit.default_timer()
+
+        if self.integration_mode == "c_lib":
+            match self.integrator:
+                case "euler" | "euler_cromer" | "rk4" | "leapfrog":
+                    integrator = SimpleIntegrator(
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                        store_count,
+                    ) = integrator.simulation_c_lib(
+                        self.integrator,
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.dt,
+                        self.tf,
+                        self.acceleration_method,
+                        self.softening_length,
+                        self.barnes_hut_theta,
+                        self._storing_method,
+                        str(flush_path),
+                        self.no_progress_bar,
+                    )
+
+                case "rkf45" | "dopri" | "dverk" | "rkf78":
+                    integrator = RKEmbedded(
+                        self.integrator,
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                        store_count,
+                        self.dt,
+                    ) = integrator.simulation_c_lib(
+                        integrator.order,
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.dt,
+                        self.tf,
+                        self.tolerance,
+                        self.tolerance,
+                        self.acceleration_method,
+                        self.softening_length,
+                        self.barnes_hut_theta,
+                        self._storing_method,
+                        str(flush_path),
+                        self.no_progress_bar,
+                    )
+
+                case "ias15":
+                    integrator = IAS15(
+                        self.store_every_n, self.c_lib, self.is_exit_ctypes_bool
+                    )
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                        store_count,
+                        self.dt,
+                    ) = integrator.simulation_c_lib(
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.dt,
+                        self.tf,
+                        self.tolerance,
+                        self.acceleration_method,
+                        self.softening_length,
+                        self.barnes_hut_theta,
+                        self._storing_method,
+                        str(flush_path),
+                        self.no_progress_bar,
+                    )
+                case "whfast":
+                    integrator = WHFast(
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                        store_count,
+                    ) = integrator.simulation_c_lib(
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.dt,
+                        self.tf,
+                        self.acceleration_method,
+                        self.softening_length,
+                        self.barnes_hut_theta,
+                        self._storing_method,
+                        str(flush_path),
+                        self.no_progress_bar,
+                        **self.kwargs,
+                    )
+
+        else:
+            match self.integrator:
+                case "euler" | "euler_cromer" | "rk4" | "leapfrog":
+                    integrator = SimpleIntegrator(
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                    ) = integrator.simulation_numpy(
+                        self.integrator,
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.dt,
+                        self.tf,
+                        self._storing_method,
+                        str(flush_path),
+                        self.no_progress_bar,
+                    )
+
+                case "rkf45" | "dopri" | "dverk" | "rkf78":
+                    integrator = RKEmbedded(
+                        self.integrator,
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                        self.dt,
+                    ) = integrator.simulation_numpy(
+                        integrator.order,
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.dt,
+                        self.tf,
+                        self.tolerance,
+                        self.tolerance,
+                        self._storing_method,
+                        str(flush_path),
+                        self.no_progress_bar,
+                    )
+
+                case "ias15":
+                    integrator = IAS15(
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                        self.dt,
+                    ) = integrator.simulation_numpy(
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.dt,
+                        self.tf,
+                        self.tolerance,
+                        self._storing_method,
+                        str(flush_path),
+                        self.no_progress_bar,
+                    )
+                case "whfast":
+                    integrator = WHFast(
+                        self.store_every_n,
+                        self.c_lib,
+                        self.is_exit_ctypes_bool,
+                    )
+
+                    (
+                        self.sol_state,
+                        self.sol_time,
+                        self.sol_dt,
+                    ) = integrator.simulation_numpy(
+                        self.objects_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.G,
+                        self.dt,
+                        self.tf,
+                        self._storing_method,
+                        str(flush_path),
+                        self.no_progress_bar,
+                    )
+
+        stop = timeit.default_timer()
+        self.run_time = stop - start
+
+        if not self.no_print:
+            print(f"Run time: {self.run_time:.3f} s")
+            print("")
+
+        # Flush
+        if self._storing_method == 1:
+            if self.flush_path is None:
+                results_path = (
+                    Path(__file__).parent
+                    / "results"
+                    / (
+                        str(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+                        + "_result.csv"
+                    )
+                )
+            else:
+                results_path = Path(flush_path)
+
+            try:
+                integrator_name = self.AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES[
+                    self.integrator
+                ]
+            except KeyError:
+                integrator_name = None
+
+            self.combine_metadata_with_flushed_data(
+                results_file_path=str(results_path),
+                flushed_file_path=str(flush_path),
+                system_name=self.system_name,
+                integrator_name=integrator_name,
+                objects_count=self.objects_count,
+                G=self.G,
+                tf=self.tf,
+                dt=self.dt,
+                tolerance=self.tolerance,
+                data_size=store_count,
+                store_every_n=self.store_every_n,
+                run_time=self.run_time,
+                masses=self.m,
+                no_print=self.no_print,
             )
             flush_path.unlink()
 
