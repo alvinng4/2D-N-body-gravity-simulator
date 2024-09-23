@@ -14,25 +14,37 @@ Note: Technically you can also create nice looking solar system animations by se
       expanding the axes limits.
 """
 
-import csv
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
+import matplotlib.pyplot as plt
 import numpy as np
 import PIL
-import matplotlib.pyplot as plt
+import rich.progress
 
 from gravity_sim import GravitySimulator
-from gravity_sim.common import get_bool
 
 N = 50000
 FPS = 30
 DPI = 200
+N_FRAMES = 500
 
+class Progress_bar(rich.progress.Progress):
+    def __init__(self):
+        super().__init__(
+            rich.progress.BarColumn(),
+            rich.progress.TextColumn("[green]{task.percentage:>3.0f}%"),
+            rich.progress.TextColumn("•"),
+            rich.progress.TimeElapsedColumn(),
+            rich.progress.TextColumn("•"),
+            rich.progress.TimeRemainingColumn(),
+            "•[magenta] {task.completed}/{task.total}",
+        )
 
 def main():
     # ---------- Initialization ---------- #
+    print("Initializing the system...", end="")
     grav_sim = GravitySimulator()
     system = grav_sim.create_system()
     grav_sim.set_current_system(system)
@@ -102,27 +114,12 @@ def main():
         )
 
     system.center_of_mass_correction()
+    print("Done!")
 
-    # ---------- Simulation ---------- #
+    # ---------- Simulation and draw frames ---------- #
     file_path = Path(__file__).parent.parent / "gravity_sim" / "results"
     file_path.mkdir(parents=True, exist_ok=True)
-    data_path = file_path / "asteroid_belt_sim.csv"
 
-    print("Simulating asteroid belt...")
-    grav_sim.launch_simulation(
-        "rk4",
-        grav_sim.years_to_days(5.0),
-        dt=grav_sim.years_to_days(0.0001),
-        store_every_n=100,
-        acceleration_method="massless",
-        storing_method="flush",
-        flush_results_path=str(data_path),
-        no_print=True,
-    )
-
-    # ---------- Drawing frames ---------- #
-    print()
-    print("Drawing frames...")
     fig = plt.figure()
     plt.style.use("dark_background")
     ax = fig.add_subplot(111, projection="3d")
@@ -133,26 +130,32 @@ def main():
     ylim_max = 3
     zlim_min = -3
     zlim_max = 3
-
     # In the API, we use PillowWriter to generate animations.
     # However, for some reason, the PillowWriter run out of memory
     # in this case. Therefore, we save each frames as images and
     # combine them as gif instead.
+
+    print()
+    print("Simulating asteroid belt and drawing frames...")
     save_count = 0
-    new_field_lim = sys.maxsize
-    while True:
-        try:
-            csv.field_size_limit(new_field_lim)
-            break
-        except OverflowError:
-            new_field_lim = new_field_lim // 10
+    progress_bar = Progress_bar()
+    with progress_bar:
+        task = progress_bar.add_task("", total=N_FRAMES)
+        for i in range(N_FRAMES):
+            if i == 0:
+                grav_sim.launch_simulation(
+                    "rk4",
+                    grav_sim.years_to_days(5.0 / N_FRAMES),
+                    dt=grav_sim.years_to_days(0.0001),
+                    acceleration_method="massless",
+                    storing_method="no_store",
+                    no_print=True,
+                    no_progress_bar=True,
+                )
+            else:
+                grav_sim.resume_simulation(grav_sim.years_to_days(5.0 / N_FRAMES))
 
-    with open(data_path, "r") as file:
-        reader = csv.reader(file)
-        for row in reader:
-            if len(row) == 0 or row[0].startswith("#"):
-                continue
-
+            # Draw the frame
             ax.grid(False)
             ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
             ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
@@ -167,26 +170,23 @@ def main():
             ax.yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
             ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
 
-            row = row[3:]
-            row = list(map(float, row))
-
-            for i in range(0, massive_objects_count):
-                ax.plot(
-                    np.array(row[i * 3]),
-                    np.array(row[1 + i * 3]),
-                    "o",
+            # Plotting massive objects
+            for i in range(massive_objects_count):
+                ax.scatter(
+                    grav_sim.simulator.x[i, 0],
+                    grav_sim.simulator.x[i, 1],
+                    grav_sim.simulator.x[i, 2],
+                    marker="o",
                     label=system.objects_names[i],
                     color=colors[i],
-                    markersize=marker_sizes[i],
+                    s=marker_sizes[i],
                 )
 
-            x = row[(massive_objects_count * 3) : (system.objects_count * 3) : 3]
-            y = row[(massive_objects_count * 3 + 1) : (system.objects_count * 3) : 3]
-            z = row[(massive_objects_count * 3 + 2) : (system.objects_count * 3) : 3]
+            # Plotting massless objects
             ax.scatter(
-                x,
-                y,
-                z,
+                grav_sim.simulator.x[massive_objects_count:, 0],
+                grav_sim.simulator.x[massive_objects_count:, 1],
+                grav_sim.simulator.x[massive_objects_count:, 2],
                 color="white",
                 marker=".",
                 s=0.1,
@@ -221,7 +221,10 @@ def main():
             # Clear the plot to prepare for the next frame
             ax.clear()
 
-        plt.close("all")
+            progress_bar.update(task, advance=1)
+
+    progress_bar.update(task, completed=N_FRAMES)
+    plt.close("all")
 
     print()
     print("Combining frames to gif...")
@@ -239,9 +242,6 @@ def main():
 
     for i in range(save_count):
         (file_path / f"frames_{i:04d}.png").unlink()
-
-    if get_bool(f"Delete data file? Path: {data_path}"):
-        data_path.unlink()
 
     print(f"Output completed! Please check {file_path / 'asteroid_belt.gif'}")
     print()
