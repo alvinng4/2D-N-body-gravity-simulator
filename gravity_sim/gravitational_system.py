@@ -388,7 +388,7 @@ class GravitationalSystem:
                 + self.v.flatten().tolist()
             )
 
-        print(f"System {self.name} saved to \"{file_path}\"")
+        print(f"System \"{self.name}\" saved to \"{file_path}\"")
 
     def load(self, system: str) -> None:
         """
