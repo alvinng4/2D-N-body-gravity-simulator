@@ -120,24 +120,8 @@ def main():
     file_path = Path(__file__).parent.parent / "gravity_sim" / "results"
     file_path.mkdir(parents=True, exist_ok=True)
 
-    fig = plt.figure()
-    plt.style.use("dark_background")
-    ax = fig.add_subplot(111, projection="3d")
-
-    xlim_min = -3
-    xlim_max = 3
-    ylim_min = -3
-    ylim_max = 3
-    zlim_min = -3
-    zlim_max = 3
-    # In the API, we use PillowWriter to generate animations.
-    # However, for some reason, the PillowWriter run out of memory
-    # in this case. Therefore, we save each frames as images and
-    # combine them as gif instead.
-
     print()
     print("Simulating asteroid belt and drawing frames...")
-    save_count = 0
     progress_bar = Progress_bar()
     with progress_bar:
         task = progress_bar.add_task("", total=N_FRAMES)
@@ -155,6 +139,17 @@ def main():
             else:
                 grav_sim.resume_simulation(grav_sim.years_to_days(5.0 / N_FRAMES))
 
+            fig = plt.figure()
+            plt.style.use("dark_background")
+            ax = fig.add_subplot(111, projection="3d")
+
+            xlim_min = -3
+            xlim_max = 3
+            ylim_min = -3
+            ylim_max = 3
+            zlim_min = -3
+            zlim_max = 3
+
             # Draw the frame
             ax.grid(False)
             ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
@@ -171,15 +166,15 @@ def main():
             ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
 
             # Plotting massive objects
-            for i in range(massive_objects_count):
+            for j in range(massive_objects_count):
                 ax.scatter(
-                    grav_sim.simulator.x[i, 0],
-                    grav_sim.simulator.x[i, 1],
-                    grav_sim.simulator.x[i, 2],
+                    grav_sim.simulator.x[j, 0],
+                    grav_sim.simulator.x[j, 1],
+                    grav_sim.simulator.x[j, 2],
                     marker="o",
-                    label=system.objects_names[i],
-                    color=colors[i],
-                    s=marker_sizes[i],
+                    label=system.objects_names[j],
+                    color=colors[j],
+                    s=marker_sizes[j],
                 )
 
             # Plotting massless objects
@@ -198,9 +193,8 @@ def main():
             legend.facecolor = "transparent"
 
             # Adjust figure for the legend
-            if save_count == 0:
-                fig.subplots_adjust(right=0.7)
-                fig.tight_layout()
+            fig.subplots_adjust(right=0.7)
+            fig.tight_layout()
 
             # Set axis labels and setting 3d axes scale before capturing the frame
             # ax.set_xlabel("$x$ (AU)")
@@ -215,11 +209,8 @@ def main():
             ax.set_aspect("equal")
 
             # Capture the frame
-            plt.savefig(file_path / f"frames_{save_count:04d}.png", dpi=DPI)
-            save_count += 1
-
-            # Clear the plot to prepare for the next frame
-            ax.clear()
+            plt.savefig(file_path / f"frames_{i:04d}.png", dpi=DPI)
+            plt.close("all")
 
             progress_bar.update(task, advance=1)
 
@@ -229,7 +220,7 @@ def main():
     print()
     print("Combining frames to gif...")
     frames = []
-    for i in range(save_count):
+    for i in range(N_FRAMES):
         frames.append(PIL.Image.open(file_path / f"frames_{i:04d}.png"))
 
     frames[0].save(
@@ -240,7 +231,7 @@ def main():
         duration=(1000 // FPS),
     )
 
-    for i in range(save_count):
+    for i in range(N_FRAMES):
         (file_path / f"frames_{i:04d}.png").unlink()
 
     print(f"Output completed! Please check {file_path / 'asteroid_belt.gif'}")
