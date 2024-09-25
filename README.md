@@ -63,6 +63,7 @@ It is possible to change this value in the API by changing `system.G`.
 * Animations, simulation results, etc. will be stored to `gravity_sim/result` by default, unless a file path is specified.
 * Complex animations like the asteroid belt cannot be done solely with the API functions. Sample scripts are provided in this repository (See [Sample projects](#sample-projects))
 * Check the `examples` folder for API tutorial
+* For WHFast, some features including `compensated_summation`, `barnes-hut` and `resume_simulation` are not available due to implementation difficulties and bugs.
 
 ## Running the program in terminal
 
