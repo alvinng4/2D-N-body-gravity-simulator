@@ -139,6 +139,7 @@ def main():
             else:
                 grav_sim.resume_simulation(grav_sim.years_to_days(5.0 / N_FRAMES))
 
+            # Drawing frame
             fig = plt.figure()
             plt.style.use("dark_background")
             ax = fig.add_subplot(111, projection="3d")
@@ -150,7 +151,6 @@ def main():
             zlim_min = -3
             zlim_max = 3
 
-            # Draw the frame
             ax.grid(False)
             ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
             ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))

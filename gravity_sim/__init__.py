@@ -132,6 +132,7 @@ class GravitySimulator:
         no_progress_bar: bool = False,
         no_print: bool = False,
         softening_length: float = 0.0,
+        barnes_hut_theta: float = None,
         **kwargs,
     ) -> None:
         if not no_print:
@@ -152,6 +153,7 @@ class GravitySimulator:
             print("no_progress_bar: ", no_progress_bar)
             print("no_print: ", no_print)
             print("softening_length: ", softening_length)
+            print("barnes_hut_theta: ", barnes_hut_theta)
             print("==================================================")
         try:
             self.simulator.launch_simulation(
@@ -167,6 +169,7 @@ class GravitySimulator:
                 no_progress_bar,
                 no_print,
                 softening_length,
+                barnes_hut_theta,
                 **kwargs,
             )
         except KeyboardInterrupt:

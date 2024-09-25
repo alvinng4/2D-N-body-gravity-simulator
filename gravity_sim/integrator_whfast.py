@@ -137,13 +137,14 @@ class WHFast:
 
         kepler_actual_objects_count = ctypes.c_int(objects_count)
 
-        if kepler_auto_remove:
-            msg = (
-                "Warning: kepler_auto_remove is enabled. Note that after" + 
-                "some objects being removed, the length of the results array will" +
-                "become smaller. This may cause some bugs."
-            )
-            print(msg)
+        # if kepler_auto_remove:
+        #     msg = (
+        #         "Warning: kepler_auto_remove is enabled. Note that after " + 
+        #         "some objects being removed, the length of the results array will " +
+        #         "become smaller. This may cause some bugs."
+        #     )
+        #     print(msg)
+            
         whfast_thread = threading.Thread(
             target=whfast_wrapper,
             args=(
@@ -228,6 +229,10 @@ class WHFast:
                 return_sol_time,
                 return_sol_dt,
                 store_count.value,
+                np.ascontiguousarray(x[:kepler_actual_objects_count.value]),
+                np.ascontiguousarray(v[:kepler_actual_objects_count.value]),
+                np.ascontiguousarray(m[:kepler_actual_objects_count.value]),
+                kepler_actual_objects_count.value,
             )
 
         else:
@@ -236,6 +241,10 @@ class WHFast:
                 None,
                 None,
                 store_count.value,
+                np.ascontiguousarray(x[:kepler_actual_objects_count.value]),
+                np.ascontiguousarray(v[:kepler_actual_objects_count.value]),
+                np.ascontiguousarray(m[:kepler_actual_objects_count.value]),
+                kepler_actual_objects_count.value,
             )
 
     def simulation_numpy(

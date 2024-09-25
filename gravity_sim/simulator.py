@@ -120,6 +120,10 @@ class Simulator:
         self.G = gravitational_system.G
 
         self.integrator = integrator.strip().lower()
+        if self.integrator not in self.AVAILABLE_INTEGRATORS:
+            raise ValueError(
+                f"Invalid integrator. Must be one of {self.AVAILABLE_INTEGRATORS}."
+            )
         self.tf = tf
         self.store_every_n = int(store_every_n)
         self.acceleration_method = acceleration_method.strip().lower()
@@ -287,6 +291,10 @@ class Simulator:
                         self.sol_time,
                         self.sol_dt,
                         store_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.objects_count,
                     ) = integrator.simulation_c_lib(
                         self.objects_count,
                         self.x,
@@ -467,6 +475,11 @@ class Simulator:
             Integration time
         """
         self.tf = tf
+        if self.integrator == "whfast":
+            warnings.warn(
+                "resume_simulation() is unstable for WHFast, and are likely to " + 
+                "induce errors."
+            )
 
         # Flushing           
         if self._storing_method == 1:
@@ -586,6 +599,10 @@ class Simulator:
                         self.sol_time,
                         self.sol_dt,
                         store_count,
+                        self.x,
+                        self.v,
+                        self.m,
+                        self.objects_count,
                     ) = integrator.simulation_c_lib(
                         self.objects_count,
                         self.x,
