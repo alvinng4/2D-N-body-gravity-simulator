@@ -132,7 +132,7 @@ class GravitySimulator:
         no_progress_bar: bool = False,
         no_print: bool = False,
         softening_length: float = 0.0,
-        barnes_hut_theta: float = None,
+        barnes_hut_theta: float = 0.5,
         **kwargs,
     ) -> None:
         if not no_print:
