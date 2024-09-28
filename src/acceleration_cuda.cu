@@ -21,32 +21,32 @@ WIN32DLL_API void acceleration_pairwise_cuda(
     error = cudaMalloc((double **) &x_device, objects_count * 3 * sizeof(double));
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
     error = cudaMalloc((double **) &a_device, objects_count * 3 * sizeof(double));
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
     error = cudaMalloc((double **) &m_device, objects_count * sizeof(double));
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
 
     error = cudaMemcpy(x_device, x, objects_count * 3 * sizeof(double), cudaMemcpyHostToDevice);
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to copy memory from host to device\n");
+        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
     error = cudaMemcpy(m_device, m, objects_count * sizeof(double), cudaMemcpyHostToDevice);
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to copy memory from host to device\n");
+        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
 
@@ -62,7 +62,7 @@ WIN32DLL_API void acceleration_pairwise_cuda(
     error = cudaMemcpy(a, a_device, objects_count * sizeof(double3), cudaMemcpyDeviceToHost);
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to copy memory from device to host\n");
+        fprintf(stderr, "Error: Failed to copy memory from device to host. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
 
@@ -137,19 +137,19 @@ WIN32DLL_API void acceleration_pairwise_float_cuda(
     error = cudaMalloc((float **) &x_device, objects_count * 3 * sizeof(float));
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
     error = cudaMalloc((float **) &a_device, objects_count * 3 * sizeof(float));
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
     error = cudaMalloc((float **) &m_device, objects_count * sizeof(float));
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
 
@@ -173,13 +173,13 @@ WIN32DLL_API void acceleration_pairwise_float_cuda(
     error = cudaMemcpy(x_device, x_float, objects_count * 3 * sizeof(float), cudaMemcpyHostToDevice);
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to copy memory from host to device\n");
+        fprintf(stderr, "Error: Failed to copy memory from host to device. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
     error = cudaMemcpy(m_device, m_float, objects_count * sizeof(float), cudaMemcpyHostToDevice);
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to copy memory from host to device\n");
+        fprintf(stderr, "Error: Failed to copy memory from host to device. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
 
@@ -195,7 +195,7 @@ WIN32DLL_API void acceleration_pairwise_float_cuda(
     error = cudaMemcpy(a_float, a_device, objects_count * 3 * sizeof(float), cudaMemcpyDeviceToHost);
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to copy memory from device to host\n");
+        fprintf(stderr, "Error: Failed to copy memory from device to host. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
     for (int i = 0; i < objects_count; i++)
@@ -283,19 +283,19 @@ WIN32DLL_API void acceleration_pairwise_float_comp_sum_cuda(
     error = cudaMalloc((float **) &x_device, objects_count * 3 * sizeof(float));
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
     error = cudaMalloc((float **) &a_device, objects_count * 3 * sizeof(float));
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
     error = cudaMalloc((float **) &m_device, objects_count * sizeof(float));
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation\n");
+        fprintf(stderr, "Error: Failed to allocate gpu memory for calculation. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
 
@@ -319,13 +319,13 @@ WIN32DLL_API void acceleration_pairwise_float_comp_sum_cuda(
     error = cudaMemcpy(x_device, x_float, objects_count * 3 * sizeof(float), cudaMemcpyHostToDevice);
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to copy memory from host to device\n");
+        fprintf(stderr, "Error: Failed to copy memory from host to device. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
     error = cudaMemcpy(m_device, m_float, objects_count * sizeof(float), cudaMemcpyHostToDevice);
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to copy memory from host to device\n");
+        fprintf(stderr, "Error: Failed to copy memory from host to device. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
 
@@ -341,7 +341,7 @@ WIN32DLL_API void acceleration_pairwise_float_comp_sum_cuda(
     error = cudaMemcpy(a_float, a_device, objects_count * 3 * sizeof(float), cudaMemcpyDeviceToHost);
     if (error != cudaSuccess)
     {
-        fprintf(stderr, "Error: Failed to copy memory from device to host\n");
+        fprintf(stderr, "Error: Failed to copy memory from device to host. Reason: %s\n", cudaGetErrorString(error));
         goto err_gpu_memory;
     }
     for (int i = 0; i < objects_count; i++)
