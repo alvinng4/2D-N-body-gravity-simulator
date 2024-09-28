@@ -56,7 +56,8 @@ class GravitySimulatorCLI:
 
         # Use c library to perform simulation
         self.is_c_lib = self.args.numpy
-        self.c_lib = common.load_c_lib()
+        if self.is_c_lib:
+            self.c_lib = common.load_c_lib()
 
         # --------------------Initialize attributes--------------------
         self.is_exit_ctypes_bool = ctypes.c_bool(False)
