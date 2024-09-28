@@ -36,6 +36,10 @@ WIN32DLL_API int get_acceleration_method_flag(
         {
             return ACCELERATION_METHOD_PAIRWISE_FLOAT_CUDA;
         }
+        else if (strcmp(acceleration_method, "pairwise_float_comp_sum_cuda") == 0)
+        {
+            return ACCELERATION_METHOD_PAIRWISE_FLOAT_COMP_SUM_CUDA;
+        }
     #endif
     else
     {
