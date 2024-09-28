@@ -1,13 +1,15 @@
+import ctypes
 import csv
 import datetime
 import math
-from pathlib import Path
+import platform
 import re
 import time
+import traceback
 import warnings
+from pathlib import Path
 
 import numpy as np
-
 import rich.progress
 
 AVAILABLE_INTEGRATORS_TO_PRINTABLE_NAMES = {
@@ -71,8 +73,8 @@ def progress_bar_c_lib_adaptive_step_size(tf, t, store_count, is_exit_ctypes_boo
 
 def progress_bar_c_lib_fixed_step_size(store_npts, store_count, is_exit_ctypes_bool):
     """
-    Progress bar for fixed step size integrator
-    s"""
+    Progress bar for fixed step size integrators
+    """
 
     progress_bar = Progress_bar_with_data_size()
     with progress_bar:
@@ -94,6 +96,51 @@ def progress_bar_c_lib_fixed_step_size(store_npts, store_count, is_exit_ctypes_b
 
         progress_bar.update(task, completed=store_npts, store_count=store_count.value)
 
+def load_c_lib():
+    """
+    Load the C dynamic-link library
+
+    Returns
+    -------
+    c_lib : ctypes.CDLL
+        C dynamic-link library object
+
+    Raises
+    ------
+    SystemExit
+        If the platform is not supported
+
+    SystemExit
+        If the user chose to exit the program
+        after failed loading of the C library
+    """
+    if platform.system() == "Windows":
+        c_lib_path = str(Path(__file__).parent / "c_lib.dll")
+    elif platform.system() == "Darwin":
+        c_lib_path = str(Path(__file__).parent / "c_lib.dylib")
+    elif platform.system() == "Linux":
+        c_lib_path = str(Path(__file__).parent / "c_lib.so")
+    else:
+        print(f"Platform {platform.system()} not supported. Integration mode is set to NumPy.")
+        return None
+
+    while True:
+        try:
+            c_lib = ctypes.cdll.LoadLibrary(c_lib_path)
+            break
+        except:
+            traceback.print_exc()
+            print()
+            print(f"Loading c_lib failed (Path: {c_lib_path}).")
+            if get_bool(
+                f"Enter a new path for c_lib? (Current path: {c_lib_path})"
+            ):
+                c_lib_path = Path(input("Enter c_lib path: "))
+            else:
+                print("Integration mode is set to NumPy.")
+                return None
+
+    return c_lib
 
 def get_bool(msg: str) -> bool:
     """

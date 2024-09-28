@@ -54,27 +54,7 @@ class GravitySimulator:
     }
 
     def __init__(self):
-        self.c_lib = None
-        try:
-            if platform.system() == "Windows":
-                self.c_lib = ctypes.cdll.LoadLibrary(
-                    str(Path(__file__).parent / "c_lib.dll")
-                )
-            elif platform.system() == "Darwin":
-                self.c_lib = ctypes.cdll.LoadLibrary(
-                    str(Path(__file__).parent / "c_lib.dylib")
-                )
-            elif platform.system() == "Linux":
-                self.c_lib = ctypes.cdll.LoadLibrary(
-                    str(Path(__file__).parent / "c_lib.so")
-                )
-        except Exception as e:
-            warnings.warn(
-                f"Failed to load C library (Exception: {e}).\n"
-                + "NumPy is still available.\n"
-                + "To use C library, try to compile the C files provided in the src folders."
-            )
-
+        self.c_lib = common.load_c_lib()
         self.is_exit = ctypes.c_bool(False)
         self.simulator = Simulator(c_lib=self.c_lib, is_exit_ctypes_bool=self.is_exit)
         self.compute_energy = self.simulator.compute_energy

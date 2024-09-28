@@ -56,31 +56,7 @@ class GravitySimulatorCLI:
 
         # Use c library to perform simulation
         self.is_c_lib = self.args.numpy
-        self.c_lib = None
-        if self.is_c_lib:
-            try:
-                if platform.system() == "Windows":
-                    self.c_lib = ctypes.cdll.LoadLibrary(
-                        str(Path(__file__).parent / "c_lib.dll")
-                    )
-                elif platform.system() == "Darwin":
-                    self.c_lib = ctypes.cdll.LoadLibrary(
-                        str(Path(__file__).parent / "c_lib.dylib")
-                    )
-                elif platform.system() == "Linux":
-                    self.c_lib = ctypes.cdll.LoadLibrary(
-                        str(Path(__file__).parent / "c_lib.so")
-                    )
-            except:
-                if common.get_bool("Loading c_lib failed. Run with numpy?"):
-                    self.is_c_lib = False
-                else:
-                    print(
-                        "If you want to run with C library, try to compile the "
-                        + "C files provided in the src folders."
-                    )
-                    print("Exiting the program...")
-                    sys.exit(0)
+        self.c_lib = common.load_c_lib()
 
         # --------------------Initialize attributes--------------------
         self.is_exit_ctypes_bool = ctypes.c_bool(False)
