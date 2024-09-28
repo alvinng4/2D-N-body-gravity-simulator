@@ -4,9 +4,10 @@ Newtonian N-body gravity simulator accelerated with C library
 This is a student project developed for learning purpose.
 Other packages such as REBOUND are recommended for more functionality.
 
-* Ten integrators including WHFast and IAS15 are implemented
-* Barnes-Hut algorithm (prototype) is available but optimization is needed
-* API is available but it is still in early development
+* Ten integrators including WHFast and IAS15
+* Barnes-Hut algorithm (prototype) is available
+* API (prototype) is available
+* CUDA implementation in calculating the acceleration function
 
 <img src="./examples/media/solar_plus_3d.gif" alt="Image" width="300">
 <img src="./examples/media/asteroid_belt_added_star_2.gif" alt="Image" width="300">
@@ -55,6 +56,14 @@ matplotlib==3.8.3
 numpy==1.26.4
 rich==13.7.1
 ```
+If the program failed to load the C library, you may choose the NumPy option (slow),
+or choose to recompile the C library. Simply go to the src folder and run
+```
+make [CC=gcc] [USE_CUDA=1]
+```
+Then, move the `c_lib.dylib`, `c_lib.dll` or `c_lib.so` file into the gravity_sim folder (they will be generated depending on your operation system).
+If you wish to use the CUDA acceleration functions, you will also need to recompile
+the library with the `USE_CUDA=1` flag, which requires `nvcc` to be installed in your system.
 
 ### Some notes
 * This project offers two user-interface: API and CLI. API is still in early development.
@@ -63,7 +72,7 @@ It is possible to change this value in the API by changing `system.G`.
 * Animations, simulation results, etc. will be stored to `gravity_sim/result` by default, unless a file path is specified.
 * Complex animations like the asteroid belt cannot be done solely with the API functions. Sample scripts are provided in this repository (See [Sample projects](#sample-projects))
 * Check the `examples` folder for API tutorial
-* For WHFast, some features including `compensated_summation`, `barnes-hut` and `resume_simulation` are not available due to implementation difficulties and bugs.
+* For WHFast, features including CUDA acceleration, `compensated_summation`, `barnes-hut` and `resume_simulation` are not available due to implementation difficulties and bugs.
 
 ## Running the program in terminal
 
@@ -147,6 +156,9 @@ launch_simulation() is the main method for launching the simulation.
 - `pairwise`
     * Brute force pairwise calculations for gravitational acceleration
     * Time complexity: $O(N^2)$
+    * Variants: `pairwise_cuda` and `pairwise_float_cuda` (Not available for `WHFast`)
+        - Parallelized calculation with CUDA GPU acceleration.
+        - `pairwise_float_cuda` uses single precision to provide furthur speed up with negligible loss of accuracy
 - `massless`
     * Similar to `pairwise`, but seperate the calculations for massive and massless particles
     * Time complexity: $O(M^2 + MN)$, where $M$ and $N$ are the number of massive and massless particles respectively

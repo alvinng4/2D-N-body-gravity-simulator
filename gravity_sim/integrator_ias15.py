@@ -53,9 +53,6 @@ class IAS15:
         """
         Recommended tolerance: 1e-9
         """
-        if acceleration_method not in ["pairwise", "massless", "barnes-hut"]:
-            raise ValueError("Invalid acceleration method")
-
         class Solutions(ctypes.Structure):
             _fields_ = [
                 ("sol_state", ctypes.POINTER(ctypes.c_double)),

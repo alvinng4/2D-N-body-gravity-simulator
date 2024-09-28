@@ -53,20 +53,8 @@ WIN32DLL_API int euler(
     bool *restrict is_exit
 )
 {   
-    int acceleration_method_flag;
-    if (strcmp(acceleration_method, "pairwise") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_PAIRWISE;
-    }
-    else if (strcmp(acceleration_method, "massless") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_MASSLESS;
-    }
-    else if (strcmp(acceleration_method, "barnes-hut") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_BARNES_HUT;
-    }
-    else
+    int acceleration_method_flag = get_acceleration_method_flag(acceleration_method);
+    if (acceleration_method_flag == -1)
     {
         fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;
@@ -269,20 +257,8 @@ WIN32DLL_API int euler_cromer(
     bool *restrict is_exit
 )
 {   
-    int acceleration_method_flag;
-    if (strcmp(acceleration_method, "pairwise") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_PAIRWISE;
-    }
-    else if (strcmp(acceleration_method, "massless") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_MASSLESS;
-    }
-    else if (strcmp(acceleration_method, "barnes-hut") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_BARNES_HUT;
-    }
-    else
+    int acceleration_method_flag = get_acceleration_method_flag(acceleration_method);
+    if (acceleration_method_flag == -1)
     {
         fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;
@@ -484,20 +460,8 @@ WIN32DLL_API int rk4(
     int *restrict is_exit
 )
 {
-    int acceleration_method_flag;
-    if (strcmp(acceleration_method, "pairwise") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_PAIRWISE;
-    }
-    else if (strcmp(acceleration_method, "massless") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_MASSLESS;
-    }
-    else if (strcmp(acceleration_method, "barnes-hut") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_BARNES_HUT;
-    }
-    else
+    int acceleration_method_flag = get_acceleration_method_flag(acceleration_method);
+    if (acceleration_method_flag == -1)
     {
         fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;
@@ -506,7 +470,6 @@ WIN32DLL_API int rk4(
     // Allocate memory for calculation
     real *restrict temp_x = malloc(objects_count * 3 * sizeof(real));
     real *restrict temp_v = malloc(objects_count * 3 * sizeof(real));
-    real *restrict a = malloc(objects_count * 3 * sizeof(real));
     real *restrict vk1 = malloc(objects_count * 3 * sizeof(real));
     real *restrict vk2 = malloc(objects_count * 3 * sizeof(real));
     real *restrict vk3 = malloc(objects_count * 3 * sizeof(real));
@@ -520,7 +483,7 @@ WIN32DLL_API int rk4(
     real *restrict x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
     real *restrict v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
 
-    if (!temp_x || !temp_v || !a || !vk1 || !vk2 || !vk3 || !vk4 || !xk1 || !xk2 || !xk3 || !xk4 || !x_err_comp_sum || !v_err_comp_sum)
+    if (!temp_x || !temp_v || !vk1 || !vk2 || !vk3 || !vk4 || !xk1 || !xk2 || !xk3 || !xk4 || !x_err_comp_sum || !v_err_comp_sum)
     {
         fprintf(stderr, "Error: Failed to allocate memory for calculation\n");
         goto err_calc_memory;
@@ -648,7 +611,6 @@ WIN32DLL_API int rk4(
     }
 
     // Exit after simulation is finished
-    free(a);
     free(temp_x);
     free(temp_v);
     free(vk1);
@@ -691,7 +653,6 @@ err_sol_output_memory:
 err_calc_memory:
     free(temp_x);
     free(temp_v);
-    free(a);
     free(vk1);
     free(vk2);
     free(vk3);
@@ -758,20 +719,8 @@ WIN32DLL_API int leapfrog(
     int *restrict is_exit
 )
 {   
-    int acceleration_method_flag;
-    if (strcmp(acceleration_method, "pairwise") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_PAIRWISE;
-    }
-    else if (strcmp(acceleration_method, "massless") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_MASSLESS;
-    }
-    else if (strcmp(acceleration_method, "barnes-hut") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_BARNES_HUT;
-    }
-    else
+    int acceleration_method_flag = get_acceleration_method_flag(acceleration_method);
+    if (acceleration_method_flag == -1)
     {
         fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;

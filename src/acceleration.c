@@ -7,7 +7,41 @@
 
 #include "common.h"
 #include "acceleration.h"
+#ifdef USE_CUDA
+    #include "acceleration_cuda.cuh"
+#endif
 
+WIN32DLL_API int get_acceleration_method_flag(
+    const char *restrict acceleration_method
+)
+{
+    if (strcmp(acceleration_method, "pairwise") == 0)
+    {
+        return ACCELERATION_METHOD_PAIRWISE;
+    }
+    else if (strcmp(acceleration_method, "massless") == 0)
+    {
+        return ACCELERATION_METHOD_MASSLESS;
+    }
+    else if (strcmp(acceleration_method, "barnes-hut") == 0)
+    {
+        return ACCELERATION_METHOD_BARNES_HUT;
+    }
+    #ifdef USE_CUDA
+        else if (strcmp(acceleration_method, "pairwise_cuda") == 0)
+        {
+            return ACCELERATION_METHOD_PAIRWISE_CUDA;
+        }
+        else if (strcmp(acceleration_method, "pairwise_float_cuda") == 0)
+        {
+            return ACCELERATION_METHOD_PAIRWISE_FLOAT_CUDA;
+        }
+    #endif
+    else
+    {
+        return -1;
+    }
+}
 
 WIN32DLL_API void acceleration(
     int acceleration_method_flag,
@@ -36,6 +70,16 @@ WIN32DLL_API void acceleration(
         case ACCELERATION_METHOD_BARNES_HUT:
             acceleration_barnes_hut(objects_count, x, a, m, G, softening_length, barnes_hut_theta);
             break;
+        #ifdef USE_CUDA
+            // CUDA Pairwise acceleration
+            case ACCELERATION_METHOD_PAIRWISE_CUDA:
+                acceleration_pairwise_cuda(objects_count, x, a, m, G, softening_length);
+                break;
+            // CUDA Pairwise acceleration with single precision
+            case ACCELERATION_METHOD_PAIRWISE_FLOAT_CUDA:
+                acceleration_pairwise_float_cuda(objects_count, x, a, m, G, softening_length);
+                break;
+        #endif
         default:
             fprintf(stderr, "Warning: Invalid acceleration method detected. Ignoring acceleration calculation.\n");
             break;
@@ -72,10 +116,10 @@ WIN32DLL_API void acceleration_pairwise(
             R[0] = x[i * 3 + 0] - x[j * 3 + 0];
             R[1] = x[i * 3 + 1] - x[j * 3 + 1];
             R[2] = x[i * 3 + 2] - x[j * 3 + 2];
-            R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2]);
+            R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2] + softening_length * softening_length);
 
             // Calculate the acceleration
-            temp_value = G / (R_norm * R_norm * R_norm + softening_length * softening_length);
+            temp_value = G / (R_norm * R_norm * R_norm);
             temp_vec[0] = temp_value * R[0];
             temp_vec[1] = temp_value * R[1];
             temp_vec[2] = temp_value * R[2];
@@ -141,10 +185,10 @@ WIN32DLL_API void acceleration_massless(
             R[0] = x[idx_i * 3 + 0] - x[idx_j * 3 + 0];
             R[1] = x[idx_i * 3 + 1] - x[idx_j * 3 + 1];
             R[2] = x[idx_i * 3 + 2] - x[idx_j * 3 + 2];
-            R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2]);
+            R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2] + softening_length * softening_length);
 
             // Calculate the acceleration
-            temp_value = G / (R_norm * R_norm * R_norm + softening_length * softening_length);
+            temp_value = G / (R_norm * R_norm * R_norm);
             temp_vec[0] = temp_value * R[0];
             temp_vec[1] = temp_value * R[1];
             temp_vec[2] = temp_value * R[2];
@@ -169,10 +213,10 @@ WIN32DLL_API void acceleration_massless(
             R[0] = x[idx_i * 3 + 0] - x[idx_j * 3 + 0];
             R[1] = x[idx_i * 3 + 1] - x[idx_j * 3 + 1];
             R[2] = x[idx_i * 3 + 2] - x[idx_j * 3 + 2];
-            R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2]);
+            R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2] + softening_length * softening_length);
 
             // Calculate the acceleration
-            temp_value = G / (R_norm * R_norm * R_norm + softening_length * softening_length);
+            temp_value = G / (R_norm * R_norm * R_norm);
             a[idx_j * 3 + 0] += temp_value * R[0] * m[i];
             a[idx_j * 3 + 1] += temp_value * R[1] * m[i];
             a[idx_j * 3 + 2] += temp_value * R[2] * m[i];
@@ -837,7 +881,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
                         R[1] = current_acc_leaf->center_of_mass[1] - child_j->center_of_mass[1];
                         R[2] = current_acc_leaf->center_of_mass[2] - child_j->center_of_mass[2];
 
-                        R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2]);
+                        R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2] + softening_length * softening_length);
 
                         bool is_acc_branch_node = false;
                         for (int k = 0; k < acc_branch_nodes_count; k++)
@@ -856,7 +900,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
                         {
                             if (child_j->index != acc_object_index)
                             {
-                                _barnes_hut_helper_acceleration_pair(current_acc_leaf, child_j, a, G, softening_length, R, R_norm);
+                                _barnes_hut_helper_acceleration_pair(current_acc_leaf, child_j, a, G, R, R_norm);
                             }
                             obj_stack->processed_region = j;
                             break;
@@ -920,7 +964,6 @@ WIN32DLL_API void _barnes_hut_helper_acceleration_pair(
     BarnesHutTreeNode *restrict current_obj_leaf,
     real *restrict a,
     real G,
-    real softening_length,
     real *restrict R,
     real R_norm
 )
@@ -930,7 +973,7 @@ WIN32DLL_API void _barnes_hut_helper_acceleration_pair(
     // Calculate the acceleration
     int acc_object_index = current_acc_leaf->index;
     real object_2_mass = current_obj_leaf->total_mass;
-    temp_value = G * object_2_mass / (R_norm * R_norm * R_norm + softening_length * softening_length);
+    temp_value = G * object_2_mass / (R_norm * R_norm * R_norm);
     a[acc_object_index * 3 + 0] -= temp_value * R[0];
     a[acc_object_index * 3 + 1] -= temp_value * R[1];
     a[acc_object_index * 3 + 2] -= temp_value * R[2];

@@ -101,6 +101,7 @@ def main():
     long_asc_node = rng.uniform(0, 2 * np.pi, size=N)
     true_anomaly = rng.uniform(0, 2 * np.pi, size=N)
 
+    # m = 0.0 if we assume asteroids are massless
     for i in range(N):
         system.add_keplerian(
             semi_major_axis=a[i],

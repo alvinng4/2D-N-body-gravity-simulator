@@ -311,7 +311,6 @@ class Simulator:
                         self.no_progress_bar,
                         **self.kwargs,
                     )
-
         else:
             match self.integrator:
                 case "euler" | "euler_cromer" | "rk4" | "leapfrog":

@@ -12,6 +12,10 @@
 #define ACCELERATION_METHOD_PAIRWISE 0
 #define ACCELERATION_METHOD_MASSLESS 1
 #define ACCELERATION_METHOD_BARNES_HUT 2
+#ifdef USE_CUDA
+    #define ACCELERATION_METHOD_PAIRWISE_CUDA 3
+    #define ACCELERATION_METHOD_PAIRWISE_FLOAT_CUDA 4
+#endif
 
 typedef struct BarnesHutTreeNode
 {
@@ -21,6 +25,17 @@ typedef struct BarnesHutTreeNode
     real box_width;
     struct BarnesHutTreeNode *children[8];
 } BarnesHutTreeNode;
+
+/**
+ * \brief Return acceleration method flag based on the input string
+ * 
+ * \param acceleration_method Acceleration method
+ * 
+ * \return Flag for acceleration method
+ */
+int get_acceleration_method_flag(
+    const char *restrict acceleration_method
+);
 
 /**
  * \brief Wrapper function for acceleration computation
@@ -164,7 +179,6 @@ void _barnes_hut_helper_acceleration_pair(
     BarnesHutTreeNode *restrict current_obj_leaf,
     real *restrict a,
     real G,
-    real softening_length,
     real *restrict R,
     real R_norm
 );

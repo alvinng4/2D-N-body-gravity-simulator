@@ -394,20 +394,8 @@ WIN32DLL_API int ias15(
     bool *restrict is_exit
 )
 {   
-    int acceleration_method_flag;
-    if (strcmp(acceleration_method, "pairwise") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_PAIRWISE;
-    }
-    else if (strcmp(acceleration_method, "massless") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_MASSLESS;
-    }
-    else if (strcmp(acceleration_method, "barnes-hut") == 0)
-    {
-        acceleration_method_flag = ACCELERATION_METHOD_BARNES_HUT;
-    }
-    else
+    int acceleration_method_flag = get_acceleration_method_flag(acceleration_method);
+    if (acceleration_method_flag == -1)
     {
         fprintf(stderr, "Error: acceleration method not recognized\n");
         goto err_acc_method;

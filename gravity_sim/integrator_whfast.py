@@ -104,9 +104,7 @@ class WHFast:
                 ("sol_dt", ctypes.POINTER(ctypes.c_double)),
             ]
 
-        if acceleration_method not in ["pairwise", "massless", "barnes-hut"]:
-            raise ValueError("Invalid acceleration method")
-        elif acceleration_method == "barnes-hut":
+        if acceleration_method == "barnes-hut":
             raise NotImplementedError("Barnes-Hut is not implemented for WHFast")
 
         self.c_lib.whfast.restype = ctypes.c_int
