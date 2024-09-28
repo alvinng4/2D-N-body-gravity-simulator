@@ -61,7 +61,12 @@ or choose to recompile the C library. Simply go to the src folder and run
 ```
 make [CC=gcc] [USE_CUDA=1]
 ```
-Then, move the `c_lib.dylib`, `c_lib.dll` or `c_lib.so` file into the gravity_sim folder (they will be generated depending on your operation system).
+Then, move the `c_lib.dylib`, `c_lib.dll` or `c_lib.so` file into the gravity_sim folder (One of them will be generated depending on your operation system).
+```
+mv c_lib.dylib ../gravity_sim
+mv c_lib.dll   ../gravity_sim
+mv c_lib.so    ../gravity_sim
+```
 If you wish to use the CUDA acceleration functions, you will also need to recompile
 the library with the `USE_CUDA=1` flag, which requires `nvcc` to be installed in your system.
 
