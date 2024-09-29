@@ -212,7 +212,7 @@ class GravitationalSystem:
         if self.x is None:
             self.x = np.array(x)
             self.v = np.array(v)
-            self.m = np.array(m)
+            self.m = np.array([m,])
         else:
             self.x = np.vstack((self.x, x))
             self.v = np.vstack((self.v, v))

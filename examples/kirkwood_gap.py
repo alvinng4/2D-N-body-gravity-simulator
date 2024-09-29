@@ -6,12 +6,9 @@ Note: N = 1000 is enough to observe some gaps, but it may not be very clear.
 Since the simulation is O(N), seting N = 50000 would take 24 hours to a few days to 
 finish, and reducing N to 25000 will reduce the runtime by half.
 
-Warning: This script will take a lot of storage space on your computer (probably a few GBs).
-         When combining the individual frames, the pillow library will take a lot of memories.
+Warning: When combining the individual frames, the pillow library will take a lot of memories.
          I have reduced number of asteroids, dpi and frame size to reduce the runtime.
          You may increase them if you want better quality.
-
-         The script will ask user's permission to erase the data after the video is generated.
 
 TODO: Calculations for the 2D scatter plot is not vectorized and is extremely slow. 
 """

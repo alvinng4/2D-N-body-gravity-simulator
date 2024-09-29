@@ -7,18 +7,15 @@ Warning: When combining the individual frames, the pillow library will take a lo
 
          Do not run multiple instances of this program at the same time, unless you made copies
          of the whole directory. Otherwise, the final data may overwrite each other.
-
-Note: Technically you can also create nice looking solar system animations by setting N = 0 and 
-      expanding the axes limits.
 """
 
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
-import matplotlib.pyplot as plt
 import numpy as np
 import PIL
+import matplotlib.pyplot as plt
 import rich.progress
 
 from gravity_sim import GravitySimulator
@@ -26,7 +23,11 @@ from gravity_sim import GravitySimulator
 N = 50000
 FPS = 30
 DPI = 200
-N_FRAMES = 500
+N_FRAMES = 500 + 1
+
+# kpc^3 / (Msun * kyr^2)
+GM_SUN = 132712440041.279419 # km^3 s^-2 M_sun^-1
+G = GM_SUN * (365 * 24 * 3600 * 1000) ** 2 * (3.24077929e-17) ** 3
 
 class Progress_bar(rich.progress.Progress):
     def __init__(self):
@@ -39,80 +40,72 @@ class Progress_bar(rich.progress.Progress):
             rich.progress.TimeRemainingColumn(),
             "•[magenta] {task.completed}/{task.total}",
         )
-
+        
 def main():
     # ---------- Initialization ---------- #
-    print("Initializing the system...", end="")
+    print("Initializing the system...", end="", flush=True)
     grav_sim = GravitySimulator()
     system = grav_sim.create_system()
     grav_sim.set_current_system(system)
-
-    system.load("solar_system")
-    system.remove("Mercury")
-    system.remove(name="Neptune")
-    system.remove(name="Uranus")
-    colors = [grav_sim.SOLAR_SYSTEM_COLORS[name] for name in system.objects_names]
-    marker_sizes = [6.0, 1.5, 2.0, 1.5, 4.0, 3.5]
-
-    #################################################
-    # Adding a star to the system
-
-    # Star 1
-    # system.add_keplerian(
-    #     semi_major_axis=5.5,
-    #     eccentricity=0.7,
-    #     inclination=0.05,
-    #     argument_of_periapsis=0.07,
-    #     longitude_of_ascending_node=0.07,
-    #     true_anomaly=0.35,
-    #     m=1.0,
-    #     primary_object_name="Sun",
-    #     object_name="Added Star",
-    # )
-    # colors.append("orange")
-    # marker_sizes.append(6.0)
-
-    # Star 2
-    # system.add_keplerian(
-    #     semi_major_axis=5.0,
-    #     eccentricity=0.7,
-    #     inclination=0.4,
-    #     argument_of_periapsis=4.0,
-    #     longitude_of_ascending_node=4.0,
-    #     true_anomaly=4.0,
-    #     m=1.0,
-    #     primary_object_name="Sun",
-    #     object_name="Added Star",
-    # )
-    # colors.append("orange")
-    # marker_sizes.append(6.0)
-
-    #################################################
-
-    massive_objects_count = system.objects_count
-
-    rng = np.random.default_rng()
-    a = rng.uniform(2.1, 3.2, size=N)
-    ecc = np.abs(rng.normal(loc=0.0, scale=0.12, size=N))
-    inc = np.abs(rng.normal(loc=0.0, scale=0.3, size=N))
-    argument_of_periapsis = rng.uniform(0, 2 * np.pi, size=N)
-    long_asc_node = rng.uniform(0, 2 * np.pi, size=N)
-    true_anomaly = rng.uniform(0, 2 * np.pi, size=N)
-
-    # m = 0.0 if we assume asteroids are massless
-    for i in range(N):
+    system.G = G
+    
+    # Galaxy 1
+    # Central black hole
+    system.add(
+        x=np.array([-35.0, 0.0, 0.0]),
+        v=np.array([0.0, 0.0, 0.0]),
+        m=5e6,
+        object_name="CentralBH_1",
+    )
+    # Disk with random radius
+    rng = np.random.RandomState(seed=0)
+    radius = rng.uniform(1, 30, size=(N - 1))
+    argument_of_periapsis = rng.uniform(0, 2 * np.pi, size=(N - 1))
+    long_asc_node = rng.uniform(0, 2 * np.pi, size=(N - 1))
+    true_anomaly = rng.uniform(0, 2 * np.pi, size=(N - 1))
+    masses = rng.uniform(1e-1, 1e1, size=(N - 1))
+    for i in range(N - 1):
         system.add_keplerian(
-            semi_major_axis=a[i],
-            eccentricity=ecc[i],
-            inclination=inc[i],
-            argument_of_periapsis=argument_of_periapsis[i],
+            semi_major_axis=radius[i],
+            eccentricity=0.0,
+            inclination=0.0,
             longitude_of_ascending_node=long_asc_node[i],
+            argument_of_periapsis=argument_of_periapsis[i],
             true_anomaly=true_anomaly[i],
-            m=0.0,
-            primary_object_name="Sun",
+            m=masses[i],
+            primary_object_name="CentralBH_1",
         )
 
+    # Galaxy 2
+    # Central black hole
+    system.add(
+        x=np.array([35.0, 0.0, 0.0]),
+        v=np.array([0.0, 0.0, 0.0]),
+        m=5e6,
+        object_name="CentralBH_2",
+    )
+    # Disk with random radius
+    radius = rng.uniform(1, 30, size=(N - 1))
+    argument_of_periapsis = rng.uniform(0, 2 * np.pi, size=(N - 1))
+    long_asc_node = rng.uniform(0, 2 * np.pi, size=(N - 1))
+    true_anomaly = rng.uniform(0, 2 * np.pi, size=(N - 1))
+    masses = rng.uniform(1e-1, 1e1, size=(N - 1))
+    for i in range(N - 1):
+        system.add_keplerian(
+            semi_major_axis=radius[i],
+            eccentricity=0.0,
+            inclination=0.0,
+            longitude_of_ascending_node=long_asc_node[i],
+            argument_of_periapsis=argument_of_periapsis[i],
+            true_anomaly=true_anomaly[i],
+            m=masses[i],
+            primary_object_name="CentralBH_2",
+        )
+
+
     system.center_of_mass_correction()
+    # system.save("galaxy_collision")
+
     print("Done!")
 
     # ---------- Simulation and draw frames ---------- #
@@ -120,35 +113,39 @@ def main():
     file_path.mkdir(parents=True, exist_ok=True)
 
     print()
-    print("Simulating asteroid belt and drawing frames...")
+    print("Simulating galaxy collision and drawing frames...")
     progress_bar = Progress_bar()
     with progress_bar:
-        task = progress_bar.add_task("", total=N_FRAMES)
+        task = progress_bar.add_task("[cyan]Simulation progress", total=N_FRAMES)
         for i in range(N_FRAMES):
             if i == 0:
                 grav_sim.launch_simulation(
-                    "rk4",
-                    grav_sim.years_to_days(5.0 / N_FRAMES),
-                    dt=grav_sim.years_to_days(0.0001),
-                    acceleration_method="massless",
+                    integrator="rk4",
+                    tf=0.0,
+                    dt=1e4,
+                    acceleration_method="barnes-hut",
                     storing_method="no_store",
                     no_print=True,
                     no_progress_bar=True,
+                    softening_length=1.0,
+                    barnes_hut_theta=2.0,
                 )
             else:
-                grav_sim.resume_simulation(grav_sim.years_to_days(5.0 / N_FRAMES))
+                grav_sim.resume_simulation(
+                    1e6,
+                )
 
             # Drawing frame
             fig = plt.figure()
             plt.style.use("dark_background")
             ax = fig.add_subplot(111, projection="3d")
 
-            xlim_min = -3
-            xlim_max = 3
-            ylim_min = -3
-            ylim_max = 3
-            zlim_min = -3
-            zlim_max = 3
+            xlim_min = 60
+            xlim_max = -60
+            ylim_min = 60
+            ylim_max = -60
+            zlim_min = 60
+            zlim_max = -60
 
             ax.grid(False)
             ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
@@ -164,41 +161,29 @@ def main():
             ax.yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
             ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
 
-            # Plotting massive objects
-            for j in range(massive_objects_count):
-                ax.scatter(
-                    grav_sim.simulator.x[j, 0],
-                    grav_sim.simulator.x[j, 1],
-                    grav_sim.simulator.x[j, 2],
-                    marker="o",
-                    label=system.objects_names[j],
-                    color=colors[j],
-                    s=marker_sizes[j],
-                )
-
-            # Plotting massless objects
+            # Galaxy 1
             ax.scatter(
-                grav_sim.simulator.x[massive_objects_count:, 0],
-                grav_sim.simulator.x[massive_objects_count:, 1],
-                grav_sim.simulator.x[massive_objects_count:, 2],
-                color="white",
+                grav_sim.simulator.x[:N, 0],
+                grav_sim.simulator.x[:N, 1],
+                grav_sim.simulator.x[:N, 2],
+                color="#fdfd96",
                 marker=".",
-                s=0.1,
+                s=0.2,
                 alpha=0.2,
             )
 
-            # Add legend
-            legend = ax.legend(loc="center right", bbox_to_anchor=(1.325, 0.5))
-            legend.facecolor = "transparent"
+            # Galaxy 2
+            ax.scatter(
+                grav_sim.simulator.x[N:, 0],
+                grav_sim.simulator.x[N:, 1],
+                grav_sim.simulator.x[N:, 2],
+                color="#87CEEB",
+                marker=".",
+                s=0.2,
+                alpha=0.2,
+            )
 
-            # Adjust figure for the legend
-            fig.subplots_adjust(right=0.7)
             fig.tight_layout()
-
-            # Set axis labels and setting 3d axes scale before capturing the frame
-            # ax.set_xlabel("$x$ (AU)")
-            # ax.set_ylabel("$y$ (AU)")
-            # ax.set_zlabel("$z$ (AU)")
 
             ax.set_xlim3d([xlim_min, xlim_max])
             ax.set_ylim3d([ylim_min, ylim_max])
@@ -206,6 +191,8 @@ def main():
 
             # Set equal aspect ratio to prevent distortion
             ax.set_aspect("equal")
+
+            ax.view_init(elev=90, azim=90)
 
             # Capture the frame
             plt.savefig(file_path / f"frames_{i:04d}.png", dpi=DPI)
@@ -215,7 +202,7 @@ def main():
 
     progress_bar.update(task, completed=N_FRAMES)
     plt.close("all")
-
+        
     print()
     print("Combining frames to gif...")
     frames = []
@@ -223,7 +210,7 @@ def main():
         frames.append(PIL.Image.open(file_path / f"frames_{i:04d}.png"))
 
     frames[0].save(
-        file_path / "asteroid_belt.gif",
+        file_path / "galaxy_collision.gif",
         save_all=True,
         append_images=frames[1:],
         loop=0,
@@ -233,7 +220,7 @@ def main():
     for i in range(N_FRAMES):
         (file_path / f"frames_{i:04d}.png").unlink()
 
-    print(f"Output completed! Please check {file_path / 'asteroid_belt.gif'}")
+    print(f"Output completed! Please check {file_path / 'galaxy_collision.gif'}")
     print()
 
 
