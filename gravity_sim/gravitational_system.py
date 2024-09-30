@@ -373,6 +373,7 @@ class GravitationalSystem:
         system_name: str = None,
         file_path: str = None,
     ) -> None:
+        warnings.warn("Warning: currently the objects names are not saved.", UserWarning)
         if system_name is not None:
             self.name = system_name
 
