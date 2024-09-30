@@ -111,6 +111,11 @@ Videos:
 * https://www.youtube.com/watch?v=AEyjIF-8zT0
 * https://www.youtube.com/watch?v=jHLLr7ACvDQ
 
+#### Galaxy collision
+<img src="./examples/media/galaxy_collision.png" alt="Image" width="300">
+
+Videos: https://www.youtube.com/watch?v=0Ut-JnTGUo0
+
 ## GravitySimulator API
 
 You may import the GravitySimulator API from `gravity_sim` to perform gravity simulation.

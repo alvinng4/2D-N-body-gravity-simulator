@@ -2,6 +2,12 @@
 Demonstration on using the gravity simulator to simulate the asteroid belt
 You will need to install the `Pillow` library for this script.
 
+Currently, we use RKF4(5) with tolerance=1e-8, but the calculation is actually not very accurate.
+You may need to lower the tolerance or use higher order integrators like RKF7(8) or DOPRI.
+
+For the acceleration function, you can choose between "barnes-hut" and "pairwise_float_cuda", but
+the latter would requires you to recompile the C library with `USE_CUDA=1` and also a NVIDIA GPU.
+
 Warning: Do not run multiple instances of this program at the same time, unless you made copies
          of the whole directory. Otherwise, the final data may overwrite each other.
 """
@@ -21,7 +27,7 @@ from gravity_sim import GravitySimulator
 N = 50000
 FPS = 30
 DPI = 200
-N_FRAMES = 2000 + 1
+N_FRAMES = 1150
 
 # kpc^3 / (Msun * kyr^2)
 GM_SUN = 132712440041.279419 # km^3 s^-2 M_sun^-1
@@ -119,9 +125,9 @@ def main():
         for i in range(N_FRAMES):
             if i == 0:
                 grav_sim.launch_simulation(
-                    integrator="rk4",
+                    integrator="rkf45",
                     tf=0.0,
-                    dt=1e4,
+                    tolerance=1e-8,
                     acceleration_method="barnes-hut",
                     storing_method="no_store",
                     no_print=True,
@@ -133,6 +139,7 @@ def main():
                 grav_sim.resume_simulation(
                     1e6,
                 )
+            print(grav_sim.simulator.dt)
 
             # Drawing frame
             fig = plt.figure()
