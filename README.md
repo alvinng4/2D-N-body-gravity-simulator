@@ -4,10 +4,12 @@ Newtonian N-body gravity simulator accelerated with C library
 This is a student project developed for learning purpose.
 Other packages such as REBOUND are recommended for more functionality.
 
+Features:
 * Ten integrators including WHFast and IAS15
-* Barnes-Hut algorithm (prototype) is available
-* API (prototype) is available
-* CUDA implementation in calculating the acceleration function
+* Barnes-Hut algorithm
+* GravitySimulator API (prototype)
+* CUDA implementation for the pairwise acceleration function
+* Multiple sample projects
 
 <img src="./examples/media/solar_plus_3d.gif" alt="Image" width="300">
 <img src="./examples/media/asteroid_belt_added_star_2.gif" alt="Image" width="300">
@@ -67,16 +69,16 @@ mv c_lib.dylib ../gravity_sim
 mv c_lib.dll   ../gravity_sim
 mv c_lib.so    ../gravity_sim
 ```
-If you wish to use the CUDA acceleration functions, you will also need to recompile
+If you wish to use CUDA GPU acceleration, you will also need to recompile
 the library with the `USE_CUDA=1` flag, which requires `nvcc` to be installed in your system.
 
 ### Some notes
-* This project offers two user-interface: API and CLI. API is still in early development.
-* The default unit for this project is solar masses, AU and days, with G = 0.00029591220828411956.
+* This project offers two user-interface: API and CLI
+* The default unit for this project is solar masses, AU and days, with $G = 0.00029591220828411956 \text{ M}_\odot^{-1} \text{ AU}^3 \text{ day}^{-2}$.
 It is possible to change this value in the API by changing `system.G`.
 * Animations, simulation results, etc. will be stored to `gravity_sim/result` by default, unless a file path is specified.
 * Complex animations like the asteroid belt cannot be done solely with the API functions. Sample scripts are provided in this repository (See [Sample projects](#sample-projects))
-* Check the `examples` folder for API tutorial
+* Check the `examples` folder for API tutorial and sample projects
 * For WHFast, features including CUDA acceleration, `compensated_summation`, `barnes-hut` and `resume_simulation` are not available due to implementation difficulties and bugs.
 
 ## Running the program in terminal
