@@ -998,9 +998,9 @@ WIN32DLL_API void ias15_step(
         }
 
         // Correct overshooting
-        if (*t + *dt > tf)
+        if ((*t) <= tf && (*t) + (*dt) > tf)
         {
-            *dt = tf - *t;
+            (*dt) = tf - (*t);
         }
 
         // Exit 
