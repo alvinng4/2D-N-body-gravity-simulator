@@ -11,6 +11,9 @@ Features:
 * CUDA implementation for the pairwise acceleration function
 * Multiple sample projects
 
+TODOs (if I have time):
+* Barnes-Hut algorithm with CUDA
+
 <img src="./examples/media/solar_plus_3d.gif" alt="Image" width="300">
 <img src="./examples/media/asteroid_belt_added_star_2.gif" alt="Image" width="300">
 <img src="./examples/media/rel_energy.png" alt="Image" width="300">
@@ -114,7 +117,7 @@ Videos:
 #### Galaxy collision
 <img src="./examples/media/galaxy_collision.png" alt="Image" width="300">
 
-Videos: https://www.youtube.com/watch?v=0Ut-JnTGUo0
+Video: https://www.youtube.com/watch?v=fn01d6Jsz2s
 
 ## GravitySimulator API
 
