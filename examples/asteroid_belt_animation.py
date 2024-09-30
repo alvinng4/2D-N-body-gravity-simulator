@@ -2,10 +2,7 @@
 Demonstration on using the gravity simulator to simulate the asteroid belt
 You will need to install the `Pillow` library for this script.
 
-Warning: When combining the individual frames, the pillow library will take a lot of memories.
-         You may reduce the frame sizes or integration time if you run out of memory.
-
-         Do not run multiple instances of this program at the same time, unless you made copies
+Warning: Do not run multiple instances of this program at the same time, unless you made copies
          of the whole directory. Otherwise, the final data may overwrite each other.
 
 Note: Technically you can also create nice looking solar system animations by setting N = 0 and 
@@ -218,24 +215,24 @@ def main():
 
     print()
     print("Combining frames to gif...")
-    frames = []
-    for i in range(N_FRAMES):
-        frames.append(PIL.Image.open(file_path / f"frames_{i:04d}.png"))
+    def frames_generator():
+        for i in range(N_FRAMES):
+            yield PIL.Image.open(file_path / f"frames_{i:04d}.png")
 
-    frames[0].save(
+    frames = frames_generator()
+    next(frames).save(
         file_path / "asteroid_belt.gif",
         save_all=True,
-        append_images=frames[1:],
+        append_images=frames,
         loop=0,
-        duration=(1000 // FPS),
+        duration=(1000 // FPS)
     )
 
     for i in range(N_FRAMES):
         (file_path / f"frames_{i:04d}.png").unlink()
 
-    print(f"Output completed! Please check {file_path / 'asteroid_belt.gif'}")
+    print(f"Output completed! Please check {file_path / "asteroid_belt.gif"}")
     print()
-
 
 if __name__ == "__main__":
     main()

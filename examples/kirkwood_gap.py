@@ -6,9 +6,8 @@ Note: N = 1000 is enough to observe some gaps, but it may not be very clear.
 Since the simulation is O(N), seting N = 50000 would take 24 hours to a few days to 
 finish, and reducing N to 25000 will reduce the runtime by half.
 
-Warning: When combining the individual frames, the pillow library will take a lot of memories.
-         I have reduced number of asteroids, dpi and frame size to reduce the runtime.
-         You may increase them if you want better quality.
+Warning: Do not run multiple instances of this program at the same time, unless you made copies
+         of the whole directory. Otherwise, the final data may overwrite each other.
 
 TODO: Calculations for the 2D scatter plot is not vectorized and is extremely slow. 
 """
@@ -26,9 +25,9 @@ from gravity_sim import GravitySimulator
 from gravity_sim.common import get_bool
 from gravity_sim.common import Progress_bar
 
-N = 10000
+N = 50000
 FPS = 30
-DPI = 150
+DPI = 200
 
 G = 0.00029591220828411956
 M = 1.0
@@ -375,32 +374,27 @@ def main():
         plt.close("all")
 
     progress_bar.stop_task(task)
+    
     print()
     print("Combining frames to gif...")
-    semi_major_axes_frames = []
-    for i in range(save_count_semi_major_axes):
-        semi_major_axes_frames.append(
-            PIL.Image.open(file_path / f"semi_major_axes_frames_{i:04d}.png")
-        )
+    def frames_generator(num_frames, file_prefix):
+        for i in range(num_frames):
+            yield PIL.Image.open(f"file_prefix_{i:04d}.png")
 
-    semi_major_axes_frames[0].save(
+    semi_major_axes_frames = frames_generator(save_count_semi_major_axes, "semi_major_axes_frames")
+    next(semi_major_axes_frames).save(
         file_path / "Kirkwood_gap_semi_major_axes.gif",
         save_all=True,
-        append_images=semi_major_axes_frames[1:],
+        append_images=semi_major_axes_frames,
         loop=0,
-        duration=(1000 // FPS),
+        duration=(1000 // FPS)
     )
 
-    visualization_frames = []
-    for i in range(save_count_visualization):
-        visualization_frames.append(
-            PIL.Image.open(file_path / f"visualization_frames_{i:04d}.png")
-        )
-
-    visualization_frames[0].save(
+    visualization_frames = frames_generator(save_count_visualization, "visualization_frames")
+    next(visualization_frames).save(
         file_path / "Kirkwood_gap_visualization.gif",
         save_all=True,
-        append_images=visualization_frames[1:],
+        append_images=visualization_frames,
         loop=0,
         duration=(1000 // FPS),
     )

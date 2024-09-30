@@ -2,10 +2,7 @@
 Demonstration on using the gravity simulator to simulate the asteroid belt
 You will need to install the `Pillow` library for this script.
 
-Warning: When combining the individual frames, the pillow library will take a lot of memories.
-         You may reduce the frame sizes or integration time if you run out of memory.
-
-         Do not run multiple instances of this program at the same time, unless you made copies
+Warning: Do not run multiple instances of this program at the same time, unless you made copies
          of the whole directory. Otherwise, the final data may overwrite each other.
 """
 
@@ -17,17 +14,20 @@ import numpy as np
 import PIL
 import matplotlib.pyplot as plt
 import rich.progress
+from matplotlib.colors import LinearSegmentedColormap
 
 from gravity_sim import GravitySimulator
 
 N = 50000
 FPS = 30
 DPI = 200
-N_FRAMES = 500 + 1
+N_FRAMES = 2000 + 1
 
 # kpc^3 / (Msun * kyr^2)
 GM_SUN = 132712440041.279419 # km^3 s^-2 M_sun^-1
 G = GM_SUN * (365 * 24 * 3600 * 1000) ** 2 * (3.24077929e-17) ** 3
+
+orange_white_cmap = LinearSegmentedColormap.from_list("orange_white", ["black", "orange", "white"])
 
 class Progress_bar(rich.progress.Progress):
     def __init__(self):
@@ -52,7 +52,7 @@ def main():
     # Galaxy 1
     # Central black hole
     system.add(
-        x=np.array([-35.0, 0.0, 0.0]),
+        x=np.array([-60.0, 0.0, 0.0]),
         v=np.array([0.0, 0.0, 0.0]),
         m=5e6,
         object_name="CentralBH_1",
@@ -79,7 +79,7 @@ def main():
     # Galaxy 2
     # Central black hole
     system.add(
-        x=np.array([35.0, 0.0, 0.0]),
+        x=np.array([60.0, 0.0, 0.0]),
         v=np.array([0.0, 0.0, 0.0]),
         m=5e6,
         object_name="CentralBH_2",
@@ -101,7 +101,6 @@ def main():
             m=masses[i],
             primary_object_name="CentralBH_2",
         )
-
 
     system.center_of_mass_correction()
     # system.save("galaxy_collision")
@@ -128,7 +127,7 @@ def main():
                     no_print=True,
                     no_progress_bar=True,
                     softening_length=1.0,
-                    barnes_hut_theta=2.0,
+                    barnes_hut_theta=1.0,
                 )
             else:
                 grav_sim.resume_simulation(
@@ -138,61 +137,57 @@ def main():
             # Drawing frame
             fig = plt.figure()
             plt.style.use("dark_background")
-            ax = fig.add_subplot(111, projection="3d")
+            ax = fig.add_subplot(111)
 
-            xlim_min = 60
-            xlim_max = -60
-            ylim_min = 60
-            ylim_max = -60
-            zlim_min = 60
-            zlim_max = -60
+            xlim_min = -200
+            xlim_max = 200
+            ylim_min = -100
+            ylim_max = 100
 
             ax.grid(False)
-            ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-            ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-            ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
             ax.set_xticks([])
             ax.set_yticks([])
-            ax.set_zticks([])
             ax.xaxis.set_visible(False)
             ax.yaxis.set_visible(False)
-            ax.zaxis.set_visible(False)
-            ax.xaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-            ax.yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-            ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+            ax.spines['top'].set_color('none')
+            ax.spines['bottom'].set_color('none')
+            ax.spines['left'].set_color('none')
+            ax.spines['right'].set_color('none')
 
             # Galaxy 1
-            ax.scatter(
+            hist1, _, _ = np.histogram2d(
                 grav_sim.simulator.x[:N, 0],
                 grav_sim.simulator.x[:N, 1],
-                grav_sim.simulator.x[:N, 2],
-                color="#fdfd96",
-                marker=".",
-                s=0.2,
-                alpha=0.2,
+                bins=500,
+                range=[[xlim_min, xlim_max], [ylim_min, ylim_max]],
             )
 
             # Galaxy 2
-            ax.scatter(
+            hist2, _, _ = np.histogram2d(
                 grav_sim.simulator.x[N:, 0],
                 grav_sim.simulator.x[N:, 1],
-                grav_sim.simulator.x[N:, 2],
-                color="#87CEEB",
-                marker=".",
-                s=0.2,
-                alpha=0.2,
+                bins=500,
+                range=[[xlim_min, xlim_max], [ylim_min, ylim_max]],
             )
+
+            if i == 0:
+                print(hist1.max(), hist2.max())
+            hist = np.clip(hist1 + hist2, 0.0, 25.0)
+            
+            ax.imshow(
+                hist.T,
+                origin="lower",
+                cmap=orange_white_cmap,
+                extent=[xlim_min, xlim_max, ylim_min, ylim_max],
+            )   
 
             fig.tight_layout()
 
-            ax.set_xlim3d([xlim_min, xlim_max])
-            ax.set_ylim3d([ylim_min, ylim_max])
-            ax.set_zlim3d([zlim_min, zlim_max])
+            ax.set_xlim(xlim_min, xlim_max)
+            ax.set_ylim(ylim_min, ylim_max)
 
             # Set equal aspect ratio to prevent distortion
             ax.set_aspect("equal")
-
-            ax.view_init(elev=90, azim=90)
 
             # Capture the frame
             plt.savefig(file_path / f"frames_{i:04d}.png", dpi=DPI)
@@ -205,16 +200,17 @@ def main():
         
     print()
     print("Combining frames to gif...")
-    frames = []
-    for i in range(N_FRAMES):
-        frames.append(PIL.Image.open(file_path / f"frames_{i:04d}.png"))
+    def frames_generator():
+        for i in range(N_FRAMES):
+            yield PIL.Image.open(file_path / f"frames_{i:04d}.png")
 
-    frames[0].save(
+    frames = frames_generator()
+    next(frames).save(
         file_path / "galaxy_collision.gif",
         save_all=True,
-        append_images=frames[1:],
+        append_images=frames,
         loop=0,
-        duration=(1000 // FPS),
+        duration=(1000 // FPS)
     )
 
     for i in range(N_FRAMES):

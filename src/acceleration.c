@@ -478,9 +478,18 @@ WIN32DLL_API int _barnes_hut_check_region(
 {
     int region = 0;
 
-    if (x > center_x) region |= 4;
-    if (y > center_y) region |= 2;
-    if (z > center_z) region |= 1;
+    if (x > center_x)
+    {
+        region |= 4;
+    }
+    if (y > center_y)
+    {
+        region |= 2;
+    }
+    if (z > center_z) 
+    {
+        region |= 1;
+    }
 
     return region;
 }
