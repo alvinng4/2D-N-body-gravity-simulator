@@ -802,7 +802,7 @@ WIN32DLL_API int rk_embedded(
         }
 
         // Correct overshooting
-        if ((*t) <= tf && (*t) + (*dt) > tf)
+        if (((*t) < tf) && ((*t) + (*dt) > tf))
         {
             (*dt) = tf - (*t);
         }
