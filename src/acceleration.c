@@ -852,19 +852,32 @@ WIN32DLL_API int _barnes_hut_acceleration(
         struct BarnesHutAccStackPool *next;
     } BarnesHutAccStackPool;
 
+    typedef struct BarnesHutSameBranchNode
+    {
+        BarnesHutTreeNode *node;
+        struct BarnesHutSameBranchNode *next;
+    } BarnesHutSameBranchNode;
+    
+    typedef struct BarnesHutSameBranchNodePool
+    {
+        BarnesHutSameBranchNode *node_pool;
+        int pool_size;
+        struct BarnesHutSameBranchNodePool *next;
+    } BarnesHutSameBranchNodePool;
+
     /* Allocate a stack pool for the outer loop */
     BarnesHutAccStackPool *acc_stack_pool = malloc(sizeof(BarnesHutAccStackPool));
     if (acc_stack_pool == NULL)
     {
         fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_acceleration.\n");
-        goto err_memory;
+        goto err_acc_stack_pool_init_memory_1;
     }
     acc_stack_pool->pool_size = objects_count;
     acc_stack_pool->stack_pool = malloc(acc_stack_pool->pool_size * sizeof(BarnesHutAccStack));
     if (acc_stack_pool->stack_pool == NULL)
     {
         fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_acceleration.\n");
-        goto err_memory;
+        goto err_acc_stack_pool_init_memory_2;
     }
     acc_stack_pool->next = NULL;
 
@@ -875,14 +888,14 @@ WIN32DLL_API int _barnes_hut_acceleration(
     if (obj_stack_pool == NULL)
     {
         fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_acceleration.\n");
-        goto err_memory;
+        goto err_obj_stack_pool_init_memory_1;
     }
     obj_stack_pool->pool_size = objects_count;
     obj_stack_pool->stack_pool = malloc(obj_stack_pool->pool_size * sizeof(BarnesHutAccStack));
     if (obj_stack_pool->stack_pool == NULL)
     {
         fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_acceleration.\n");
-        goto err_memory;
+        goto err_obj_stack_pool_init_memory_2;
     }
     obj_stack_pool->next = NULL;
 
@@ -912,13 +925,25 @@ WIN32DLL_API int _barnes_hut_acceleration(
     BarnesHutTreeNode *current_acc_leaf;
 
     // Keep track of the nodes that is in the same branch as the current node
-    int current_same_branch_nodes_count;
-    int total_same_branch_nodes_count = objects_count;
-    BarnesHutTreeNode **acc_same_branch_nodes = malloc(total_same_branch_nodes_count * sizeof(BarnesHutTreeNode*));
-    if (acc_same_branch_nodes == NULL)
+    int current_same_branch_nodes_count = 1;
+    BarnesHutSameBranchNodePool *acc_same_branch_node_pool = malloc(sizeof(BarnesHutSameBranchNodePool));
+    if (acc_same_branch_node_pool == NULL)
     {
-        goto err_memory;
+        fprintf(stderr, "Error: Failed to allocate memory for acc_same_branch_nodes in _barnes_hut_acceleration.\n");
+        goto err_same_branch_node_pool_init_memory_1;
     }
+    acc_same_branch_node_pool->pool_size = objects_count;
+    acc_same_branch_node_pool->node_pool = malloc(acc_same_branch_node_pool->pool_size * sizeof(BarnesHutSameBranchNode));
+    if (acc_same_branch_node_pool->node_pool == NULL)
+    {
+        fprintf(stderr, "Error: Failed to allocate memory for acc_same_branch_nodes in _barnes_hut_acceleration.\n");
+        goto err_same_branch_node_pool_init_memory_2;
+    }
+    BarnesHutSameBranchNodePool *acc_same_branch_node_pool_root = acc_same_branch_node_pool;
+    BarnesHutSameBranchNode *current_same_branch_node = &(acc_same_branch_node_pool->node_pool[0]);
+    BarnesHutSameBranchNode *same_branch_node_root = current_same_branch_node;
+
+    current_same_branch_node->node = root;
 
     while (true)
     {     
@@ -951,17 +976,30 @@ WIN32DLL_API int _barnes_hut_acceleration(
                 found_leaf = true;
                 acc_stack->processed_region = i;
 
-                if (current_same_branch_nodes_count >= total_same_branch_nodes_count)
+                if (current_same_branch_nodes_count >= acc_same_branch_node_pool->pool_size)
                 {
-                    total_same_branch_nodes_count *= 2;
-                    acc_same_branch_nodes = realloc(acc_same_branch_nodes, total_same_branch_nodes_count * sizeof(BarnesHutTreeNode*));
-                    if (acc_same_branch_nodes == NULL)
+                    if (acc_same_branch_node_pool->next == NULL)
                     {
-                        fprintf(stderr, "Error: Failed to allocate memory for acc_same_branch_nodes in _barnes_hut_acceleration.\n");
-                        goto err_memory;
+                        acc_same_branch_node_pool->next = malloc(sizeof(BarnesHutTreeNodePool));
+                        if (acc_same_branch_node_pool->next == NULL)
+                        {
+                            fprintf(stderr, "Error: Failed to allocate memory for acc_same_branch_nodes in _barnes_hut_acceleration.\n");
+                            goto err_memory;
+                        }
+                        acc_same_branch_node_pool->next->pool_size = acc_same_branch_node_pool->pool_size * 2;
+                        acc_same_branch_node_pool->next->node_pool = malloc(acc_same_branch_node_pool->next->pool_size * sizeof(BarnesHutTreeNode));
+                        if (acc_same_branch_node_pool->next->node_pool == NULL)
+                        {
+                            fprintf(stderr, "Error: Failed to allocate memory for acc_same_branch_nodes in _barnes_hut_acceleration.\n");
+                            goto err_memory;
+                        }
+                        acc_same_branch_node_pool->next->next = NULL;
                     }
+                    acc_same_branch_node_pool = acc_same_branch_node_pool->next;
                 }
-                acc_same_branch_nodes[current_same_branch_nodes_count] = child_i;
+                current_same_branch_node->next = &(acc_same_branch_node_pool->node_pool[current_same_branch_nodes_count]);
+                current_same_branch_node = current_same_branch_node->next;
+                current_same_branch_node->node = current_acc_leaf;
                 current_same_branch_nodes_count++;
                 break;
             }
@@ -1000,18 +1038,30 @@ WIN32DLL_API int _barnes_hut_acceleration(
                 acc_stack = new_item;
                 current_acc_node = child_i;
 
-                if (current_same_branch_nodes_count >= total_same_branch_nodes_count)
+                if (current_same_branch_nodes_count >= acc_same_branch_node_pool->pool_size)
                 {
-                    total_same_branch_nodes_count *= 2;
-                    BarnesHutTreeNode **new_acc_same_branch_nodes = realloc(acc_same_branch_nodes, total_same_branch_nodes_count * sizeof(BarnesHutTreeNode*));
-                    if (new_acc_same_branch_nodes == NULL)
+                    if (acc_same_branch_node_pool->next == NULL)
                     {
-                        fprintf(stderr, "Error: Failed to allocate memory for acc_same_branch_nodes in _barnes_hut_acceleration.\n");
-                        goto err_memory;
+                        acc_same_branch_node_pool->next = malloc(sizeof(BarnesHutTreeNodePool));
+                        if (acc_same_branch_node_pool->next == NULL)
+                        {
+                            fprintf(stderr, "Error: Failed to allocate memory for acc_same_branch_nodes in _barnes_hut_acceleration.\n");
+                            goto err_memory;
+                        }
+                        acc_same_branch_node_pool->next->pool_size = acc_same_branch_node_pool->pool_size * 2;
+                        acc_same_branch_node_pool->next->node_pool = malloc(acc_same_branch_node_pool->next->pool_size * sizeof(BarnesHutTreeNode));
+                        if (acc_same_branch_node_pool->next->node_pool == NULL)
+                        {
+                            fprintf(stderr, "Error: Failed to allocate memory for acc_same_branch_nodes in _barnes_hut_acceleration.\n");
+                            goto err_memory;
+                        }
+                        acc_same_branch_node_pool->next->next = NULL;
                     }
-                    acc_same_branch_nodes = new_acc_same_branch_nodes;
+                    acc_same_branch_node_pool = acc_same_branch_node_pool->next;
                 }
-                acc_same_branch_nodes[current_same_branch_nodes_count] = current_acc_node;
+                current_same_branch_node->next = &(acc_same_branch_node_pool->node_pool[current_same_branch_nodes_count]);
+                current_same_branch_node = current_same_branch_node->next;
+                current_same_branch_node->node = current_acc_node;
                 current_same_branch_nodes_count++;
                 break;
             }
@@ -1051,13 +1101,15 @@ WIN32DLL_API int _barnes_hut_acceleration(
 
                     // Check if the node is in the same branch as the current node
                     bool is_same_branch = false;
+                    current_same_branch_node = same_branch_node_root;
                     for (int k = 0; k < current_same_branch_nodes_count; k++)
-                    {
-                        if (acc_same_branch_nodes[k] == child_j)
+                    { 
+                        if (current_same_branch_node->node == child_j)
                         {
                             is_same_branch = true;
                             break;
                         }
+                        current_same_branch_node = current_same_branch_node->next;
                     }
                     if (is_same_branch)
                     {
@@ -1176,13 +1228,29 @@ WIN32DLL_API int _barnes_hut_acceleration(
         free(obj_stack_pool_root);
         obj_stack_pool_root = next;
     }
-
-    free(acc_same_branch_nodes);
+    while (acc_same_branch_node_pool_root != NULL)
+    {
+        BarnesHutSameBranchNodePool *next = acc_same_branch_node_pool_root->next;
+        free(acc_same_branch_node_pool_root->node_pool);
+        free(acc_same_branch_node_pool_root);
+        acc_same_branch_node_pool_root = next;
+    }
 
     return 0;
 
 err_memory:
-    // free(acc_same_branch_nodes);
+err_same_branch_node_pool_init_memory_2:
+    free(acc_same_branch_node_pool->node_pool);
+err_same_branch_node_pool_init_memory_1:
+    free(acc_same_branch_node_pool);
+err_obj_stack_pool_init_memory_2:
+    free(obj_stack_pool->stack_pool);
+err_obj_stack_pool_init_memory_1:
+    free(obj_stack_pool);
+err_acc_stack_pool_init_memory_2:
+    free(acc_stack_pool->stack_pool);
+err_acc_stack_pool_init_memory_1:
+    free(acc_stack_pool);
     return 1;
 }
 
