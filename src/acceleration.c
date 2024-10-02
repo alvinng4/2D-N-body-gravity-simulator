@@ -342,6 +342,7 @@ WIN32DLL_API void acceleration_barnes_hut(
     }
 
     // Free the memory
+    free(leaf_node_pool->node_pool);
     free(leaf_node_pool);
     while (internal_node_pool != NULL)
     {
@@ -835,6 +836,8 @@ WIN32DLL_API int _barnes_hut_acceleration(
     BarnesHutTreeNode *restrict root
 )
 {
+    BarnesHutTreeNode *current_acc_node = root;
+
     typedef struct BarnesHutAccStack
     {
         BarnesHutTreeNode *node;
@@ -848,8 +851,6 @@ WIN32DLL_API int _barnes_hut_acceleration(
         int pool_size;
         struct BarnesHutAccStackPool *next;
     } BarnesHutAccStackPool;
-
-    BarnesHutTreeNode *current_acc_node = root;
 
     /* Allocate a stack pool for the outer loop */
     BarnesHutAccStackPool *acc_stack_pool = malloc(sizeof(BarnesHutAccStackPool));
@@ -931,8 +932,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
         */
         found_leaf = false;
         current_same_branch_nodes_count = 0;
-        int i;
-        for (i = (acc_stack->processed_region + 1); i < 8; i++)
+        for (int i = (acc_stack->processed_region + 1); i < 8; i++)
         {   
             BarnesHutTreeNode *child_i = current_acc_node->children[i];
 
@@ -1003,19 +1003,20 @@ WIN32DLL_API int _barnes_hut_acceleration(
                 if (current_same_branch_nodes_count >= total_same_branch_nodes_count)
                 {
                     total_same_branch_nodes_count *= 2;
-                    acc_same_branch_nodes = realloc(acc_same_branch_nodes, total_same_branch_nodes_count * sizeof(BarnesHutTreeNode*));
-                    if (acc_same_branch_nodes == NULL)
+                    BarnesHutTreeNode **new_acc_same_branch_nodes = realloc(acc_same_branch_nodes, total_same_branch_nodes_count * sizeof(BarnesHutTreeNode*));
+                    if (new_acc_same_branch_nodes == NULL)
                     {
                         fprintf(stderr, "Error: Failed to allocate memory for acc_same_branch_nodes in _barnes_hut_acceleration.\n");
                         goto err_memory;
                     }
+                    acc_same_branch_nodes = new_acc_same_branch_nodes;
                 }
                 acc_same_branch_nodes[current_same_branch_nodes_count] = current_acc_node;
                 current_same_branch_nodes_count++;
                 break;
             }
         }
-
+        
         if (found_leaf)
         {
             BarnesHutTreeNode *current_obj_node = root;
@@ -1089,26 +1090,30 @@ WIN32DLL_API int _barnes_hut_acceleration(
                         else
                         {
                             // Create a new stack item
-                            if ((current_obj_stack_count >= obj_stack_pool->pool_size) && (obj_stack_pool->next == NULL))
+                            if (current_obj_stack_count >= (obj_stack_pool->pool_size))
                             {
-                                obj_stack_pool->next = malloc(sizeof(BarnesHutAccStackPool));
                                 if (obj_stack_pool->next == NULL)
                                 {
-                                    fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_acceleration.\n");
-                                    goto err_memory;
+                                    obj_stack_pool->next = malloc(sizeof(BarnesHutAccStackPool));
+                                    if (obj_stack_pool->next == NULL)
+                                    {
+                                        fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_acceleration.\n");
+                                        goto err_memory;
+                                    }
+                                    obj_stack_pool->next->pool_size = obj_stack_pool->pool_size * 2;
+                                    obj_stack_pool->next->stack_pool = malloc(obj_stack_pool->next->pool_size * sizeof(BarnesHutAccStack));
+                                    if (obj_stack_pool->next->stack_pool == NULL)
+                                    {
+                                        fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_acceleration.\n");
+                                        goto err_memory;
+                                    }
+                                    obj_stack_pool->next->next = NULL;
                                 }
-                                obj_stack_pool->next->pool_size = obj_stack_pool->pool_size * 2;
-                                obj_stack_pool->next->stack_pool = malloc(obj_stack_pool->next->pool_size * sizeof(BarnesHutAccStack));
-                                if (obj_stack_pool->next->stack_pool == NULL)
-                                {
-                                    fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_acceleration.\n");
-                                    goto err_memory;
-                                }
-                                obj_stack_pool->next->next = NULL;
-                                obj_stack_pool = obj_stack_pool->next;
 
+                                obj_stack_pool = obj_stack_pool->next;
                                 current_obj_stack_count = 0;
                             }
+
                             BarnesHutAccStack *new_item = &(obj_stack_pool->stack_pool[current_obj_stack_count]);
                             current_obj_stack_count++;
 
