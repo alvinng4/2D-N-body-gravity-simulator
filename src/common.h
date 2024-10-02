@@ -74,6 +74,15 @@ void vec_cross(
 );
 
 /**
+ * \brief Compute the power of 2
+ * 
+ * \param n Power
+ * 
+ * \return 2^n (int)
+ */
+int fast_pow_of_2(int n);
+
+/**
  * \brief Store the state of the system at a given time
  * 
  * \param file File pointer to the csv file

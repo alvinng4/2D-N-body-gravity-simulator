@@ -21,11 +21,18 @@
 typedef struct BarnesHutTreeNode
 {
     int index;
-    real total_mass;
     real center_of_mass[3];
+    real total_mass;
     real box_width;
     struct BarnesHutTreeNode *children[8];
 } BarnesHutTreeNode;
+
+typedef struct BarnesHutTreeNodePool
+{
+    BarnesHutTreeNode *node_pool;
+    int pool_size;
+    struct BarnesHutTreeNodePool *next;
+} BarnesHutTreeNodePool;    
 
 /**
  * \brief Return acceleration method flag based on the input string
@@ -160,18 +167,22 @@ int _barnes_hut_construct_octree(
     const real *restrict x,
     const real *restrict m,
     real width,
-    BarnesHutTreeNode *restrict child_node_pool,
+    BarnesHutTreeNodePool *leaf_node_pool,
+    BarnesHutTreeNodePool *internal_node_pool,
     BarnesHutTreeNode *restrict root
 );
 
-int _barnes_hut_compute_center_of_mass(BarnesHutTreeNode *root);
+int _barnes_hut_compute_center_of_mass(
+    int objects_count,
+    BarnesHutTreeNode *restrict root
+);
 
 int _barnes_hut_acceleration(
-    real theta,
     int objects_count,
     real *restrict a,
     real G,
     real softening_length,
+    real theta,
     BarnesHutTreeNode *restrict root
 );
 
@@ -182,11 +193,6 @@ void _barnes_hut_helper_acceleration_pair(
     real G,
     real *restrict R,
     real R_norm
-);
-
-int _barnes_hut_free_octree(
-    BarnesHutTreeNode *restrict child_node_pool,
-    BarnesHutTreeNode *restrict root
 );
 
 #endif

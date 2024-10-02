@@ -69,6 +69,11 @@ WIN32DLL_API void vec_cross(
     result[2] = vec_1[0] * vec_2[1] - vec_1[1] * vec_2[0];
 }
 
+WIN32DLL_API int fast_pow_of_2(int n)
+{
+    return 1 << n; // Use bitwise shift operator to calculate 2^n
+}
+
 WIN32DLL_API void write_to_csv_file(
     FILE *restrict file,
     double time,
