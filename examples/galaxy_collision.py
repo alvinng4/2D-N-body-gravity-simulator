@@ -139,7 +139,6 @@ def main():
                 grav_sim.resume_simulation(
                     1e6,
                 )
-            print(grav_sim.simulator.dt)
 
             # Drawing frame
             fig = plt.figure()

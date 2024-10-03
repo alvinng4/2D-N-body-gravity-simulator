@@ -124,9 +124,9 @@ def main():
         for i in range(N_FRAMES):
             if i == 0:
                 grav_sim.launch_simulation(
-                    "rk4",
+                    "rkf78",
                     grav_sim.years_to_days(5.0 / N_FRAMES),
-                    dt=grav_sim.years_to_days(0.0001),
+                    tolerance=1e-6,
                     acceleration_method="massless",
                     storing_method="no_store",
                     no_print=True,
@@ -231,7 +231,7 @@ def main():
     for i in range(N_FRAMES):
         (file_path / f"frames_{i:04d}.png").unlink()
 
-    print(f"Output completed! Please check {file_path / "asteroid_belt.gif"}")
+    print(f"Output completed! Please check {file_path / 'asteroid_belt.gif'}")
     print()
 
 if __name__ == "__main__":
