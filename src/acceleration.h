@@ -169,11 +169,12 @@ int _barnes_hut_construct_octree(
     real width,
     BarnesHutTreeNodePool *leaf_node_pool,
     BarnesHutTreeNodePool *internal_node_pool,
+    int *restrict actual_interval_nodes_count,
     BarnesHutTreeNode *restrict root
 );
 
 int _barnes_hut_compute_center_of_mass(
-    int objects_count,
+    int actual_interval_nodes_count,
     BarnesHutTreeNode *restrict root
 );
 
@@ -183,6 +184,7 @@ int _barnes_hut_acceleration(
     real G,
     real softening_length,
     real theta,
+    int actual_interval_nodes_count,
     BarnesHutTreeNode *restrict root
 );
 
