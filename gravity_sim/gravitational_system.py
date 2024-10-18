@@ -231,9 +231,9 @@ class GravitationalSystem:
         true_anomaly: float,
         m: float,
         primary_object_name: str=None,
-        primary_object_x: np.ndarray = np.array([0.0, 0.0, 0.0]),
-        primary_object_v: np.ndarray = np.array([0.0, 0.0, 0.0]),
-        primary_object_m: float = 0.0,
+        primary_object_x: np.ndarray=None,
+        primary_object_v: np.ndarray=None,
+        primary_object_m: float=None,
         object_name: str = None,
     ):
         """
@@ -271,9 +271,15 @@ class GravitationalSystem:
         """
         if primary_object_name is not None:
             primary_object_idx = self.objects_names.index(primary_object_name)
-            primary_object_x = self.x[primary_object_idx]
-            primary_object_v = self.v[primary_object_idx]
-            primary_object_m = self.m[primary_object_idx]
+
+            if primary_object_x is None:
+                primary_object_x = self.x[primary_object_idx]
+
+            if primary_object_v is None:
+                primary_object_v = self.v[primary_object_idx]
+
+            if primary_object_m is None:
+                primary_object_m = self.m[primary_object_idx]
 
         x, v = common.keplerian_to_cartesian(
             semi_major_axis=semi_major_axis,

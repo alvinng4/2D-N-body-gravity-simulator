@@ -110,14 +110,18 @@ Some projects are done with the API. The scripts are stored at the `examples` fo
 <img src="./examples/media/Kirkwood_gap_semi_major_axes.png" alt="Image" width="300">
 <img src="./examples/media/Kirkwood_gap_visualization.png" alt="Image" width="225">
 
-Videos: 
+Videos:
 * https://www.youtube.com/watch?v=AEyjIF-8zT0
 * https://www.youtube.com/watch?v=jHLLr7ACvDQ
 
 #### Galaxy collision
+Note: This simulation is for demonstration only. The initial conditions are very different from actual galaxies.
+
 <img src="./examples/media/galaxy_collision.png" alt="Image" width="300">
 
-Video: https://www.youtube.com/watch?v=fn01d6Jsz2s
+Videos:
+* https://www.youtube.com/watch?v=g45o0Vf4zDk
+* https://www.youtube.com/watch?v=OdfgFYLYcVw
 
 ## GravitySimulator API
 

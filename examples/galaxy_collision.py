@@ -1,9 +1,6 @@
 """
-Demonstration on using the gravity simulator to simulate the asteroid belt
+Demonstration on using the gravity simulator to simulate galaxy collisions
 You will need to install the `Pillow` library for this script.
-
-Currently, we use RKF4(5) with tolerance=1e-8, but the calculation is actually not very accurate.
-You may need to lower the tolerance or use higher order integrators like RKF7(8) or DOPRI.
 
 For the acceleration function, you can choose between "barnes-hut" and "pairwise_float_cuda", but
 the latter would requires you to recompile the C library with `USE_CUDA=1` and also a NVIDIA GPU.
@@ -24,10 +21,10 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from gravity_sim import GravitySimulator
 
-N = 50000
+N = 75000 * 2
 FPS = 30
 DPI = 200
-N_FRAMES = 1150
+N_FRAMES = 1000
 
 # kpc^3 / (Msun * kyr^2)
 GM_SUN = 132712440041.279419 # km^3 s^-2 M_sun^-1
@@ -49,66 +46,110 @@ class Progress_bar(rich.progress.Progress):
         
 def main():
     # ---------- Initialization ---------- #
-    print("Initializing the system...", end="", flush=True)
+    print("Initializing the system...")
     grav_sim = GravitySimulator()
     system = grav_sim.create_system()
     grav_sim.set_current_system(system)
     system.G = G
     
     # Galaxy 1
-    # Central black hole
-    system.add(
-        x=np.array([-60.0, 0.0, 0.0]),
-        v=np.array([0.0, 0.0, 0.0]),
-        m=5e6,
-        object_name="CentralBH_1",
-    )
-    # Disk with random radius
-    rng = np.random.RandomState(seed=0)
-    radius = rng.uniform(1, 30, size=(N - 1))
-    argument_of_periapsis = rng.uniform(0, 2 * np.pi, size=(N - 1))
-    long_asc_node = rng.uniform(0, 2 * np.pi, size=(N - 1))
-    true_anomaly = rng.uniform(0, 2 * np.pi, size=(N - 1))
-    masses = rng.uniform(1e-1, 1e1, size=(N - 1))
-    for i in range(N - 1):
-        system.add_keplerian(
-            semi_major_axis=radius[i],
-            eccentricity=0.0,
-            inclination=0.0,
-            longitude_of_ascending_node=long_asc_node[i],
-            argument_of_periapsis=argument_of_periapsis[i],
-            true_anomaly=true_anomaly[i],
-            m=masses[i],
-            primary_object_name="CentralBH_1",
+    init_conditions = np.load("galaxy_collision_init_conditions.npz")
+    x = init_conditions["x"]
+    v = init_conditions["v"]
+    m = init_conditions["m"]
+
+    for i in range(N // 2):
+        system.add(
+            x=x[i] + np.array([-60.0, 0.0, 0.0]),
+            v=v[i],
+            m=m[i],
         )
+    system.center_of_mass_correction()
 
     # Galaxy 2
-    # Central black hole
-    system.add(
-        x=np.array([60.0, 0.0, 0.0]),
-        v=np.array([0.0, 0.0, 0.0]),
-        m=5e6,
-        object_name="CentralBH_2",
-    )
-    # Disk with random radius
-    radius = rng.uniform(1, 30, size=(N - 1))
-    argument_of_periapsis = rng.uniform(0, 2 * np.pi, size=(N - 1))
-    long_asc_node = rng.uniform(0, 2 * np.pi, size=(N - 1))
-    true_anomaly = rng.uniform(0, 2 * np.pi, size=(N - 1))
-    masses = rng.uniform(1e-1, 1e1, size=(N - 1))
-    for i in range(N - 1):
-        system.add_keplerian(
-            semi_major_axis=radius[i],
-            eccentricity=0.0,
-            inclination=0.0,
-            longitude_of_ascending_node=long_asc_node[i],
-            argument_of_periapsis=argument_of_periapsis[i],
-            true_anomaly=true_anomaly[i],
-            m=masses[i],
-            primary_object_name="CentralBH_2",
+    for i in range(N // 2):
+        system.add(
+            x=system.x[i] + np.array([120.0, 0.0, 0.0]),
+            v=v[i],
+            m=m[i],
         )
-
     system.center_of_mass_correction()
+
+    # # Galaxy 1
+    # # Central black hole
+    # system.add(
+    #     x=np.array([-60.0, 0.0, 0.0]),
+    #     v=np.array([0.0, 0.0, 0.0]),
+    #     m=5000.0,
+    #     object_name="CentralBH_1",
+    # )
+    # total_mass = 5000.0
+    # # Disk with random radius
+    # rng = np.random.RandomState(seed=0)
+    # radius = np.zeros(N - 1)
+    # for i in range(N - 1):
+    #     radii = 0
+    #     while (radii > 20.0 or radii < 1.0):
+    #         radii = rng.exponential(3)
+    #     radius[i] = radii
+
+    # radius.sort()
+    # argument_of_periapsis = rng.uniform(0, 2 * np.pi, size=(N - 1))
+    # long_asc_node = rng.uniform(0, 2 * np.pi, size=(N - 1))
+    # true_anomaly = rng.uniform(0, 2 * np.pi, size=(N - 1))
+    # masses = rng.uniform(100, 1000, size=(N - 1))
+    # for i in range(N - 1):
+    #     system.add_keplerian(
+    #         semi_major_axis=radius[i],
+    #         eccentricity=0.0,
+    #         inclination=0.0,
+    #         longitude_of_ascending_node=long_asc_node[i],
+    #         argument_of_periapsis=argument_of_periapsis[i],
+    #         true_anomaly=true_anomaly[i],
+    #         m=masses[i],
+    #         primary_object_name="CentralBH_1",
+    #         primary_object_m=total_mass,
+    #     )
+    #     total_mass += masses[i]
+
+    # # Galaxy 2
+    # # Central black hole
+    # system.add(
+    #     x=np.array([60.0, 0.0, 0.0]),
+    #     v=np.array([0.0, 0.0, 0.0]),
+    #     m=5000.0,
+    #     object_name="CentralBH_2",
+    # )
+    # total_mass = 5000.0
+    # # Disk with random radius
+    # radius = np.zeros(N - 1)
+    # for i in range(N - 1):
+    #     radii = 0
+    #     while (radii > 20.0 or radii < 1.0):
+    #         radii = rng.exponential(3)
+    #     radius[i] = radii
+
+    # radius.sort()
+    # argument_of_periapsis = rng.uniform(0, 2 * np.pi, size=(N - 1))
+    # long_asc_node = rng.uniform(0, 2 * np.pi, size=(N - 1))
+    # true_anomaly = rng.uniform(0, 2 * np.pi, size=(N - 1))
+    # masses = rng.uniform(100, 1000, size=(N - 1))
+    # for i in range(N - 1):
+    #     system.add_keplerian(
+    #         semi_major_axis=radius[i],
+    #         eccentricity=0.0,
+    #         inclination=0.0,
+    #         longitude_of_ascending_node=long_asc_node[i],
+    #         argument_of_periapsis=argument_of_periapsis[i],
+    #         true_anomaly=true_anomaly[i],
+    #         m=masses[i],
+    #         primary_object_name="CentralBH_2",
+    #         primary_object_m=total_mass,
+    #     )
+    #     total_mass += masses[i]
+
+    # system.center_of_mass_correction()
+
     # system.save("galaxy_collision")
 
     print("Done!")
@@ -137,7 +178,7 @@ def main():
                 )
             else:
                 grav_sim.resume_simulation(
-                    1e6,
+                    2.5e5,
                 )
 
             # Drawing frame
@@ -178,6 +219,7 @@ def main():
 
             if i == 0:
                 print(hist1.max(), hist2.max())
+                print(hist1.mean(), hist2.mean())
             hist = np.clip(hist1 + hist2, 0.0, 25.0)
             
             ax.imshow(
@@ -203,6 +245,16 @@ def main():
 
     progress_bar.update(task, completed=N_FRAMES)
     plt.close("all")
+
+    # import pickle
+    # with open(file_path / "galaxy_collision_positions.pkl", "wb") as file:
+    #     pickle.dump(grav_sim.simulator.x, file)
+
+    # with open(file_path / "galaxy_collision_velocities.pkl", "wb") as file:
+    #     pickle.dump(grav_sim.simulator.v, file)
+
+    # with open(file_path / "galaxy_collision_masses.pkl", "wb") as file:
+    #     pickle.dump(grav_sim.simulator.m, file)
         
     print()
     print("Combining frames to gif...")
