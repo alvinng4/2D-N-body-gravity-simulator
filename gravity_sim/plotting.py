@@ -822,6 +822,8 @@ def plot_compare_rel_energy(grav_plot):
 
                     i = 0
                     for row in reader:
+                        if row[0].startswith("#"):
+                            continue
                         sol_time[i] = row[0]
                         energy[i] = row[2]
                         i += 1
