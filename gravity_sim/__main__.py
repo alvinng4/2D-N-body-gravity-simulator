@@ -950,8 +950,8 @@ class GravitySimulatorCLI:
             self.computed_eccentricity = True
 
         try:
-            colors = [self.SOLAR_SYSTEM_COLORS[objects_name] for objects_name in self.gravitational_system.objects_names]
-            labels = [objects_name for objects_name in self.gravitational_system.objects_names]
+            colors = [self.SOLAR_SYSTEM_COLORS[objects_name] for objects_name in self.gravitational_system.objects_names[1:]]
+            labels = [objects_name for objects_name in self.gravitational_system.objects_names[1:]]
             legend = True
         except KeyError:
             colors = None
@@ -975,8 +975,8 @@ class GravitySimulatorCLI:
             self.computed_inclination = True
 
         try:
-            colors = [self.SOLAR_SYSTEM_COLORS[objects_name] for objects_name in self.gravitational_system.objects_names]
-            labels = [objects_name for objects_name in self.gravitational_system.objects_names]
+            colors = [self.SOLAR_SYSTEM_COLORS[objects_name] for objects_name in self.gravitational_system.objects_names[1:]]
+            labels = [objects_name for objects_name in self.gravitational_system.objects_names[1:]]
             legend = True
         except KeyError:
             colors = None
