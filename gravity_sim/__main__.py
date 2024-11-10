@@ -797,6 +797,7 @@ class GravitySimulatorCLI:
                 smaller_than=self.simulator.data_size,
             )
             is_dynamic_axes = common.get_bool("Use dynamic axes limit?")
+            is_maintain_fixed_dt = common.get_bool("Use fixed step size for the animation?")
 
             print()
 
@@ -808,6 +809,7 @@ class GravitySimulatorCLI:
             print(f"dpi: {dpi:.1f}")
             print(f"Trail length: {traj_len}")
             print(f"Dynamic axes limits: {is_dynamic_axes}")
+            print(f"Fixed step size: {is_maintain_fixed_dt}")
 
             is_cancel = False
             if common.get_bool("Proceed?"):
@@ -830,6 +832,7 @@ class GravitySimulatorCLI:
             dpi,
             traj_len,
             is_dynamic_axes,
+            is_maintain_fixed_dt,
             is_cancel,
         )
 
@@ -841,6 +844,7 @@ class GravitySimulatorCLI:
             dpi,
             traj_len,
             is_dynamic_axes,
+            is_maintain_fixed_dt,
             is_cancel,
         ) = self._animation_get_user_input()
         if not is_cancel:
@@ -863,6 +867,7 @@ class GravitySimulatorCLI:
             dpi,
             traj_len=traj_len,
             is_dynamic_axes=is_dynamic_axes,
+            is_maintain_fixed_dt=is_maintain_fixed_dt,
             colors=colors,
             labels=labels,
             legend=legend,
@@ -879,6 +884,7 @@ class GravitySimulatorCLI:
             dpi,
             traj_len,
             is_dynamic_axes,
+            is_maintain_fixed_dt,
             is_cancel,
         ) = self._animation_get_user_input()
         if not is_cancel:
@@ -901,6 +907,7 @@ class GravitySimulatorCLI:
             dpi,
             traj_len=traj_len,
             is_dynamic_axes=is_dynamic_axes,
+            is_maintain_fixed_dt=is_maintain_fixed_dt,
             colors=colors,
             labels=labels,
             legend=legend,
