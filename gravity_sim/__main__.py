@@ -847,8 +847,8 @@ class GravitySimulatorCLI:
             is_maintain_fixed_dt,
             is_cancel,
         ) = self._animation_get_user_input()
-        if not is_cancel:
-            print("Animating 2D trajectory (xy plane) in .gif...")
+        # if not is_cancel:
+        #     print("Animating 2D trajectory (xy plane) in .gif...")
 
         try:
             colors = [self.SOLAR_SYSTEM_COLORS[objects_name] for objects_name in self.gravitational_system.objects_names]
@@ -887,8 +887,8 @@ class GravitySimulatorCLI:
             is_maintain_fixed_dt,
             is_cancel,
         ) = self._animation_get_user_input()
-        if not is_cancel:
-            print("Animating 3D trajectory in .gif...")
+        # if not is_cancel:
+        #     print("Animating 3D trajectory in .gif...")
 
         try:
             colors = [self.SOLAR_SYSTEM_COLORS[objects_name] for objects_name in self.gravitational_system.objects_names]
