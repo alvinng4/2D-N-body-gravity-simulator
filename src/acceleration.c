@@ -27,6 +27,10 @@ WIN32DLL_API int get_acceleration_method_flag(
     {
         return ACCELERATION_METHOD_BARNES_HUT;
     }
+    else if (strcmp(acceleration_method, "fast_multipole") == 0)
+    {
+        return ACCELERATION_METHOD_FAST_MULTIPOLE;
+    }
     #ifdef USE_CUDA
         else if (strcmp(acceleration_method, "pairwise_cuda") == 0)
         {
@@ -35,10 +39,6 @@ WIN32DLL_API int get_acceleration_method_flag(
         else if (strcmp(acceleration_method, "pairwise_float_cuda") == 0)
         {
             return ACCELERATION_METHOD_PAIRWISE_FLOAT_CUDA;
-        }
-        else if (strcmp(acceleration_method, "pairwise_float_comp_sum_cuda") == 0)
-        {
-            return ACCELERATION_METHOD_PAIRWISE_FLOAT_COMP_SUM_CUDA;
         }
     #endif
     else
@@ -73,6 +73,9 @@ WIN32DLL_API void acceleration(
         // Barnes-Hut acceleration
         case ACCELERATION_METHOD_BARNES_HUT:
             acceleration_barnes_hut(objects_count, x, a, m, G, softening_length, barnes_hut_theta);
+            break;
+        case ACCELERATION_METHOD_FAST_MULTIPOLE:
+            acceleration_fast_multipole(objects_count, x, a, m, G, softening_length);
             break;
         #ifdef USE_CUDA
             // CUDA Pairwise acceleration
@@ -269,6 +272,14 @@ WIN32DLL_API void acceleration_barnes_hut(
     real barnes_hut_theta
 )
 {
+    // Empty the input array
+    for (int i = 0; i < objects_count; i++)
+    {
+        a[i * 3 + 0] = 0.0;
+        a[i * 3 + 1] = 0.0;
+        a[i * 3 + 2] = 0.0;
+    }
+
     /* Find the width and center of the bounding box */
     real center[3];
     real width;
@@ -840,14 +851,6 @@ WIN32DLL_API int _barnes_hut_acceleration(
     acc_stack->last = NULL;
     acc_stack->processed_region = -1;
 
-    // Empty the input array
-    for (int i = 0; i < objects_count; i++)
-    {
-        a[i * 3 + 0] = 0.0;
-        a[i * 3 + 1] = 0.0;
-        a[i * 3 + 2] = 0.0;
-    }
-
     bool found_leaf;
     int acc_object_index = 0;
     BarnesHutTreeNode *current_acc_leaf;
@@ -1102,4 +1105,24 @@ WIN32DLL_API void _barnes_hut_helper_acceleration_pair(
     a[acc_object_index * 3 + 0] -= temp_value * R[0];
     a[acc_object_index * 3 + 1] -= temp_value * R[1];
     a[acc_object_index * 3 + 2] -= temp_value * R[2];
+}
+
+WIN32DLL_API void acceleration_fast_multipole(
+    int objects_count,
+    real *restrict x,
+    real *restrict a,
+    const real *restrict m,
+    real G,
+    real softening_length
+)
+{       
+    // Empty the input array
+    for (int i = 0; i < objects_count; i++)
+    {
+        a[i * 3 + 0] = 0.0;
+        a[i * 3 + 1] = 0.0;
+        a[i * 3 + 2] = 0.0;
+    }
+
+    fprintf(stderr, "Error: The fast multipole method is not implemented yet.\n");
 }

@@ -110,10 +110,9 @@ launch_simulation() is the main method for launching the simulation.
 - `pairwise`
     * Brute force pairwise calculations for gravitational acceleration
     * Time complexity: $O(N^2)$
-    * Variants: `pairwise_cuda`, `pairwise_float_cuda`, `pairwise_float_comp_sum_cuda` (Not available for `WHFast`)
+    * Variants: `pairwise_cuda`, `pairwise_float_cuda` (Not available for `WHFast`)
         - Parallelized calculation with CUDA GPU acceleration.
         - `pairwise_float_cuda` uses single precision to provide furthur speed up with a loss of precision
-        - `pairwise_float_comp_sum_cuda` uses compensated summation to reduce precision loss (See [Compensated summation](#compensated-summation))
 - `massless`
     * Similar to `pairwise`, but seperate the calculations for massive and massless particles
     * Time complexity: $O(M^2 + MN)$, where $M$ and $N$ are the number of massive and massless particles respectively
