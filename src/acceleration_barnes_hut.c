@@ -210,7 +210,7 @@ WIN32DLL_API int _barnes_hut_check_region(
 
     if (x > center_x)
     {
-        region |= 4;
+        region |= 1;
     }
     if (y > center_y)
     {
@@ -218,7 +218,7 @@ WIN32DLL_API int _barnes_hut_check_region(
     }
     if (z > center_z) 
     {
-        region |= 1;
+        region |= 4;
     }
 
     return region;
@@ -339,31 +339,31 @@ WIN32DLL_API int _barnes_hut_construct_octree(
 
                     // Calculate the center of the node (not center of mass) when constructing the octree
                     // It will be replaced with the center of mass in the next step
-                    if (region < 4)
-                    {
-                        new_node->center_of_mass[0] = current_node->center_of_mass[0] - width / ((real) fast_pow_of_2(depth + 1));
-                    }
-                    else
+                    if (region & 1)
                     {
                         new_node->center_of_mass[0] = current_node->center_of_mass[0] + width / ((real) fast_pow_of_2(depth + 1));
                     }
-
-                    if (region == 0 || region == 1 || region == 4 || region == 5)
-                    {
-                        new_node->center_of_mass[1] = current_node->center_of_mass[1] - width / ((real) fast_pow_of_2(depth + 1));
-                    }
                     else
+                    {
+                        new_node->center_of_mass[0] = current_node->center_of_mass[0] - width / ((real) fast_pow_of_2(depth + 1));
+                    }
+
+                    if (region & 2)
                     {
                         new_node->center_of_mass[1] = current_node->center_of_mass[1] + width / ((real) fast_pow_of_2(depth + 1));
                     }
-
-                    if (region % 2 == 0)
+                    else
                     {
-                        new_node->center_of_mass[2] = current_node->center_of_mass[2] - width / ((real) fast_pow_of_2(depth + 1));
+                        new_node->center_of_mass[1] = current_node->center_of_mass[1] - width / ((real) fast_pow_of_2(depth + 1));
+                    }
+
+                    if (region & 4)
+                    {
+                        new_node->center_of_mass[2] = current_node->center_of_mass[2] + width / ((real) fast_pow_of_2(depth + 1));
                     }
                     else
                     {
-                        new_node->center_of_mass[2] = current_node->center_of_mass[2] + width / ((real) fast_pow_of_2(depth + 1));
+                        new_node->center_of_mass[2] = current_node->center_of_mass[2] - width / ((real) fast_pow_of_2(depth + 1));
                     }
 
                     current_node->children[region] = new_node;
@@ -443,31 +443,31 @@ WIN32DLL_API int _barnes_hut_construct_octree(
 
                     // Calculate the center of the node when constructing the octree
                     // It will be replaced with the center of mass later
-                    if (region < 4)
-                    {
-                        new_node->center_of_mass[0] = current_node->center_of_mass[0] - width / ((real) fast_pow_of_2(depth + 1));
-                    }
-                    else
+                    if (region & 1)
                     {
                         new_node->center_of_mass[0] = current_node->center_of_mass[0] + width / ((real) fast_pow_of_2(depth + 1));
                     }
-
-                    if (region == 0 || region == 1 || region == 4 || region == 5)
-                    {
-                        new_node->center_of_mass[1] = current_node->center_of_mass[1] - width / ((real) fast_pow_of_2(depth + 1));
-                    }
                     else
+                    {
+                        new_node->center_of_mass[0] = current_node->center_of_mass[0] - width / ((real) fast_pow_of_2(depth + 1));
+                    }
+
+                    if (region & 2)
                     {
                         new_node->center_of_mass[1] = current_node->center_of_mass[1] + width / ((real) fast_pow_of_2(depth + 1));
                     }
-                    
-                    if (region % 2 == 0)
+                    else
                     {
-                        new_node->center_of_mass[2] = current_node->center_of_mass[2] - width / ((real) fast_pow_of_2(depth + 1));
+                        new_node->center_of_mass[1] = current_node->center_of_mass[1] - width / ((real) fast_pow_of_2(depth + 1));
+                    }
+                    
+                    if (region & 4)
+                    {
+                        new_node->center_of_mass[2] = current_node->center_of_mass[2] + width / ((real) fast_pow_of_2(depth + 1));
                     }
                     else
                     {
-                        new_node->center_of_mass[2] = current_node->center_of_mass[2] + width / ((real) fast_pow_of_2(depth + 1));
+                        new_node->center_of_mass[2] = current_node->center_of_mass[2] - width / ((real) fast_pow_of_2(depth + 1));
                     }
 
                     current_node->children[region] = new_node;
