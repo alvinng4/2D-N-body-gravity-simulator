@@ -124,13 +124,14 @@ WIN32DLL_API void acceleration_barnes_hut(
     }
 
     /* Calculate the center of mass */
-    if (_barnes_hut_compute_center_of_mass(actual_internal_nodes_count, root) == 1)
+    int max_depth;
+    if (_barnes_hut_compute_center_of_mass(actual_internal_nodes_count, &max_depth, root) == 1)
     {
         goto err_center_of_mass_memory;
     }
 
     /* Calculate the acceleration */
-    if (_barnes_hut_acceleration(a, G, softening_length, barnes_hut_theta, actual_internal_nodes_count, root) == 1)
+    if (_barnes_hut_acceleration(a, G, softening_length, barnes_hut_theta, actual_internal_nodes_count, max_depth, root) == 1)
     {
         goto err_acceleration_memory;
     }
@@ -693,6 +694,7 @@ err_memory:
 
 WIN32DLL_API int _barnes_hut_compute_center_of_mass(
     int actual_internal_nodes_count,
+    int *restrict max_depth,
     BarnesHutTreeNode *restrict root
 )
 {
@@ -722,6 +724,9 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(
     stack->sum_of_mass_times_distance[1] = 0.0;
     stack->sum_of_mass_times_distance[2] = 0.0;
     stack->processed_region = -1;
+
+    *max_depth = 0;
+    int current_depth = 0;
 
     while (true)
     {
@@ -767,12 +772,43 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(
 
                 stack = new_item;
                 current_node = child_i;
+
+                current_depth++;
                 break;
             }
+        }
+
+        if (current_depth > *max_depth)
+        {
+            *max_depth = current_depth;
         }
     
         if (stack->processed_region >= 7)
         {
+            // For max depth calculation, check if (1) there is at least one children and (2) they are all leaves
+            bool there_is_at_least_one_child = false;
+            bool all_children_are_leaves = true;
+            for (int i = 0; i < 8; i++)
+            {
+                BarnesHutTreeNode *child_i = current_node->children[i];
+                if (child_i != NULL)
+                {
+                    there_is_at_least_one_child = true;
+                    if (child_i->index < 0)
+                    {
+                        all_children_are_leaves = false;
+                        break;
+                    }
+                }
+            }
+
+            if (there_is_at_least_one_child && all_children_are_leaves)
+            {
+                if (current_depth + 1 > *max_depth)
+                {
+                    *max_depth = current_depth + 1;
+                }
+            }
             BarnesHutCOMStack *parent = stack->last;
             
             // Root node has no parent
@@ -795,6 +831,8 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(
 
             stack = parent;
             current_node = parent_node;
+
+            current_depth--;
         }
     }
 
@@ -813,6 +851,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
     real softening_length,
     real theta,
     int actual_internal_nodes_count,
+    int max_depth,
     BarnesHutTreeNode *restrict root
 )
 {
@@ -861,7 +900,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
     BarnesHutTreeNode *current_acc_leaf;
 
     // Keep track of the nodes that is in the same branch as the current node
-    int same_branch_node_pool_size = actual_internal_nodes_count + 1;
+    int same_branch_node_pool_size = max_depth + 1;
     BarnesHutSameBranchNode *acc_same_branch_node_pool = malloc(same_branch_node_pool_size * sizeof(BarnesHutSameBranchNode));
     if (acc_same_branch_node_pool == NULL)
     {
@@ -1072,6 +1111,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
             parent->processed_region++;
             acc_stack = parent;
             current_acc_node = parent->node;
+            current_same_branch_nodes_count--;
         }
     }
 

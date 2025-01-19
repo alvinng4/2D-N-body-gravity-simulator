@@ -98,6 +98,7 @@ int _barnes_hut_shorten_tree(
 
 int _barnes_hut_compute_center_of_mass(
     int actual_interval_nodes_count,
+    int *restrict max_depth,
     BarnesHutTreeNode *restrict root
 );
 
@@ -107,6 +108,7 @@ int _barnes_hut_acceleration(
     real softening_length,
     real theta,
     int actual_interval_nodes_count,
+    int max_depth,
     BarnesHutTreeNode *restrict root
 );
 
