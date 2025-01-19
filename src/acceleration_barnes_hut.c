@@ -4,7 +4,7 @@
 #include "common.h"
 #include "acceleration_barnes_hut.h"
 
-// // For debug
+// For debug
 // void visualize_octree_nodes(BarnesHutTreeNode *node, int depth) 
 // {
 //     if (node == NULL) 
@@ -19,10 +19,10 @@
 //     }
 
 //     // Print node information
-//     printf("Node (depth %d): is_leaf=%s, index=%d, mass=%.10f, center=(%.10f, %.10f, %.10f), width=%.2f\n",
+//     printf("Node (depth %d): is_leaf=%s, index=%d, mass=%.10f, center=(%.10f, %.10f, %.10f), width=%.2f, intern_obj_count=%d\n",
 //            depth, node->index >= 0 ? "true" : "false", node->index, node->total_mass,
 //            node->center_of_mass[0], node->center_of_mass[1], node->center_of_mass[2],
-//            node->box_width);
+//            node->box_width, node->internal_nodes_objects_count);
 
 //     // Recursively visualize children
 //     for (int i = 0; i < 8; i++) 
@@ -55,6 +55,7 @@ WIN32DLL_API void acceleration_barnes_hut(
     _calculate_bounding_box(objects_count, x, center, &width);
 
     /* Construct the octree */
+    // root node
     BarnesHutTreeNode *restrict root = malloc(sizeof(BarnesHutTreeNode));
     if (root == NULL) 
     {
@@ -67,6 +68,7 @@ WIN32DLL_API void acceleration_barnes_hut(
     root->center_of_mass[1] = center[1];
     root->center_of_mass[2] = center[2];
     root->box_width = width;
+    root->internal_nodes_objects_count = 0;
     root->children[0] = NULL;
     root->children[1] = NULL;
     root->children[2] = NULL;
@@ -76,6 +78,7 @@ WIN32DLL_API void acceleration_barnes_hut(
     root->children[6] = NULL;
     root->children[7] = NULL;
 
+    // leaf node pool
     BarnesHutTreeNodePool *leaf_node_pool = malloc(sizeof(BarnesHutTreeNodePool));
     if (leaf_node_pool == NULL)
     {
@@ -90,6 +93,8 @@ WIN32DLL_API void acceleration_barnes_hut(
         fprintf(stderr, "Error: Failed to allocate memory for leaf nodes in acceleration_barnes_hut.\n");
         goto err_leaf_pool_memory;
     }
+
+    // internal node pool
     BarnesHutTreeNodePool *internal_node_pool = malloc(sizeof(BarnesHutTreeNodePool));
     if (internal_node_pool == NULL)
     {
@@ -104,9 +109,16 @@ WIN32DLL_API void acceleration_barnes_hut(
         fprintf(stderr, "Error: Failed to allocate memory for internal nodes in acceleration_barnes_hut.\n");
         goto err_internal_pool_memory;
     }
-
+    
+    // Construct the octree
     int actual_interval_nodes_count = 0;
     if (_barnes_hut_construct_octree(objects_count, x, m, width, leaf_node_pool, internal_node_pool, &actual_interval_nodes_count, root) == 1)
+    {
+        goto err_octree_memory;
+    }
+
+    // Shorten the tree if internal node have less than 8 leaves
+    if (_barnes_hut_shorten_tree(&actual_interval_nodes_count, root) == 1)
     {
         goto err_octree_memory;
     }
@@ -239,6 +251,17 @@ WIN32DLL_API int _barnes_hut_construct_octree(
         leaf_node->center_of_mass[0] = x[i * 3 + 0];
         leaf_node->center_of_mass[1] = x[i * 3 + 1];
         leaf_node->center_of_mass[2] = x[i * 3 + 2];
+        // Technically not used
+        // leaf_node->box_width = 0.0;
+        // leaf_node->internal_nodes_objects_count = 0;
+        // leaf_node->children[0] = NULL;
+        // leaf_node->children[1] = NULL;
+        // leaf_node->children[2] = NULL;
+        // leaf_node->children[3] = NULL;
+        // leaf_node->children[4] = NULL;
+        // leaf_node->children[5] = NULL;
+        // leaf_node->children[6] = NULL;
+        // leaf_node->children[7] = NULL;
 
         BarnesHutTreeNode *collider_leaf = NULL;
         
@@ -259,6 +282,8 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                 current_node->center_of_mass[1],
                 current_node->center_of_mass[2]
             );
+
+            (current_node->internal_nodes_objects_count)++;
             
             if (collider_leaf == NULL)
             {
@@ -302,6 +327,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     new_node->index = -1;
                     new_node->total_mass = collider_leaf->total_mass + m[i];
                     new_node->box_width = width / ((real) fast_pow_of_2(depth));
+                    new_node->internal_nodes_objects_count = 1;
                     new_node->children[0] = NULL;
                     new_node->children[1] = NULL;
                     new_node->children[2] = NULL;
@@ -405,6 +431,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                     new_node->center_of_mass[1] = current_node->center_of_mass[1];
                     new_node->center_of_mass[2] = current_node->center_of_mass[2];
                     new_node->box_width = width / ((real) fast_pow_of_2(depth));
+                    new_node->internal_nodes_objects_count = 1;
                     new_node->children[0] = NULL;
                     new_node->children[1] = NULL;
                     new_node->children[2] = NULL;
@@ -453,6 +480,211 @@ WIN32DLL_API int _barnes_hut_construct_octree(
 
     return 0;
 
+err_memory:
+    return 1;
+}
+
+WIN32DLL_API int _barnes_hut_shorten_tree(
+    int *restrict actual_interval_nodes_count,
+    BarnesHutTreeNode *restrict root
+)
+{
+    if (root->internal_nodes_objects_count <= 8)
+    {
+        return 0;
+    }
+
+    typedef struct BarnesHutShortenTreeStack
+    {
+        BarnesHutTreeNode *node;
+        struct BarnesHutShortenTreeStack *last;
+        int processed_region;
+    } BarnesHutShortenTreeStack;
+
+    BarnesHutTreeNode *current_node = root;
+
+    int shorten_stack_pool_size = *actual_interval_nodes_count + root->internal_nodes_objects_count + 1;
+    BarnesHutShortenTreeStack *shorten_tree_stack_pool = malloc(shorten_stack_pool_size * sizeof(BarnesHutShortenTreeStack));
+    if (shorten_tree_stack_pool == NULL)
+    {
+        fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_shorten_tree.\n");
+        goto err_memory;
+    }
+    int current_stack_count = 1;
+    BarnesHutShortenTreeStack *stack = &shorten_tree_stack_pool[0];
+
+    stack->node = root;
+    stack->last = NULL;
+    stack->processed_region = -1;
+
+    bool is_shorten = false;
+    BarnesHutTreeNode *shorten_leaves[8];
+    int num_leaves_to_find;
+    int found_leaves_count;
+    while (true)
+    {
+        for (int i = (stack->processed_region + 1); i < 8; i++)
+        {
+            BarnesHutTreeNode *child_i = current_node->children[i];
+
+            // Check if the node is empty 
+            // or occupied by a leaf (index >= 0 means it is a leaf) 
+            if (
+                (child_i == NULL)
+                || (child_i->index >= 0)
+            )
+            {
+                stack->processed_region = i;
+                continue;
+            }
+
+            else
+            {
+                // Create a new stack item
+                if (current_stack_count >= shorten_stack_pool_size)
+                {
+                    fprintf(stderr, "Error: The stack pool is full in _barnes_hut_shorten_tree.\n");
+                    goto err_memory;
+                }
+                BarnesHutShortenTreeStack *new_item = &shorten_tree_stack_pool[current_stack_count];
+                current_stack_count++;
+
+                new_item->node = child_i;
+                new_item->last = stack;
+                new_item->processed_region = -1;
+
+                stack = new_item;
+                current_node = child_i;
+                break;
+            }
+        }
+
+        if (stack->processed_region >= 7)
+        {
+            // Root node has no parent
+            if (stack->last == NULL)
+            {
+                break;
+            }
+
+            stack = stack->last;
+            (stack->processed_region)++;
+            current_node = stack->node;
+        }
+
+        else if (current_node->internal_nodes_objects_count <= 8)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                BarnesHutTreeNode *temp_child = current_node->children[i];
+                // Check if there is internal node
+                if ((temp_child != NULL) && (temp_child->index < 0))
+                {
+                    is_shorten = true;
+                    break;
+                }
+            }
+        }
+
+        if (!is_shorten)
+        {
+            continue;
+        }
+
+        // Find the leaves
+        num_leaves_to_find = current_node->internal_nodes_objects_count;
+        found_leaves_count = 0;
+        BarnesHutShortenTreeStack *find_leaves_stack = stack;
+        BarnesHutTreeNode *find_leaves_current_node = current_node;
+        while (true)
+        {
+            for (int i = find_leaves_stack->processed_region + 1; i < 8; i++)
+            {
+                BarnesHutTreeNode *temp_child = find_leaves_current_node->children[i];
+                
+                // Check if the node is empty
+                if (temp_child == NULL)
+                {
+                    find_leaves_stack->processed_region = i;
+                    continue;
+                }
+
+                // Check if the node is occupied by a leaf
+                else if (temp_child->index >= 0)
+                {
+                    shorten_leaves[found_leaves_count] = temp_child;
+                    found_leaves_count++;
+                    find_leaves_stack->processed_region = i;
+                    break;
+                }
+
+                else
+                {
+                    // Create a new stack item
+                    if (current_stack_count >= shorten_stack_pool_size)
+                    {
+                        fprintf(stderr, "Error: The stack pool is full in _barnes_hut_shorten_tree2.\n");
+                        goto err_memory;
+                    }
+                    BarnesHutShortenTreeStack *new_item = &shorten_tree_stack_pool[current_stack_count];
+                    current_stack_count++;
+
+                    new_item->node = temp_child;
+                    new_item->last = find_leaves_stack;
+                    new_item->processed_region = -1;
+
+                    find_leaves_stack = new_item;
+                    find_leaves_current_node = temp_child;
+                    break;
+                }
+            }
+
+            if (found_leaves_count >= num_leaves_to_find)
+            {
+                break;
+            }
+
+            if (find_leaves_stack->processed_region >= 7)
+            {
+                BarnesHutShortenTreeStack *parent = find_leaves_stack->last;
+                if (parent == NULL)
+                {
+                    break;
+                }
+
+                find_leaves_stack = parent;
+                find_leaves_current_node = parent->node;
+                (find_leaves_stack->processed_region)++;
+            }
+        }
+
+        if (found_leaves_count < num_leaves_to_find)
+        {
+            fprintf(stderr, "Error: Failed to find all leaves in _barnes_hut_shorten_tree.\n");
+            goto err_shorten_tree;
+        }
+
+        for (int i = 0, placed_leaves_count = 0; (i < 8) && (placed_leaves_count < found_leaves_count); i++)
+        {
+            current_node->children[i] = shorten_leaves[placed_leaves_count];
+            placed_leaves_count++;
+        }
+        for (int i = num_leaves_to_find; i < 8; i++)
+        {
+            current_node->children[i] = NULL;
+        }
+
+        is_shorten = false;
+        stack->processed_region = 7;
+    }
+
+    // Free the stack pool
+    free(shorten_tree_stack_pool);
+
+    return 0;
+
+err_shorten_tree:
+    free(shorten_tree_stack_pool);
 err_memory:
     return 1;
 }
@@ -539,16 +771,19 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(
     
         if (stack->processed_region >= 7)
         {
-            real total_mass = current_node->total_mass;
-            current_node->center_of_mass[0] = stack->sum_of_mass_times_distance[0] / total_mass;
-            current_node->center_of_mass[1] = stack->sum_of_mass_times_distance[1] / total_mass;
-            current_node->center_of_mass[2] = stack->sum_of_mass_times_distance[2] / total_mass;
-
             BarnesHutCOMStack *parent = stack->last;
+            
+            // Root node has no parent
             if (parent == NULL)
             {
                 break;
             }
+
+            real total_mass = current_node->total_mass;
+
+            current_node->center_of_mass[0] = stack->sum_of_mass_times_distance[0] / total_mass;
+            current_node->center_of_mass[1] = stack->sum_of_mass_times_distance[1] / total_mass;
+            current_node->center_of_mass[2] = stack->sum_of_mass_times_distance[2] / total_mass;
 
             BarnesHutTreeNode *parent_node = parent->node;
             parent->sum_of_mass_times_distance[0] += total_mass * current_node->center_of_mass[0];

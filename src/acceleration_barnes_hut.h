@@ -14,6 +14,7 @@ typedef struct BarnesHutTreeNode
     real center_of_mass[3];
     real total_mass;
     real box_width;
+    int internal_nodes_objects_count;
     struct BarnesHutTreeNode *children[8];
 } BarnesHutTreeNode;
 
@@ -85,6 +86,12 @@ int _barnes_hut_construct_octree(
     real width,
     BarnesHutTreeNodePool *leaf_node_pool,
     BarnesHutTreeNodePool *internal_node_pool,
+    int *restrict actual_interval_nodes_count,
+    BarnesHutTreeNode *restrict root
+);
+
+// Shorten the tree if having less than 8 leaves
+int _barnes_hut_shorten_tree(
     int *restrict actual_interval_nodes_count,
     BarnesHutTreeNode *restrict root
 );
