@@ -111,26 +111,26 @@ WIN32DLL_API void acceleration_barnes_hut(
     }
     
     // Construct the octree
-    int actual_interval_nodes_count = 0;
-    if (_barnes_hut_construct_octree(objects_count, x, m, width, leaf_node_pool, internal_node_pool, &actual_interval_nodes_count, root) == 1)
+    int actual_internal_nodes_count = 0;
+    if (_barnes_hut_construct_octree(objects_count, x, m, width, leaf_node_pool, internal_node_pool, &actual_internal_nodes_count, root) == 1)
     {
         goto err_octree_memory;
     }
 
     // Shorten the tree if internal node have less than 8 leaves
-    if (_barnes_hut_shorten_tree(&actual_interval_nodes_count, root) == 1)
+    if (_barnes_hut_shorten_tree(&actual_internal_nodes_count, root) == 1)
     {
         goto err_octree_memory;
     }
 
     /* Calculate the center of mass */
-    if (_barnes_hut_compute_center_of_mass(actual_interval_nodes_count, root) == 1)
+    if (_barnes_hut_compute_center_of_mass(actual_internal_nodes_count, root) == 1)
     {
         goto err_center_of_mass_memory;
     }
 
     /* Calculate the acceleration */
-    if (_barnes_hut_acceleration(a, G, softening_length, barnes_hut_theta, actual_interval_nodes_count, root) == 1)
+    if (_barnes_hut_acceleration(a, G, softening_length, barnes_hut_theta, actual_internal_nodes_count, root) == 1)
     {
         goto err_acceleration_memory;
     }
@@ -231,7 +231,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
     real width,
     BarnesHutTreeNodePool *leaf_node_pool,
     BarnesHutTreeNodePool *internal_node_pool,
-    int *restrict actual_interval_nodes_count,
+    int *restrict actual_internal_nodes_count,
     BarnesHutTreeNode *restrict root
 )
 {
@@ -321,7 +321,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                         current_internal_nodes_count = 0;
                     }
                     BarnesHutTreeNode *new_node = &(internal_node_pool->node_pool[current_internal_nodes_count]);
-                    (*actual_interval_nodes_count)++;
+                    (*actual_internal_nodes_count)++;
                     current_internal_nodes_count++;
 
                     new_node->index = -1;
@@ -422,7 +422,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                         current_internal_nodes_count = 0;
                     }
                     BarnesHutTreeNode *new_node = &(internal_node_pool->node_pool[current_internal_nodes_count]);
-                    (*actual_interval_nodes_count)++;
+                    (*actual_internal_nodes_count)++;
                     current_internal_nodes_count++;
 
                     new_node->index = -1;
@@ -485,7 +485,7 @@ err_memory:
 }
 
 WIN32DLL_API int _barnes_hut_shorten_tree(
-    int *restrict actual_interval_nodes_count,
+    int *restrict actual_internal_nodes_count,
     BarnesHutTreeNode *restrict root
 )
 {
@@ -503,7 +503,7 @@ WIN32DLL_API int _barnes_hut_shorten_tree(
 
     BarnesHutTreeNode *current_node = root;
 
-    int shorten_stack_pool_size = *actual_interval_nodes_count + root->internal_nodes_objects_count + 1;
+    int shorten_stack_pool_size = *actual_internal_nodes_count + root->internal_nodes_objects_count + 1;
     BarnesHutShortenTreeStack *shorten_tree_stack_pool = malloc(shorten_stack_pool_size * sizeof(BarnesHutShortenTreeStack));
     if (shorten_tree_stack_pool == NULL)
     {
@@ -591,6 +591,7 @@ WIN32DLL_API int _barnes_hut_shorten_tree(
             continue;
         }
 
+        /* Shorten the tree */
         // Find the leaves
         num_leaves_to_find = current_node->internal_nodes_objects_count;
         found_leaves_count = 0;
@@ -635,6 +636,7 @@ WIN32DLL_API int _barnes_hut_shorten_tree(
 
                     find_leaves_stack = new_item;
                     find_leaves_current_node = temp_child;
+                    *actual_internal_nodes_count -= 1;
                     break;
                 }
             }
@@ -690,7 +692,7 @@ err_memory:
 }
 
 WIN32DLL_API int _barnes_hut_compute_center_of_mass(
-    int actual_interval_nodes_count,
+    int actual_internal_nodes_count,
     BarnesHutTreeNode *restrict root
 )
 {
@@ -704,7 +706,7 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(
 
     BarnesHutTreeNode *current_node = root;
 
-    int COM_stack_pool_size = actual_interval_nodes_count + 1;
+    int COM_stack_pool_size = actual_internal_nodes_count + 1;
     BarnesHutCOMStack *COM_stack_pool = malloc(COM_stack_pool_size * sizeof(BarnesHutCOMStack));
     if (COM_stack_pool == NULL)
     {
@@ -810,7 +812,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
     real G,
     real softening_length,
     real theta,
-    int actual_interval_nodes_count,
+    int actual_internal_nodes_count,
     BarnesHutTreeNode *restrict root
 )
 {
@@ -830,7 +832,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
     } BarnesHutSameBranchNode;
     
     /* Allocate a stack pool for the outer loop */
-    int acc_stack_pool_size = actual_interval_nodes_count + 1;
+    int acc_stack_pool_size = actual_internal_nodes_count + 1;
     BarnesHutAccStack *acc_stack_pool = malloc(acc_stack_pool_size * sizeof(BarnesHutAccStack));
     if (acc_stack_pool == NULL)
     {
@@ -839,7 +841,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
     }
 
     /* Allocate a stack pool for the inner loop */
-    int obj_stack_pool_size = actual_interval_nodes_count + 1;
+    int obj_stack_pool_size = actual_internal_nodes_count + 1;
     BarnesHutAccStack *obj_stack_pool = malloc(obj_stack_pool_size * sizeof(BarnesHutAccStack));
     if (obj_stack_pool == NULL)
     {
@@ -859,7 +861,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
     BarnesHutTreeNode *current_acc_leaf;
 
     // Keep track of the nodes that is in the same branch as the current node
-    int same_branch_node_pool_size = actual_interval_nodes_count + 1;
+    int same_branch_node_pool_size = actual_internal_nodes_count + 1;
     BarnesHutSameBranchNode *acc_same_branch_node_pool = malloc(same_branch_node_pool_size * sizeof(BarnesHutSameBranchNode));
     if (acc_same_branch_node_pool == NULL)
     {
