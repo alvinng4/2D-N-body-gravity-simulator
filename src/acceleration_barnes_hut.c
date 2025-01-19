@@ -31,6 +31,82 @@
 //     }
 // }
 
+/**
+ * \brief Calculate the bounding box of the system
+ * 
+ * \param objects_count Number of objects
+ * \param x Array of position vectors
+ */
+IN_FILE void _calculate_bounding_box(
+    int objects_count,
+    const real *restrict x,
+    real *restrict center,
+    real *restrict width
+);
+
+/**
+ * \brief Check the region relative to the center
+ *  
+ * \param x x-coordinate
+ * \param y y-coordinate
+ * \param z z-coordinate
+ * \param center_x x-coordinate of the center
+ * \param center_y y-coordinate of the center
+ * \param center_z z-coordinate of the center
+ * 
+ * \return Region index
+ */
+IN_FILE int _check_region(
+    real x,
+    real y,
+    real z,
+    real center_x,
+    real center_y,
+    real center_z
+);
+
+IN_FILE int _construct_octree(
+    int objects_count,
+    const real *restrict x,
+    const real *restrict m,
+    real width,
+    BarnesHutTreeNodePool *leaf_node_pool,
+    BarnesHutTreeNodePool *internal_node_pool,
+    int *restrict actual_interval_nodes_count,
+    BarnesHutTreeNode *restrict root
+);
+
+// Shorten the tree if having less than 8 leaves
+IN_FILE int _shorten_tree(
+    int *restrict actual_interval_nodes_count,
+    BarnesHutTreeNode *restrict root
+);
+
+IN_FILE int _compute_center_of_mass(
+    int actual_interval_nodes_count,
+    int *restrict max_depth,
+    BarnesHutTreeNode *restrict root
+);
+
+IN_FILE int _acceleration_step(
+    real *restrict a,
+    real G,
+    real softening_length,
+    real theta,
+    int actual_interval_nodes_count,
+    int max_depth,
+    BarnesHutTreeNode *restrict root
+);
+
+IN_FILE void _helper_acceleration_pair(
+    BarnesHutTreeNode *restrict current_acc_leaf,
+    BarnesHutTreeNode *restrict current_obj_leaf,
+    real *restrict a,
+    real G,
+    real *restrict R,
+    real R_norm
+);
+
 WIN32DLL_API void acceleration_barnes_hut(
     int objects_count,
     real *restrict x,
@@ -112,26 +188,26 @@ WIN32DLL_API void acceleration_barnes_hut(
     
     // Construct the octree
     int actual_internal_nodes_count = 0;
-    if (_barnes_hut_construct_octree(objects_count, x, m, width, leaf_node_pool, internal_node_pool, &actual_internal_nodes_count, root) == 1)
+    if (_construct_octree(objects_count, x, m, width, leaf_node_pool, internal_node_pool, &actual_internal_nodes_count, root) == 1)
     {
         goto err_octree_memory;
     }
 
     // Shorten the tree if internal node have less than 8 leaves
-    if (_barnes_hut_shorten_tree(&actual_internal_nodes_count, root) == 1)
+    if (_shorten_tree(&actual_internal_nodes_count, root) == 1)
     {
         goto err_octree_memory;
     }
 
     /* Calculate the center of mass */
     int max_depth;
-    if (_barnes_hut_compute_center_of_mass(actual_internal_nodes_count, &max_depth, root) == 1)
+    if (_compute_center_of_mass(actual_internal_nodes_count, &max_depth, root) == 1)
     {
         goto err_center_of_mass_memory;
     }
 
     /* Calculate the acceleration */
-    if (_barnes_hut_acceleration(a, G, softening_length, barnes_hut_theta, actual_internal_nodes_count, max_depth, root) == 1)
+    if (_acceleration_step(a, G, softening_length, barnes_hut_theta, actual_internal_nodes_count, max_depth, root) == 1)
     {
         goto err_acceleration_memory;
     }
@@ -163,7 +239,7 @@ err_root_memory:
 //    return 1;
 }
 
-WIN32DLL_API void _calculate_bounding_box(
+IN_FILE void _calculate_bounding_box(
     int objects_count,
     const real *restrict x,
     real *restrict center,
@@ -198,7 +274,7 @@ WIN32DLL_API void _calculate_bounding_box(
     *width = fmax(fmax(width_x, width_y), width_z);
 }
 
-WIN32DLL_API int _barnes_hut_check_region(
+IN_FILE int _check_region(
     real x,
     real y,
     real z,
@@ -225,7 +301,7 @@ WIN32DLL_API int _barnes_hut_check_region(
     return region;
 }
 
-WIN32DLL_API int _barnes_hut_construct_octree(
+IN_FILE int _construct_octree(
     int objects_count,
     const real *restrict x,
     const real *restrict m,
@@ -275,7 +351,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
             *         the center of mass. It will
             *         be replaced in the next step.
             */
-            int region = _barnes_hut_check_region(
+            int region = _check_region(
                 x[i * 3 + 0],
                 x[i * 3 + 1],
                 x[i * 3 + 2],
@@ -306,14 +382,14 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                         internal_node_pool->next = malloc(sizeof(BarnesHutTreeNodePool));
                         if (internal_node_pool->next == NULL)
                         {
-                            fprintf(stderr, "Error: Failed to allocate memory for internal nodes in _barnes_hut_construct_octree.\n");
+                            fprintf(stderr, "Error: Failed to allocate memory for internal nodes in _construct_octree.\n");
                             goto err_memory;
                         }
                         internal_node_pool->next->pool_size = internal_node_pool -> pool_size * 2;
                         internal_node_pool->next->node_pool = malloc(internal_node_pool->next->pool_size * sizeof(BarnesHutTreeNode));
                         if (internal_node_pool->next->node_pool == NULL)
                         {
-                            fprintf(stderr, "Error: Failed to allocate memory for internal nodes in _barnes_hut_construct_octree.\n");
+                            fprintf(stderr, "Error: Failed to allocate memory for internal nodes in _construct_octree.\n");
                             goto err_memory;
                         }
                         internal_node_pool->next->next = NULL;
@@ -382,7 +458,7 @@ WIN32DLL_API int _barnes_hut_construct_octree(
             }
             else
             {
-                int collider_region = _barnes_hut_check_region(
+                int collider_region = _check_region(
                     collider_leaf->center_of_mass[0],
                     collider_leaf->center_of_mass[1],
                     collider_leaf->center_of_mass[2],
@@ -407,14 +483,14 @@ WIN32DLL_API int _barnes_hut_construct_octree(
                         internal_node_pool->next = malloc(sizeof(BarnesHutTreeNodePool));
                         if (internal_node_pool->next == NULL)
                         {
-                            fprintf(stderr, "Error: Failed to allocate memory for internal nodes in _barnes_hut_construct_octree.\n");
+                            fprintf(stderr, "Error: Failed to allocate memory for internal nodes in _construct_octree.\n");
                             goto err_memory;
                         }
                         internal_node_pool->next->pool_size = internal_node_pool -> pool_size * 2;
                         internal_node_pool->next->node_pool = malloc(internal_node_pool->next->pool_size * sizeof(BarnesHutTreeNode));
                         if (internal_node_pool->next->node_pool == NULL)
                         {
-                            fprintf(stderr, "Error: Failed to allocate memory for internal nodes in _barnes_hut_construct_octree.\n");
+                            fprintf(stderr, "Error: Failed to allocate memory for internal nodes in _construct_octree.\n");
                             goto err_memory;
                         }
                         internal_node_pool->next->next = NULL;
@@ -485,7 +561,7 @@ err_memory:
     return 1;
 }
 
-WIN32DLL_API int _barnes_hut_shorten_tree(
+IN_FILE int _shorten_tree(
     int *restrict actual_internal_nodes_count,
     BarnesHutTreeNode *restrict root
 )
@@ -508,7 +584,7 @@ WIN32DLL_API int _barnes_hut_shorten_tree(
     BarnesHutShortenTreeStack *shorten_tree_stack_pool = malloc(shorten_stack_pool_size * sizeof(BarnesHutShortenTreeStack));
     if (shorten_tree_stack_pool == NULL)
     {
-        fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_shorten_tree.\n");
+        fprintf(stderr, "Error: Failed to allocate memory for stack in _shorten_tree.\n");
         goto err_memory;
     }
     int current_stack_count = 1;
@@ -544,7 +620,7 @@ WIN32DLL_API int _barnes_hut_shorten_tree(
                 // Create a new stack item
                 if (current_stack_count >= shorten_stack_pool_size)
                 {
-                    fprintf(stderr, "Error: The stack pool is full in _barnes_hut_shorten_tree.\n");
+                    fprintf(stderr, "Error: The stack pool is full in _shorten_tree.\n");
                     goto err_memory;
                 }
                 BarnesHutShortenTreeStack *new_item = &shorten_tree_stack_pool[current_stack_count];
@@ -625,7 +701,7 @@ WIN32DLL_API int _barnes_hut_shorten_tree(
                     // Create a new stack item
                     if (current_stack_count >= shorten_stack_pool_size)
                     {
-                        fprintf(stderr, "Error: The stack pool is full in _barnes_hut_shorten_tree2.\n");
+                        fprintf(stderr, "Error: The stack pool is full in _barnes_hut_shorten_tree.\n");
                         goto err_memory;
                     }
                     BarnesHutShortenTreeStack *new_item = &shorten_tree_stack_pool[current_stack_count];
@@ -663,7 +739,7 @@ WIN32DLL_API int _barnes_hut_shorten_tree(
 
         if (found_leaves_count < num_leaves_to_find)
         {
-            fprintf(stderr, "Error: Failed to find all leaves in _barnes_hut_shorten_tree.\n");
+            fprintf(stderr, "Error: Failed to find all leaves in _shorten_tree.\n");
             goto err_shorten_tree;
         }
 
@@ -692,7 +768,7 @@ err_memory:
     return 1;
 }
 
-WIN32DLL_API int _barnes_hut_compute_center_of_mass(
+IN_FILE int _compute_center_of_mass(
     int actual_internal_nodes_count,
     int *restrict max_depth,
     BarnesHutTreeNode *restrict root
@@ -712,7 +788,7 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(
     BarnesHutCOMStack *COM_stack_pool = malloc(COM_stack_pool_size * sizeof(BarnesHutCOMStack));
     if (COM_stack_pool == NULL)
     {
-        fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_compute_center_of_mass.\n");
+        fprintf(stderr, "Error: Failed to allocate memory for stack in _compute_center_of_mass.\n");
         goto err_memory;
     }
     int current_stack_count = 1;
@@ -757,7 +833,7 @@ WIN32DLL_API int _barnes_hut_compute_center_of_mass(
                 // Create a new stack item
                 if (current_stack_count >= COM_stack_pool_size)
                 {
-                    fprintf(stderr, "Error: The stack pool is full in _barnes_hut_compute_center_of_mass.\n");
+                    fprintf(stderr, "Error: The stack pool is full in _compute_center_of_mass.\n");
                     goto err_memory;
                 }
                 BarnesHutCOMStack *new_item = &COM_stack_pool[current_stack_count];
@@ -845,7 +921,7 @@ err_memory:
     return 1;
 }
 
-WIN32DLL_API int _barnes_hut_acceleration(
+IN_FILE int _acceleration_step(
     real *restrict a,
     real G,
     real softening_length,
@@ -875,7 +951,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
     BarnesHutAccStack *acc_stack_pool = malloc(acc_stack_pool_size * sizeof(BarnesHutAccStack));
     if (acc_stack_pool == NULL)
     {
-        fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_acceleration.\n");
+        fprintf(stderr, "Error: Failed to allocate memory for stack in _acceleration_step.\n");
         goto err_acc_stack_pool_init_memory;
     }
 
@@ -884,7 +960,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
     BarnesHutAccStack *obj_stack_pool = malloc(obj_stack_pool_size * sizeof(BarnesHutAccStack));
     if (obj_stack_pool == NULL)
     {
-        fprintf(stderr, "Error: Failed to allocate memory for stack in _barnes_hut_acceleration.\n");
+        fprintf(stderr, "Error: Failed to allocate memory for stack in _acceleration_step.\n");
         goto err_obj_stack_pool_init_memory;
     }
 
@@ -904,7 +980,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
     BarnesHutSameBranchNode *acc_same_branch_node_pool = malloc(same_branch_node_pool_size * sizeof(BarnesHutSameBranchNode));
     if (acc_same_branch_node_pool == NULL)
     {
-        fprintf(stderr, "Error: Failed to allocate memory for acc_same_branch_nodes in _barnes_hut_acceleration.\n");
+        fprintf(stderr, "Error: Failed to allocate memory for acc_same_branch_nodes in _acceleration_step.\n");
         goto err_same_branch_node_pool_init_memory;
     }
     int current_same_branch_nodes_count = 1;
@@ -945,7 +1021,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
 
                 if (current_same_branch_nodes_count >= same_branch_node_pool_size)
                 {
-                    fprintf(stderr, "Error: The same branch node pool is full in _barnes_hut_acceleration.\n");
+                    fprintf(stderr, "Error: The same branch node pool is full in _acceleration_step.\n");
                     goto err_memory;
                 }
                 current_same_branch_node->next = &acc_same_branch_node_pool[current_same_branch_nodes_count];
@@ -961,7 +1037,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
                 // Create a new stack item
                 if (current_acc_stack_count >= acc_stack_pool_size)
                 {
-                    fprintf(stderr, "Error: The stack pool is full in _barnes_hut_acceleration.\n");
+                    fprintf(stderr, "Error: The stack pool is full in _acceleration_step.\n");
                     goto err_memory;
                 }
                 BarnesHutAccStack *new_item = &acc_stack_pool[current_acc_stack_count];
@@ -976,7 +1052,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
 
                 if (current_same_branch_nodes_count >= same_branch_node_pool_size)
                 {
-                    fprintf(stderr, "Error: The same branch node pool is full in _barnes_hut_acceleration.\n");
+                    fprintf(stderr, "Error: The same branch node pool is full in _barnes_hut_acceleration_step.\n");
                     goto err_memory;
                 }
                 current_same_branch_node->next = &acc_same_branch_node_pool[current_same_branch_nodes_count];
@@ -1053,7 +1129,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
                         {
                             if (child_j->index != acc_object_index)
                             {
-                                _barnes_hut_helper_acceleration_pair(current_acc_leaf, child_j, a, G, R, R_norm);
+                                _helper_acceleration_pair(current_acc_leaf, child_j, a, G, R, R_norm);
                             }
                             obj_stack->processed_region = j;
                             break;
@@ -1063,7 +1139,7 @@ WIN32DLL_API int _barnes_hut_acceleration(
                             // Create a new stack item
                             if (current_obj_stack_count >= (obj_stack_pool_size))
                             {
-                                fprintf(stderr, "Error: The stack pool is full in _barnes_hut_acceleration.\n");
+                                fprintf(stderr, "Error: The stack pool is full in _acceleration_step.\n");
                                 goto err_memory;
                             }
 
@@ -1132,7 +1208,7 @@ err_acc_stack_pool_init_memory:
     return 1;
 }
 
-WIN32DLL_API void _barnes_hut_helper_acceleration_pair(
+IN_FILE void _helper_acceleration_pair(
     BarnesHutTreeNode *restrict current_acc_leaf,
     BarnesHutTreeNode *restrict current_obj_leaf,
     real *restrict a,

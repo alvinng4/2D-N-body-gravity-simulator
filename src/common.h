@@ -18,6 +18,7 @@
     #define WIN32DLL_API 
 #endif
 
+#define IN_FILE static
 #define BUFFER_SIZE 50000
 
 typedef int64_t int64;
