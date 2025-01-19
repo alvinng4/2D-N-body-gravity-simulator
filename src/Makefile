@@ -1,7 +1,7 @@
 CFLAGS = -O3 -std=gnu99 -Wall -Wextra -Wpedantic
 LDFLAGS = -shared
 LIBS = -lm
-SRCS = tools.c integrator_whfast.c integrator_ias15.c integrator_rk_embedded.c integrator_simple.c acceleration.c common.c
+SRCS = tools.c integrator_whfast.c integrator_ias15.c integrator_rk_embedded.c integrator_simple.c acceleration_barnes_hut.c acceleration_fast_multipole.c acceleration.c common.c
 OBJS = $(SRCS:.c=.o)
 
 CUDA_FLAGS = -Xcompiler

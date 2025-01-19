@@ -56,7 +56,7 @@ It is possible to change this value in the API by changing `system.G`.
 * Animations, simulation results, etc. will be stored to `gravity_sim/result` by default, unless a file path is specified.
 * Complex animations like the asteroid belt cannot be done solely with the API functions. Sample scripts are provided in this repository
 * Check the `examples` folder for API tutorial and sample projects
-* For WHFast, features including CUDA acceleration, `compensated_summation`, `barnes-hut` and `resume_simulation` are not available due to implementation difficulties.
+* For WHFast, features including CUDA acceleration, `compensated_summation`, `barnes_hut` and `resume_simulation` are not available due to implementation difficulties.
 
 ## GravitySimulator API
 
@@ -116,11 +116,11 @@ launch_simulation() is the main method for launching the simulation.
 - `massless`
     * Similar to `pairwise`, but seperate the calculations for massive and massless particles
     * Time complexity: $O(M^2 + MN)$, where $M$ and $N$ are the number of massive and massless particles respectively
-- `barnes-hut`
-    * Calculate gravitational acceleration with barnes-hut algorithm
+- `barnes_hut`
+    * Calculate gravitational acceleration with Barnes-Hut algorithm
     * Time complexity: $O(N \log{N})$
     * `**kwargs`: `barnes_hut_theta`
-        * Threshold for Barnes-hut algorithm, default = 0.5
+        * Threshold for Barnes-Hut algorithm, default = 0.5
 
 - `fast_multipole`
     * Calculate gravitational acceleration with fast multipole method (FMM)

@@ -146,7 +146,7 @@ class Simulator:
             
         self.tolerance = tolerance
 
-        if self.acceleration_method == "barnes-hut" and (self.m == 0.0).any():
+        if self.acceleration_method == "barnes_hut" and (self.m == 0.0).any():
             warnings.warn(
                 "barnes-hut: Massless particles detected, adding m=1e-30 to massless particles."
             )

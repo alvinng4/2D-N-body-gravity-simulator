@@ -104,7 +104,7 @@ class WHFast:
                 ("sol_dt", ctypes.POINTER(ctypes.c_double)),
             ]
 
-        if acceleration_method == "barnes-hut":
+        if acceleration_method == "barnes_hut":
             raise NotImplementedError("Barnes-Hut is not implemented for WHFast")
 
         self.c_lib.whfast.restype = ctypes.c_int
