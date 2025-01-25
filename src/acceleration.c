@@ -8,9 +8,6 @@
 #include "acceleration.h"
 #include "acceleration_barnes_hut.h"
 #include "acceleration_fast_multipole.h"
-#ifdef USE_CUDA
-    #include "acceleration_cuda.cuh"
-#endif
 
 WIN32DLL_API int get_acceleration_method_flag(
     const char *restrict acceleration_method
@@ -32,16 +29,6 @@ WIN32DLL_API int get_acceleration_method_flag(
     {
         return ACCELERATION_METHOD_FAST_MULTIPOLE;
     }
-    #ifdef USE_CUDA
-        else if (strcmp(acceleration_method, "pairwise_cuda") == 0)
-        {
-            return ACCELERATION_METHOD_PAIRWISE_CUDA;
-        }
-        else if (strcmp(acceleration_method, "pairwise_float_cuda") == 0)
-        {
-            return ACCELERATION_METHOD_PAIRWISE_FLOAT_CUDA;
-        }
-    #endif
     else
     {
         return -1;

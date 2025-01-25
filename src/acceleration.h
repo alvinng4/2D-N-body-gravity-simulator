@@ -11,10 +11,6 @@
 #define ACCELERATION_METHOD_MASSLESS 1
 #define ACCELERATION_METHOD_BARNES_HUT 2
 #define ACCELERATION_METHOD_FAST_MULTIPOLE 3
-#ifdef USE_CUDA
-    #define ACCELERATION_METHOD_PAIRWISE_CUDA 4
-    #define ACCELERATION_METHOD_PAIRWISE_FLOAT_CUDA 5
-#endif
 
 /**
  * \brief Return acceleration method flag based on the input string

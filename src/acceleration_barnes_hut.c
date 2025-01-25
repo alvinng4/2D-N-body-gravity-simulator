@@ -45,7 +45,7 @@ IN_FILE void _calculate_bounding_box(
 );
 
 /**
- * \brief Check the region relative to the center
+ * \brief Check the region (i.e. octant)
  *  
  * \param x x-coordinate
  * \param y y-coordinate

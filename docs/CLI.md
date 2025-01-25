@@ -1,7 +1,7 @@
 # Command-line interface (CLI) documentation for Gravity-Simulator
 
 * [Quick Start](#quick-start)
-    - [Python version](#python-version)
+    - [Prerequisite](#prerequisite)
     - [Installation](#installation)
     - [Some notes](#some-notes)
 * [Running the program in terminal](#running-the-program-in-terminal)
@@ -16,8 +16,9 @@
 
 ## Quick Start
 
-### Python version
-This program requires Python version 3.10 or higher. 
+### Prerequisite
+1. Python version 3.10 or higher. 
+2. Any C compiler that supports C99
 
 ### Installation
 1. Download the source files, or clone this repository by running the following command in terminal:
@@ -34,13 +35,14 @@ This program requires Python version 3.10 or higher.
     numpy==1.26.4
     rich==13.7.1
     ```
-3. I have compiled the C library for you, but you may want to recompile the C library if 
-    * The program failed to load the C library, and you don't want to use the NumPy option (slow)
-    * You want to use CUDA GPU acceleration
+3. Compile the C library
+
+    I have provided a compilation of the C library in the repository. If it does not run on your computer,
+    you may need to recompile it.
 
     To compile the C library, simply go to the src folder and run
     ```
-    make [CC=gcc] [USE_CUDA=1]
+    make [CC=gcc]
     ```
     Then, move the `c_lib.dylib`, `c_lib.dll` or `c_lib.so` file into the gravity_sim folder (One of them will be generated depending on your operation system).
     ```
@@ -48,8 +50,6 @@ This program requires Python version 3.10 or higher.
     mv c_lib.dll   ../gravity_sim
     mv c_lib.so    ../gravity_sim
     ```
-    If you wish to use CUDA GPU acceleration, you will also need to recompile
-    the library with the `USE_CUDA=1` flag, which requires `nvcc` to be installed in your system.
 
 ### Some notes
 * The default unit for this project is solar masses, AU and days, with $G = 0.00029591220828411956 \text{ M}_\odot^{-1} \text{ AU}^3 \text{ day}^{-2}$.

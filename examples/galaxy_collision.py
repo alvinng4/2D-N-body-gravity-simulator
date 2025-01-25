@@ -2,9 +2,6 @@
 Demonstration on using the gravity simulator to simulate galaxy collisions
 You will need to install the `Pillow` library for this script.
 
-For the acceleration function, you can choose between "barnes-hut" and "pairwise_float_cuda", but
-the latter would requires you to recompile the C library with `USE_CUDA=1` and also a NVIDIA GPU.
-
 Warning: Do not run multiple instances of this program at the same time, unless you made copies
          of the whole directory. Otherwise, the final data may overwrite each other.
 """
