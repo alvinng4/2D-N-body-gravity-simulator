@@ -1,12 +1,65 @@
+/**
+ * \file integrator_rk_embedded.c
+ * \author Ching Yin Ng
+ * \brief Function definitions for Embedded Runge-Kutta integrators
+ * 
+ * Function definitions for Embedded Runge-Kutta integrators. This is
+ * a C implementation based on the reference:
+ *   J. Roa, et al. Moving Planets Around: An Introduction to
+ *   N-Body Simulations Applied to Exoplanetary Systems*, MIT
+ *   Press, 2020
+ */
+
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "common.h"
 #include "acceleration.h"
+#include "error.h"
+#include "gravity_sim.h"
+#include "storing.h"
 
+/**
+ * \brief Get the order of the Embedded RK integrator
+ * 
+ * \param integrator Name of the integrator
+ * \param order Pointer to the order of the integrator
+ * 
+ * \retval SUCCESS If successful
+ * \retval ERROR_UNKNOWN_RK_EMBEDDED_METHOD If integrator is not recognized
+ */
+IN_FILE int get_rk_embedded_order(
+    const char *integrator,
+    int *restrict order
+)
+{
+    if (strcmp(integrator, "rkf45") == 0)
+    {
+        *order = 45;
+        return SUCCESS;
+    }
+    else if (strcmp(integrator, "dopri") == 0)
+    {
+        *order = 54;
+        return SUCCESS;
+    }
+    else if (strcmp(integrator, "dverk") == 0)
+    {
+        *order = 65;
+        return SUCCESS;
+    }
+    else if (strcmp(integrator, "rkf78") == 0)
+    {
+        *order = 78;
+        return SUCCESS;
+    }
+    else
+    {
+        return ERROR_UNKNOWN_RK_EMBEDDED_METHOD;
+    }
+}
 
 /**
  * \brief Butcher tableaus for Embedded RK integrator
@@ -19,11 +72,14 @@
  * \param weights Pointer to the array of weights for RK integrator
  * \param weights_test Pointer to the array of weights for error calculation
  * 
- * \retval 0 If successful
- * \retval 1 If failed to allocate memory for coeff, weights and weights_test
+ * \retval SUCCESS If successful
+ * \retval ERROR_RK_EMBEDDED_BUTCHER_TABLEAUS_UNKNOWN_ORDER
+ *         If order is not one of 45 / 54 / 78 / 65
+ * \retval ERROR_RK_EMBEDDED_BUTCHER_TABLEAUS_MEMORY_ALLOC 
+ *         If failed to allocate memory for coeff, weights and weights_test
  */
-WIN32DLL_API int rk_embedded_butcher_tableaus(
-    int order,
+IN_FILE int rk_embedded_butcher_tableaus(
+    const int order,
     int *restrict power,
     int *restrict power_test,
     real **coeff,
@@ -40,6 +96,11 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
     *   65) Verner's method 6(5), DVERK
     */
 
+    int return_code;
+    *coeff = NULL;
+    *weights = NULL;
+    *weights_test = NULL;
+
     switch (order)
     {
         // RUNGE-KUTTA-FEHLBERG 4(5)
@@ -49,6 +110,13 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
             *power_test = 5;
             // nodes = np.array([1.0 / 4.0, 3.0 / 8.0, 12.0 / 13.0, 1.0, 0.5])
             *coeff = malloc(25 * sizeof(real));
+            *len_weights = 6;
+            *weights = malloc(*len_weights * sizeof(real));
+            *weights_test = malloc(6 * sizeof(real));
+            if (!*coeff || !*weights || !*weights_test)
+            {
+                goto error_memory;
+            }
             memcpy(
                 *coeff,
                 (real [25]) {
@@ -60,9 +128,6 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
                 },
                 25 * sizeof(real)
             );
-
-            *len_weights = 6;
-            *weights = malloc(*len_weights * sizeof(real));
             memcpy(
                 *weights,
                 (real [6]) {
@@ -70,8 +135,6 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
                 },
                 6 * sizeof(real)
             );
-
-            *weights_test = malloc(6 * sizeof(real));
             memcpy(
                 *weights_test,
                 (real [6]) {
@@ -89,6 +152,15 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
             *power_test = 4;
             // nodes = np.array([1.0 / 5.0, 3.0 / 10.0, 4.0 / 5.0, 8.0 / 9.0, 1.0, 1.0])
             *coeff = malloc(36 * sizeof(real));
+            *len_weights = 7;
+            *weights = malloc(*len_weights * sizeof(real));
+            *weights_test = malloc(7 * sizeof(real));
+
+            if (!*coeff || !*weights || !*weights_test)
+            {
+                goto error_memory;
+            }
+
             memcpy(
                 *coeff,
                 (real [36]) {
@@ -101,9 +173,6 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
                 },
                 36 * sizeof(real)
             );
-
-            *len_weights = 7;
-            *weights = malloc(*len_weights * sizeof(real));
             memcpy(
                 *weights,
                 (real [7]) {
@@ -111,8 +180,6 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
                 },
                 7 * sizeof(real)
             );
-
-            *weights_test = malloc(7 * sizeof(real));
             memcpy(
                 *weights_test,
                 (real [7]) {
@@ -146,6 +213,14 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
             // )
             
             *coeff = malloc(144 * sizeof(real));
+            *len_weights = 13;
+            *weights = malloc(*len_weights * sizeof(real));
+            *weights_test = malloc(13 * sizeof(real));
+            if (!*coeff || !*weights || !*weights_test)
+            {
+                goto error_memory;
+            }
+
             memcpy(
                 *coeff,
                 (real [144]) {
@@ -164,9 +239,6 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
                 },
                 144 * sizeof(real)
             );
-
-            *len_weights = 13;
-            *weights = malloc(*len_weights * sizeof(real));
             memcpy(
                 *weights,
                 (real [13]) {
@@ -174,8 +246,6 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
                 },
                 13 * sizeof(real)
             );
-
-            *weights_test = malloc(13 * sizeof(real));
             memcpy(
                 *weights_test,
                 (real [13]) {
@@ -196,6 +266,13 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
             * )
             */
             *coeff = malloc(49 * sizeof(real));
+            *len_weights = 8;
+            *weights = malloc(*len_weights * sizeof(real));
+            *weights_test = malloc(8 * sizeof(real));
+            if (!*coeff || !*weights || !*weights_test)
+            {
+                goto error_memory;
+            }
             memcpy(
                 *coeff,
                 (real [49]) {
@@ -209,9 +286,6 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
                 },
                 49 * sizeof(real)
             );
-
-            *len_weights = 8;
-            *weights = malloc(*len_weights * sizeof(real));
             memcpy(
                 *weights,
                 (real [8]) {
@@ -219,8 +293,6 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
                 },
                 8 * sizeof(real)
             );
-
-            *weights_test = malloc(8 * sizeof(real));
             memcpy(
                 *weights_test,
                 (real [8]) {
@@ -232,94 +304,105 @@ WIN32DLL_API int rk_embedded_butcher_tableaus(
             break;
 
         default:
-            fprintf(stderr, "Error: Invalid order for Embedded RK integrator\n");
-            exit(EXIT_FAILURE);
-            break;
+            return_code = ERROR_RK_EMBEDDED_BUTCHER_TABLEAUS_UNKNOWN_ORDER;
+            goto error_code;
     }
 
-    if (!*coeff || !*weights || !weights_test)
-    {
-        fprintf(stderr, "Error: Failed to allocate memory for rk_embedded_butcher_tableaus()\n");
-        free(*coeff);
-        free(*weights);
-        free(*weights_test);
+    return SUCCESS;
 
-        return 1;
-    }
-    return 0;
+error_memory:
+    free(*coeff);
+    free(*weights);
+    free(*weights_test);
+error_code:
+    return return_code;
 }
 
 /**
- * \brief Calculate the initial time step for Embedded RK integrator
+ * \brief Calculate initial time step for Embedded Runge-Kutta integrator
  * 
- * \param objects_count Number of objects in the system
+ * \param rel_tolerance Relative tolerance
+ * \param abs_tolerance Absolute tolerance
+ * \param initial_dt Pointer to the initial time step
  * \param power Power of the integrator
- * \param x Array of position vectors of all objects
- * \param v Array of velocity vectors of all objects
- * \param a Array of acceleration vectors of all objects
- * \param m Array of masses for all objects
- * \param G Gravitational constant
- * \param abs_tolerance Absolute tolerance of the integrator
- * \param rel_tolerance Relative tolerance of the integrator
- * \param acceleration_method Method to calculate acceleration
- * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
+ * \param system Pointer to the system
+ * \param acceleration_param Pointer to the acceleration parameters
  * 
- * \warning: Modified to return dt * 1e-2 since this function gives initial dt thats too large
+ * \note Modified to return dt * 1e-2 since this function gives initial dt thats too large
  * 
- * \return initial dt for Embedded RK integrator
- * \retval -1.0 if failed to allocate memory for calculation
+ * \retval SUCCESS If successful
+ * \retval ERROR_RK_EMBEDDED_INITIAL_DT_MEMORY_ALLOC
+ *         If failed to allocate memory for calculation
+ * \retval ERROR_RK_EMBEDDED_INITIAL_DT_NEGATIVE
+ *        If initial_dt is negative
  */
-WIN32DLL_API real rk_embedded_initial_dt(
-    int objects_count,
-    int power,
-    real *restrict x,
-    real *restrict v,
-    real *restrict a,
-    real *restrict m,
-    real G,
-    real abs_tolerance,
+IN_FILE int rk_embedded_initial_dt(
     real rel_tolerance,
-    int acceleration_method,
-    real softening_length,
-    real barnes_hut_theta
+    real abs_tolerance,
+    real *restrict initial_dt,
+    const int power,
+    System *system,
+    AccelerationParam *acceleration_param
 )
 {
+    int return_code;
+
+    const int objects_count = system->objects_count;
+    real *restrict x = system->x;
+    real *restrict v = system->v;
+
+    /* Allocate memory and declare variables */
     real *restrict tolerance_scale_x = malloc(objects_count * 3 * sizeof(real));
     real *restrict tolerance_scale_v = malloc(objects_count * 3 * sizeof(real));
-    real sum_0 = 0;
-    real sum_1 = 0;
-    real sum_2 = 0;
+    real *restrict x_1 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict v_1 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict a_1 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict a = malloc(objects_count * 3 * sizeof(real));
+    if (
+        !tolerance_scale_x ||
+        !tolerance_scale_v ||
+        !x_1 ||
+        !v_1 ||
+        !a_1 ||
+        !a
+    )
+    {
+        return_code = ERROR_RK_EMBEDDED_INITIAL_DT_MEMORY_ALLOC;
+        goto error_memory;
+    }
+
+    real sum_0 = 0.0;
+    real sum_1 = 0.0;
+    real sum_2 = 0.0;
     real d_0;
     real d_1;
     real d_2;
     real dt_0;
     real dt_1;
     real dt;
-    real *restrict x_1 = malloc(objects_count * 3 * sizeof(real));
-    real *restrict v_1 = malloc(objects_count * 3 * sizeof(real));
-    real *restrict a_1 = malloc(objects_count * 3 * sizeof(real));
+    System system_1 = {
+        .objects_count = objects_count,
+        .x = x_1,
+        .v = v_1,
+        .m = system->m,
+        .G = system->G,
+    };
 
-    if (
-        !tolerance_scale_x ||
-        !tolerance_scale_v ||
-        !x_1 ||
-        !v_1 ||
-        !a_1
-    )
+    /* Compute acceleration */
+    return_code = acceleration(
+        a,
+        system,
+        acceleration_param
+    );
+    if (return_code != SUCCESS)
     {
-        fprintf(stderr, "Error: Failed to allocate memory for rk_embedded_initial_dt()\n");
-        free(tolerance_scale_x);
-        free(tolerance_scale_v);
-        free(x_1);
-        free(v_1);
-        free(a_1);
-        return -1.0;
+        goto error_acc;
     }
 
-    acceleration(acceleration_method, objects_count, x, v, a, m, G, softening_length, barnes_hut_theta);
-
-    // tolerance_scale_x = abs_tol + rel_tol * abs(x)
-    // tolerance_scale_v = abs_tol + rel_tol * abs(v)
+    /**
+     *  tolerance_scale_x = abs_tol + rel_tol * abs(x)
+     *  tolerance_scale_v = abs_tol + rel_tol * abs(v)
+     */
     for (int i = 0; i < objects_count; i++)
     {
         for (int j = 0; j < 3; j++)
@@ -329,8 +412,10 @@ WIN32DLL_API real rk_embedded_initial_dt(
         }
     }
 
-    // sum_0 = sum(square(x / tolerance_scale_x)) + sum(square(v / tolerance_scale_v))
-    // sum_1 = sum(square(v / tolerance_scale_x)) + sum(square(a / tolerance_scale_x))
+    /**
+     *  sum_0 = sum(square(x / tolerance_scale_x)) + sum(square(v / tolerance_scale_v))
+     *  sum_1 = sum(square(v / tolerance_scale_x)) + sum(square(a / tolerance_scale_x))
+     */
     for (int i = 0; i < objects_count; i++)
     {
         for (int j = 0; j < 3; j++)
@@ -342,8 +427,8 @@ WIN32DLL_API real rk_embedded_initial_dt(
         }
     }
 
-    d_0 = pow(sum_0 / (objects_count * 6), 0.5);
-    d_1 = pow(sum_1 / (objects_count * 6), 0.5);
+    d_0 = sqrt(sum_0 / (objects_count * 6));
+    d_1 = sqrt(sum_1 / (objects_count * 6));
 
     if (d_0 < 1e-5 || d_1 < 1e-5)
     {
@@ -358,16 +443,26 @@ WIN32DLL_API real rk_embedded_initial_dt(
     {
         for (int j = 0; j < 3; j++)
         {
-            x_1[i * 3 + j] = x[i * 3 + j] + (dt_0 / 100.0L) * v[i * 3 + j];
-            v_1[i * 3 + j] = v[i * 3 + j] + (dt_0 / 100.0L) * a[i * 3 + j];
+            x_1[i * 3 + j] = x[i * 3 + j] + (dt_0 / 100.0) * v[i * 3 + j];
+            v_1[i * 3 + j] = v[i * 3 + j] + (dt_0 / 100.0) * a[i * 3 + j];
         }
     }
-    
-    acceleration(acceleration_method, objects_count, x_1, v_1, a_1, m, G, softening_length, barnes_hut_theta);
 
-    // Calculate d_2 to measure how much the derivatives have changed
+    return_code = acceleration(
+        a_1,
+        &system_1,
+        acceleration_param
+    );
+    if (return_code != SUCCESS)
+    {
+        goto error_acc;
+    }
 
-    // sum_2 = sum(square((v_1 - v) / tolerance_scale_x)) + sum(square((a_1 - a) / tolerance_scale_v))
+    /* Calculate d_2 to measure how much the derivatives have changed */
+
+    /**
+     * sum_2 = sum(square((v_1 - v) / tolerance_scale_x)) + sum(square((a_1 - a) / tolerance_scale_v))
+     */
     for (int i = 0; i < objects_count; i++)
     {
         for (int j = 0; j < 3; j++)
@@ -376,7 +471,7 @@ WIN32DLL_API real rk_embedded_initial_dt(
             sum_2 += ((a_1[i * 3 + j] - a[i * 3 + j]) / tolerance_scale_v[i * 3 + j]) * ((a_1[i * 3 + j] - a[i * 3 + j]) / tolerance_scale_v[i * 3 + j]);
         }
     }
-    d_2 = pow(sum_2 / (objects_count * 6), 0.5) / dt_0;
+    d_2 = sqrt(sum_2 / (objects_count * 6)) / dt_0;
 
     if (fmax(d_1, d_2) <= 1e-15)
     {
@@ -387,85 +482,78 @@ WIN32DLL_API real rk_embedded_initial_dt(
     }
     dt = fmin(100.0L * dt_0, dt_1);
 
+    /* the factor 1e-2 is a modification made by me */
+    *initial_dt = dt * 1e-2;
+    if (*initial_dt <= 0.0)
+    {
+        return_code = ERROR_RK_EMBEDDED_INITIAL_DT_NON_POSITIVE;
+        goto error_dt;
+    }
+
     free(tolerance_scale_x);
     free(tolerance_scale_v);
     free(x_1);
     free(v_1);
     free(a_1);
+    free(a);
 
-    return dt * 1e-2;
+    return SUCCESS;
+
+error_dt:
+error_acc:
+error_memory:
+    free(tolerance_scale_x);
+    free(tolerance_scale_v);
+    free(x_1);
+    free(v_1);
+    free(a_1);
+    free(a);
+    return return_code;
 }
 
-/**
- * \brief Embedded RK integrator
- * 
- * \param order Order of the integrator
- * \param objects_count Number of objects in the system
- * \param x Array of position vectors of all objects
- * \param v Array of velocity vectors of all objects
- * \param m Array of masses for all objects
- * \param G Gravitational constant
- * \param t Pointer to the current simulation time
- * \param dt Pointer to time step. Initial dt of
- *           negative or zero will be ignored
- * \param tf Total time to be integrated
- * \param input_abs_tolerance Absolute tolerance of the integrator
- * \param input_rel_tolerance Relative tolerance of the integrator
- * \param acceleration_method Method to calculate acceleration
- * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
- * \param store_every_n Store every nth point
- * \param store_count Pointer to the store count
- * \param storing_method Integer flag to indicate method of storing solution
- * \param flush_path Path to the file to store the solution
- * \param solution Pointer to a Solution struct, in order to store the solution
- * \param is_exit Pointer to flag that indicates whether user sent 
- *                KeyboardInterrupt in the main thread
- * 
- * \retval 0 If exit successfully
- * \retval 1 If failed to allocate memory
- * \retval 2 If KeyboardInterrupt in the main thread
- */
 WIN32DLL_API int rk_embedded(
-    int order,
-    int objects_count,
-    real *restrict x,
-    real *restrict v,
-    real *restrict m,
-    real G,
-    double *restrict t,
-    double *restrict dt,
-    double tf, 
-    double input_abs_tolerance,
-    double input_rel_tolerance,
-    const char *restrict acceleration_method,
-    real softening_length,
-    real barnes_hut_theta,
-    int store_every_n,
-    int *restrict store_count,
-    const int storing_method,
-    const char *restrict flush_path,
-    Solutions *restrict solution,
-    bool *restrict is_exit
+    System *system,
+    IntegratorParam *integrator_param,
+    AccelerationParam *acceleration_param,
+    StoringParam *storing_param,
+    Solutions *solutions,
+    SimulationStatus *simulation_status,
+    Settings *settings,
+    SimulationParam *simulation_param
 )
-{   
-    int acceleration_method_flag = get_acceleration_method_flag(acceleration_method);
-    if (acceleration_method_flag == -1)
-    {
-        fprintf(stderr, "Error: acceleration method not recognized\n");
-        goto err_acc_method;
-    }
-    
-    // Initialization
+{
+    int return_code;
+
+    /* Initialization */
+    int order;
     int power;
     int power_test;
     real *coeff = NULL;
     int len_weights;
     real *weights = NULL;
     real *weights_test = NULL;
-    int butcher_tableaus_flag = rk_embedded_butcher_tableaus(order, &power, &power_test, &coeff, &len_weights, &weights, &weights_test);
-    if (butcher_tableaus_flag == 1)
+
+    return_code = get_rk_embedded_order(
+        integrator_param->integrator,
+        &order
+    );
+    if (return_code != SUCCESS)
     {
-        goto err_rk_embedded_butcher_tableaus;
+        goto error_order;
+    }
+
+    return_code = rk_embedded_butcher_tableaus(
+        order,
+        &power,
+        &power_test,
+        &coeff,
+        &len_weights,
+        &weights,
+        &weights_test
+    );
+    if (return_code != SUCCESS)
+    {
+        goto error_butcher_tableaus;
     }
 
     int stages = len_weights;
@@ -474,8 +562,8 @@ WIN32DLL_API int rk_embedded(
     real *restrict error_estimation_delta_weights = malloc(len_weights * sizeof(real));
     if (!error_estimation_delta_weights)
     {
-        fprintf(stderr, "Error: Failed to allocate memory for error_estimation_delta_weights variable in rk_embedded()\n");
-        goto err_error_estimation_delta_weights;
+        return_code = ERROR_RK_EMBEDDED_MEMORY_ALLOC;
+        goto error_error_estimation_delta_weights_memory_alloc;
     }
 
     for (int stage = 0; stage < stages; stage++)
@@ -483,43 +571,60 @@ WIN32DLL_API int rk_embedded(
         error_estimation_delta_weights[stage] = weights[stage] - weights_test[stage];
     }
 
-    // Convert the tolerance from double to type real
-    real abs_tolerance = input_abs_tolerance;
-    real rel_tolerance = input_rel_tolerance;
+    /* tolerance */
+    real abs_tolerance = integrator_param->tolerance;
+    real rel_tolerance = integrator_param->tolerance;
 
-    // Safety factors for step-size control:
+    /* Safety factors for step-size control */
     real safety_fac_max = 6.0;
     real safety_fac_min = 0.33;
     real safety_fac = pow(0.38, (1.0 / (1.0 + (real) min_power)));
 
-    // Initialize memory for calculation
-    real sum, error, dt_new; 
-    real *restrict a = malloc(objects_count * 3 * sizeof(real));
-    real *restrict v_1 = calloc(objects_count * 3, sizeof(real));
-    real *restrict x_1 = calloc(objects_count * 3, sizeof(real));
-    real *restrict vk = calloc(stages * objects_count * 3, sizeof(real));
-    real *restrict xk = calloc(stages * objects_count * 3, sizeof(real));    
-    real *restrict temp_a = calloc(objects_count * 3, sizeof(real));
-    real *restrict temp_v = calloc(objects_count * 3, sizeof(real));
-    real *restrict temp_x = calloc(objects_count * 3, sizeof(real));
-    real *restrict error_estimation_delta_v = calloc(objects_count * 3, sizeof(real));
-    real *restrict error_estimation_delta_x = calloc(objects_count * 3, sizeof(real));
-    real *restrict tolerance_scale_v = calloc(objects_count * 3, sizeof(real));
-    real *restrict tolerance_scale_x = calloc(objects_count * 3, sizeof(real));
+    /* Allocate memory and declare variables */
+    real *restrict x = system->x;
+    real *restrict v = system->v;
+    real *restrict m = system->m;
+    const real G = system->G;
+    const int objects_count = system->objects_count;
 
-    // Arrays for compensated summation
+    real dt;
+    real *t = simulation_status->t;
+    real tf = simulation_param->tf;
+
+    real sum;
+    real error;
+    real dt_new;
+
+    System temp_system = {
+        .objects_count = objects_count,
+        .x = NULL,
+        .v = NULL,
+        .m = m,
+        .G = G,
+    };
+
+    real *restrict v_1 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict x_1 = malloc(objects_count * 3 * sizeof(real));
+    real *restrict vk = malloc(stages * objects_count * 3 * sizeof(real));
+    real *restrict xk = malloc(stages * objects_count * 3 * sizeof(real));    
+    real *restrict temp_v = malloc(objects_count * 3 * sizeof(real));
+    real *restrict temp_x = malloc(objects_count * 3 * sizeof(real));
+    real *restrict error_estimation_delta_v = malloc(objects_count * 3 * sizeof(real));
+    real *restrict error_estimation_delta_x = malloc(objects_count * 3 * sizeof(real));
+    real *restrict tolerance_scale_v = malloc(objects_count * 3 * sizeof(real));
+    real *restrict tolerance_scale_x = malloc(objects_count * 3 * sizeof(real));
+
+    // Compensated summation
     real *restrict x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
     real *restrict v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
     real *restrict temp_x_err_comp_sum = calloc(objects_count * 3, sizeof(real));
     real *restrict temp_v_err_comp_sum = calloc(objects_count * 3, sizeof(real));
 
     if (
-        !a ||
         !v_1 || 
         !x_1 || 
         !vk || 
-        !xk || 
-        !temp_a || 
+        !xk ||  
         !temp_v || 
         !temp_x || 
         !error_estimation_delta_v || 
@@ -532,83 +637,47 @@ WIN32DLL_API int rk_embedded(
         !temp_v_err_comp_sum
     ) 
     {
-        fprintf(stderr, "Error: Failed to allocate memory for calculation\n");
-        goto err_calc_memory;
+        return_code = ERROR_RK_EMBEDDED_MEMORY_ALLOC;
+        goto error_memory;
     }
 
-    // Allocate memory for solution output
-    int64 count = 1;    // 1 for t0
-
-    if (*dt <= 0)
+    /* Get initial dt */
+    if (integrator_param->initial_dt > 0.0)
     {
-        *dt = rk_embedded_initial_dt(
-            objects_count,
-            power,
-            x,
-            v,
-            a,
-            m,
-            G,
-            abs_tolerance,
+        dt = integrator_param->initial_dt;
+    }
+    else
+    {
+        return_code = rk_embedded_initial_dt(
             rel_tolerance,
-            acceleration_method_flag,
-            softening_length,
-            barnes_hut_theta
+            abs_tolerance,
+            &dt,
+            power,
+            system,
+            acceleration_param
         );
+        if (return_code != SUCCESS)
+        {
+            goto error_initial_dt;
+        }
     }
+    simulation_status->dt = dt;
 
-    FILE *flush_file = NULL;
-    double *sol_state = NULL;
-    double *sol_time = NULL;
-    double *sol_dt = NULL;
-    int buffer_size = BUFFER_SIZE;
+    int64 count = 1; // Count for storing solutions, 1 for t_0
+    int storing_freq = storing_param->storing_freq;
 
-    // For realloc solution output
-    double *temp_sol_state = NULL;
-    double *temp_sol_time = NULL;
-    double *temp_sol_dt = NULL;
-    
-    if (storing_method == 1)
-    {
-        flush_file = fopen(flush_path, "w");
-
-        if (!flush_file)
-        {
-            fprintf(stderr, "Error: Failed to open file for flushing\n");
-            goto err_flush_file;
-        }
-
-        // Initial value
-        write_to_csv_file(flush_file, 0.0, *dt, objects_count, x, v, m, G);
-    } 
-    else if (storing_method == 0)
-    {
-        sol_state = malloc(buffer_size * objects_count * 6 * sizeof(double));
-        sol_time = malloc(buffer_size * sizeof(double));
-        sol_dt = malloc(buffer_size * sizeof(double));
-
-        if (!sol_state || !sol_time || !sol_dt)
-        {
-            fprintf(stderr, "Error: Failed to allocate memory for solution output\n");
-            goto err_sol_output_memory;
-        }
-
-        // Initial value
-        memcpy(&sol_state[0], x, objects_count * 3 * sizeof(double));
-        memcpy(&sol_state[objects_count * 3], v, objects_count * 3 * sizeof(double));
-        sol_time[0] = 0.0;
-        if (*dt == -1.0)
-        {
-            goto err_initial_dt_memory;
-        }
-        sol_dt[0] = *dt;
-    }
-
-    // Main Loop
     while (*t < tf)
     {
-        // Calculate xk and vk
-        acceleration(acceleration_method_flag, objects_count, x, v, vk, m, G, softening_length, barnes_hut_theta);
+        /* Compute xk and vk */
+        return_code = acceleration(
+            vk,
+            system,
+            acceleration_param
+        );
+        if (return_code != SUCCESS)
+        {
+            goto acc_error;
+        }
         memcpy(xk, v, objects_count * 3 * sizeof(real));
         for (int stage = 1; stage < stages; stage++)
         {
@@ -621,7 +690,7 @@ WIN32DLL_API int rk_embedded(
                 temp_x[i * 3 + 0] = 0.0;
                 temp_x[i * 3 + 1] = 0.0;
                 temp_x[i * 3 + 2] = 0.0;
-            }       
+            }
 
             for (int i = 0; i < stage; i++)
             {
@@ -639,11 +708,22 @@ WIN32DLL_API int rk_embedded(
             {
                 for (int j = 0; j < 3; j++)
                 {
-                    temp_v[i * 3 + j] = v[i * 3 + j] + *dt * temp_v[i * 3 + j] + v_err_comp_sum[i * 3 + j];
-                    temp_x[i * 3 + j] = x[i * 3 + j] + *dt * temp_x[i * 3 + j] + x_err_comp_sum[i * 3 + j];
+                    temp_v[i * 3 + j] = v[i * 3 + j] + dt * temp_v[i * 3 + j] + v_err_comp_sum[i * 3 + j];
+                    temp_x[i * 3 + j] = x[i * 3 + j] + dt * temp_x[i * 3 + j] + x_err_comp_sum[i * 3 + j];
                 }
             }
-            acceleration(acceleration_method_flag, objects_count, temp_x, v, &vk[stage * objects_count * 3], m, G, softening_length, barnes_hut_theta);
+
+            temp_system.x = temp_x;
+            temp_system.v = temp_v;
+            return_code = acceleration(
+                &vk[stage * objects_count * 3],
+                &temp_system,
+                acceleration_param
+            );
+            if (return_code != SUCCESS)
+            {
+                goto acc_error;
+            }
             memcpy(&xk[stage * objects_count * 3], temp_v, objects_count * 3 * sizeof(real));
         }
 
@@ -674,8 +754,8 @@ WIN32DLL_API int rk_embedded(
                     temp_v[i * 3 + j] += weights[stage] * vk[stage * objects_count * 3 + i * 3 + j];
                     temp_x[i * 3 + j] += weights[stage] * xk[stage * objects_count * 3 + i * 3 + j];
 
-                    error_estimation_delta_v[i * 3 + j] += *dt * error_estimation_delta_weights[stage] * vk[stage * objects_count * 3 + i * 3 + j];
-                    error_estimation_delta_x[i * 3 + j] += *dt * error_estimation_delta_weights[stage] * xk[stage * objects_count * 3 + i * 3 + j];
+                    error_estimation_delta_v[i * 3 + j] += dt * error_estimation_delta_weights[stage] * vk[stage * objects_count * 3 + i * 3 + j];
+                    error_estimation_delta_x[i * 3 + j] += dt * error_estimation_delta_weights[stage] * xk[stage * objects_count * 3 + i * 3 + j];
                 }
             }
         }
@@ -686,8 +766,8 @@ WIN32DLL_API int rk_embedded(
         {
             for (int j = 0; j < 3; j++)
             {
-                temp_v_err_comp_sum[i * 3 + j] += *dt * temp_v[i * 3 + j];
-                temp_x_err_comp_sum[i * 3 + j] += *dt * temp_x[i * 3 + j];
+                temp_v_err_comp_sum[i * 3 + j] += dt * temp_v[i * 3 + j];
+                temp_x_err_comp_sum[i * 3 + j] += dt * temp_x[i * 3 + j];
 
                 v_1[i * 3 + j] = v[i * 3 + j] + temp_v_err_comp_sum[i * 3 + j];
                 x_1[i * 3 + j] = x[i * 3 + j] + temp_x_err_comp_sum[i * 3 + j];
@@ -697,7 +777,7 @@ WIN32DLL_API int rk_embedded(
             }
         }
 
-        // Error calculation
+        /* Error calculation */
         for (int i = 0; i < objects_count; i++)
         {
             for (int j = 0; j < 3; j++)
@@ -723,101 +803,89 @@ WIN32DLL_API int rk_embedded(
         }
         error = sqrt(sum / (objects_count * 3 * 2));
 
-        if (error <= 1 || *dt <= tf * 1e-12)
+        /* Advance step */
+        if (error <= 1 || dt <= tf * 1e-12)
         {
-            // Advance step
-            *t += *dt; 
+            *t += dt; 
             memcpy(x, x_1, objects_count * 3 * sizeof(real));
             memcpy(v, v_1, objects_count * 3 * sizeof(real));
 
             memcpy(x_err_comp_sum, temp_x_err_comp_sum, objects_count * 3 * sizeof(real));
             memcpy(v_err_comp_sum, temp_v_err_comp_sum, objects_count * 3 * sizeof(real));
 
-            // Store step
-            if (count % store_every_n == 0)
+            /* Store solution */
+            if (count % storing_freq == 0)
             {
-                if (storing_method == 1)
+                if ((*solutions->sol_size_ + 1) > storing_param->max_sol_size_)
                 {
-                    write_to_csv_file(flush_file, *t, *dt, objects_count, x, v, m, G);
-                }
-                else if (storing_method == 0)
-                {
-                    sol_time[*store_count] = *t;
-                    sol_dt[*store_count] = *dt;
-                    memcpy(&sol_state[*store_count * objects_count * 6], x, objects_count * 3 * sizeof(double));
-                    memcpy(&sol_state[*store_count * objects_count * 6 + objects_count * 3], v, objects_count * 3 * sizeof(double));
-                }
-                (*store_count)++;
-
-                // Check buffer size and extend if full
-                if ((storing_method == 0) && (*store_count == buffer_size) && (*t < tf))
-                {   
-                    buffer_size *= 2;
-                    temp_sol_state = realloc(sol_state, buffer_size * objects_count * 6 * sizeof(real));
-                    temp_sol_time = realloc(sol_time, buffer_size * sizeof(real));
-                    temp_sol_dt = realloc(sol_dt, buffer_size * sizeof(real));
-
-                    if (!temp_sol_state || !temp_sol_time || !temp_sol_dt)
+                    return_code = extend_sol_memory_buffer(
+                        solutions,
+                        storing_param,
+                        objects_count
+                    );
+                    if (return_code != SUCCESS)
                     {
-                        fprintf(stderr, "Error: Failed to allocate extra memory to extend array for solution output\n");
-                        goto err_sol_output_memory;
+                        goto err_store_solution;
                     }
-                    
-                    sol_state = temp_sol_state;
-                    sol_time = temp_sol_time;
-                    sol_dt = temp_sol_dt;
                 }
-            }
-            count++;
 
-            // Check if user sends KeyboardInterrupt in main thread
-            if (*is_exit)
-            {
-                goto err_user_exit;
+                return_code = store_solution_step(
+                    storing_param,
+                    system,
+                    simulation_status,
+                    solutions
+                );
+                if (return_code != SUCCESS)
+                {
+                    goto err_store_solution;
+                }
             }
         }
 
-        // Calculate dt
+        /* Calculate dt for next step */
         if (error < 1e-10)
         {
             error = 1e-10;  // Prevent error from being too small
         }
-        dt_new = (*dt) * safety_fac / pow(error, (1.0 / (1.0 + (real) min_power)));
-        if (dt_new > safety_fac_max * (*dt)) 
+        dt_new = dt * safety_fac / pow(error, (1.0 / (1.0 + (real) min_power)));
+        if (dt_new > safety_fac_max * dt) 
         {
-            (*dt) *= safety_fac_max;
+            dt *= safety_fac_max;
         }
-        else if (dt_new < safety_fac_min * (*dt))
+        else if (dt_new < safety_fac_min * dt)
         {
-            (*dt) *= safety_fac_min;
+            dt *= safety_fac_min;
         }
         else
         {
-            (*dt) = dt_new;
+            dt = dt_new;
         }
 
         if (dt_new / tf < 1e-12)
         {
-            (*dt) = tf * 1e-12;
+            dt = tf * 1e-12;
         }
 
         // Correct overshooting
-        if (((*t) < tf) && ((*t) + (*dt) > tf))
+        if (((*t) < tf) && (((*t) + dt) > tf))
         {
-            (*dt) = tf - (*t);
+            dt = tf - (*t);
+        }
+        simulation_status->dt = dt;
+
+        /* Check user interrupt */
+        if (*(settings->is_exit))
+        {
+            return_code = ERROR_USER_INTERRUPT;
+            goto err_user_interrupt;
         }
     }
 
-    free(a);
-    free(coeff);
-    free(weights);
-    free(weights_test);
-    free(error_estimation_delta_weights);
+    /* free memory */
     free(v_1);
     free(x_1);
     free(vk);
     free(xk);
-    free(temp_a);
     free(temp_v);
     free(temp_x);
     free(error_estimation_delta_v);
@@ -828,64 +896,35 @@ WIN32DLL_API int rk_embedded(
     free(v_err_comp_sum);
     free(temp_x_err_comp_sum);
     free(temp_v_err_comp_sum);
-
-    if (storing_method == 1)
-    {
-        fclose(flush_file);
-    }
-    else if (storing_method == 0)
-    {
-        solution->sol_state = sol_state;
-        solution->sol_time = sol_time;
-        solution->sol_dt = sol_dt;
-    }
-
-    return 0;
-
-err_user_exit: // User sends KeyboardInterrupt in main thread
-err_initial_dt_memory:
-err_flush_file:
-err_sol_output_memory:
-    if (storing_method == 1)
-    {
-        fclose(flush_file);
-    }
-    else if (storing_method == 0)
-    {
-        free(sol_state);
-        free(sol_time);
-        free(sol_dt);
-    }  
-err_calc_memory:
-    free(a);
-    free(v_1);
-    free(x_1);
-    free(vk);
-    free(xk);
-    free(temp_a);
-    free(temp_v);
-    free(temp_x);
-    free(error_estimation_delta_v);
-    free(error_estimation_delta_x);
-    free(tolerance_scale_v);
-    free(tolerance_scale_x);
-    free(x_err_comp_sum);
-    free(v_err_comp_sum);
-    free(temp_x_err_comp_sum);
-    free(temp_v_err_comp_sum);
-err_error_estimation_delta_weights:
     free(error_estimation_delta_weights);
-err_rk_embedded_butcher_tableaus:
     free(coeff);
     free(weights);
     free(weights_test); 
-err_acc_method:
-    if (*is_exit)
-    {
-        return 2;   // User sends KeyboardInterrupt in main thread
-    }
-    else
-    {
-        return 1;
-    }
+
+    return SUCCESS;
+
+err_user_interrupt:
+err_store_solution:
+acc_error:
+error_initial_dt:
+error_memory:
+    free(v_1);
+    free(x_1);
+    free(vk);
+    free(xk);
+    free(temp_v);
+    free(temp_x);
+    free(error_estimation_delta_v);
+    free(error_estimation_delta_x);
+    free(tolerance_scale_v);
+    free(tolerance_scale_x);
+    free(x_err_comp_sum);
+    free(v_err_comp_sum);
+    free(temp_x_err_comp_sum);
+    free(temp_v_err_comp_sum);
+error_error_estimation_delta_weights_memory_alloc:
+    free(error_estimation_delta_weights);
+error_butcher_tableaus:
+error_order:
+    return return_code;
 }

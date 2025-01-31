@@ -1,11 +1,14 @@
+/**
+ * \file acceleration.h
+ * \author Ching Yin Ng
+ * \brief Contains simple methods in calculating gravitational
+ *        acceleration, and acceleration-related functions.
+ */
+
 #ifndef ACCELERATION_H
 #define ACCELERATION_H
 
-/**
- * acceleration: Contains methods in calculating acceleration
- */
-
-#include "common.h"
+#include "gravity_sim.h"
 
 #define ACCELERATION_METHOD_PAIRWISE 0
 #define ACCELERATION_METHOD_MASSLESS 1
@@ -15,75 +18,30 @@
 /**
  * \brief Return acceleration method flag based on the input string
  * 
- * \param acceleration_method Acceleration method
+ * \param acceleration_method Name of the acceleration method
  * 
- * \return Flag for acceleration method
+ * \retval SUCCESS If the acceleration method is recognized
+ * \retval ERROR_UNKNOWN_ACCELERATION_METHOD If the acceleration method is not recognized
  */
 int get_acceleration_method_flag(
-    const char *restrict acceleration_method
+    const char *restrict acceleration_method,
+    uint *restrict acceleration_method_flag
 );
 
 /**
- * \brief Wrapper function for acceleration computation
+ * \brief Wrapper function for computing acceleration
  * 
- * \param acceleration_method_flag Method to calculate acceleration (int flag)
- * \param objects_count Number of objects in the system
- * \param x Array of position vectors of all objects
- * \param v Array of velocity vectors of all objects
- * \param a Array of acceleration vectors to be modifed
- * \param m Array of masses for all objects
- * \param G Gravitational constant
- * \param barnes_hut_theta Theta parameter for Barnes-Hut algorithm
- */
-void acceleration(
-    int acceleration_method_flag,
-    int objects_count,
-    real *restrict x,
-    real *restrict v,
-    real *restrict a,
-    const real *restrict m,
-    real G,
-    real softening_length,
-    real barnes_hut_theta
-);
-
-/**
- * \brief Pairwise computation of acceleration based on Newton's law of gravitational. 
- * \param objects_count Number of objects in the system
- * \param x Array of position vectors of all objects
- * \param a Array of acceleration vectors to be modifed
- * \param m Array of masses for all objects
- * \param G Gravitational constant
+ * \param a Array of acceleration vectors to be modified
+ * \param system Pointer to the gravitational system
+ * \param acceleration_param Pointer to the acceleration parameters
  * 
- * \return None
+ * \retval SUCCESS If the computation is successful
+ * \retval ERROR_UNKNOWN_ACCELERATION_CODE If the acceleration code is not recognized
  */
-void acceleration_pairwise(
-    int objects_count,
-    real *restrict x,
+int acceleration(
     real *restrict a,
-    const real *restrict m,
-    real G,
-    real softening_length
-);
-
-/**
- * \brief Compute acceleration based on Newton's law of gravitational,
- *        separating the calculation of massive and massless objects.
- * \param objects_count Number of objects in the system
- * \param x Array of position vectors of all objects
- * \param a Array of acceleration vectors to be modifed
- * \param m Array of masses for all objects
- * \param G Gravitational constant
- * 
- * \return None
- */
-void acceleration_massless(
-    int objects_count,
-    real *restrict x,
-    real *restrict a,
-    const real *restrict m,
-    real G,
-    real softening_length
+    const System *restrict system,
+    AccelerationParam *restrict acceleration_param
 );
 
 #endif
