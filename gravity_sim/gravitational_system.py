@@ -618,7 +618,7 @@ class GravitationalSystem:
                 if not file_path.is_file():
                     err_msg = (
                         f'load: system name "{system_name}" not found in built-in systems, and'
-                        + f' default customized systems file not found: "{file_path}"'
+                        f' default customized systems file not found: "{file_path}"'
                     )
                     raise ValueError(err_msg)
 
@@ -669,7 +669,7 @@ class GravitationalSystem:
                     if not loaded_system_flag:
                         err_msg = (
                             f'load: system name "{system_name}" not recognized in '
-                            + f'built-in systems and customized systems file: "{file_path}"'
+                            f'built-in systems and customized systems file: "{file_path}"'
                         )
                         raise ValueError(err_msg)
 
@@ -714,9 +714,11 @@ class GravitationalSystem:
             if not loaded_system_flag:
                 err_msg = (
                     f'load: system name "{system_name}" not recognized in '
-                    + f'given file: "{file_path}"'
+                    f'given file: "{file_path}"'
                 )
                 raise ValueError(err_msg)
+
+        self.name = system_name
 
     def plot_2d_system(
         self,

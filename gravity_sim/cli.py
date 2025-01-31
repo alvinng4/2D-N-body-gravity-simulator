@@ -297,9 +297,9 @@ class GravitySimulatorCLI:
                 print()
                 break
             else:
-                self.get_bool("Back to main menu? (y/n): ")
-                print()
-                return True
+                if self.get_bool("Back to main menu? (y/n): "):
+                    print()
+                    return True
 
         gravitational_system.load(system_name)
         self.simulator.launch_simulation(

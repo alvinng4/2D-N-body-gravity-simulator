@@ -9,6 +9,7 @@ import ctypes
 import threading
 import time
 import timeit
+from pathlib import Path
 from queue import Queue
 from typing import Optional
 
@@ -20,6 +21,7 @@ from .gravitational_system import GravitationalSystem
 
 class Simulator:
     DAYS_PER_YEAR = 365.242189
+    AVAILABLE_ACCELERATION_METHODS = ["pairwise", "massless", "barnes_hut"]
     AVAILABLE_STORING_METHODS = ["default", "flush", "disabled"]
     AVAILABLE_INTEGRATORS = [
         "euler",
@@ -94,6 +96,7 @@ class Simulator:
         self.settings = settings
 
         if "flush_path" in storing_params:
+            Path(storing_params["flush_path"]).mkdir(parents=True, exist_ok=True)
             flush_path_ctypes = storing_params["flush_path"].encode("utf-8")
         else:
             flush_path_ctypes = None

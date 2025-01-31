@@ -1,12 +1,10 @@
 """
 Demonstration on using the gravity simulator to simulate the asteroid belt
-You will need to install the `Pillow` library for this script.
-
-Warning: Do not run multiple instances of this program at the same time, unless you made copies
-         of the whole directory. Otherwise, the final data may overwrite each other.
 
 Note: Technically you can also create nice looking solar system animations by setting N = 0 and 
       expanding the axes limits.
+
+Author: Ching Yin Ng
 """
 
 from pathlib import Path
@@ -42,7 +40,6 @@ def main():
     print("Initializing the system...", end="")
     grav_sim = GravitySimulator()
     system = grav_sim.create_system()
-    grav_sim.set_current_system(system)
 
     system.load("solar_system")
     system.remove("Mercury")

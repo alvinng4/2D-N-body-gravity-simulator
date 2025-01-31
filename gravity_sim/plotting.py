@@ -1,6 +1,5 @@
-import io
 from pathlib import Path
-from typing import Generator, Optional
+from typing import Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -396,11 +395,10 @@ def animate_2d_traj_gif(
             xlim_min, xlim_max = _animation_get_axes_lim(2, objects_count, sol_state)
             ylim_min, ylim_max = xlim_min, xlim_max
 
-    def frame_generator() -> Generator[PIL.Image.Image, None, None]:
         data_size = len(sol_state)
         progress_bar = utils.Progress_bar()
         num_frames_count = 0
-        buffer = io.BytesIO()
+
         if not is_maintain_fixed_dt:
             with progress_bar:
                 for i in progress_bar.track(range(data_size)):
@@ -450,14 +448,14 @@ def animate_2d_traj_gif(
                         ax.set_ylim((ylim_min, ylim_max))
 
                     # Capture the frame
-                    buffer.seek(0)
-                    buffer.truncate(0)
-                    plt.savefig(buffer, dpi=dpi)
+                    plt.savefig(
+                        Path(file_path).parent / f"frames_{num_frames_count:06d}.png",
+                        dpi=dpi,
+                    )
                     num_frames_count += 1
 
-                    buffer.seek(0)
-                    yield PIL.Image.open(buffer)
-
+                    # Clear the plot to prepare for the next frame
+                    ax.clear()
         else:
             if sol_time is None:
                 raise ValueError("Solution time is required to maintain fixed dt")
@@ -520,22 +518,29 @@ def animate_2d_traj_gif(
                         ax.set_ylim((ylim_min, ylim_max))
 
                     # Capture the frame
-                    buffer.seek(0)
-                    buffer.truncate(0)
-                    plt.savefig(buffer, dpi=dpi, format="png")
+                    plt.savefig(
+                        Path(file_path).parent / f"frames_{num_frames_count:06d}.png",
+                        dpi=dpi,
+                        format="png",
+                    )
                     num_frames_count += 1
 
-                    buffer.seek(0)
-                    yield PIL.Image.open(buffer)
-        buffer.close()
+                    # Clear the plot to prepare for the next frame
+                    ax.clear()
 
-    frames = frame_generator()
+    print("Combining frames to gif...")
+
+    def frames_generator(num_frames_count):
+        for i in range(num_frames_count):
+            yield PIL.Image.open(file_path.parent / f"frames_{i:06d}.png")
+
+    frames = frames_generator(num_frames_count)
     next(frames).save(
         file_path,
         format="GIF",
         append_images=frames,
         save_all=True,
-        duration=(1000.0 / fps),
+        duration=(1000 / fps),
         loop=0,
     )
 
@@ -639,11 +644,9 @@ def animate_3d_traj_gif(
             ylim_min, ylim_max = xlim_min, xlim_max
             zlim_min, zlim_max = xlim_min, xlim_max
 
-    def frame_generator() -> Generator[PIL.Image.Image, None, None]:
         data_size = len(sol_state)
         progress_bar = utils.Progress_bar()
         num_frames_count = 0
-        buffer = io.BytesIO()
         if not is_maintain_fixed_dt:
             with progress_bar:
                 for i in progress_bar.track(range(data_size)):
@@ -707,13 +710,15 @@ def animate_3d_traj_gif(
                     ax.set_aspect("equal")
 
                     # Capture the frame
-                    buffer.seek(0)
-                    buffer.truncate(0)
-                    plt.savefig(buffer, dpi=dpi)
+                    # Capture the frame
+                    plt.savefig(
+                        Path(file_path).parent / f"frames_{num_frames_count:06d}.png",
+                        dpi=dpi,
+                    )
                     num_frames_count += 1
 
-                    buffer.seek(0)
-                    yield PIL.Image.open(buffer)
+                    # Clear the plot to prepare for the next frame
+                    ax.clear()
 
         else:
             if sol_time is None:
@@ -786,22 +791,28 @@ def animate_3d_traj_gif(
                     ax.set_aspect("equal")
 
                     # Capture the frame
-                    buffer.seek(0)
-                    buffer.truncate(0)
-                    plt.savefig(buffer, dpi=dpi, format="png")
+                    plt.savefig(
+                        Path(file_path).parent / f"frames_{num_frames_count:06d}.png",
+                        dpi=dpi,
+                    )
                     num_frames_count += 1
 
-                    buffer.seek(0)
-                    yield PIL.Image.open(buffer)
-        buffer.close()
+                    # Clear the plot to prepare for the next frame
+                    ax.clear()
 
-    frames = frame_generator()
+    print("Combining frames to gif...")
+
+    def frames_generator(num_frames_count):
+        for i in range(num_frames_count):
+            yield PIL.Image.open(file_path.parent / f"frames_{i:06d}.png")
+
+    frames = frames_generator(num_frames_count)
     next(frames).save(
         file_path,
         format="GIF",
         append_images=frames,
         save_all=True,
-        duration=(1000.0 / fps),
+        duration=(1000 / fps),
         loop=0,
     )
 
