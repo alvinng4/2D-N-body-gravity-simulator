@@ -1,7 +1,7 @@
 """
 Demonstration on using the gravity simulator to simulate the asteroid belt
 
-Note: Technically you can also create nice looking solar system animations by setting N = 0 and 
+Note: Technically you can also create nice looking solar system animations by setting N = 0 and
       expanding the axes limits.
 
 Author: Ching Yin Ng
@@ -9,6 +9,7 @@ Author: Ching Yin Ng
 
 from pathlib import Path
 import sys
+
 sys.path.append(str(Path(__file__).parent.parent))
 
 import matplotlib.pyplot as plt
@@ -16,12 +17,14 @@ import numpy as np
 import PIL
 import rich.progress
 
-from gravity_sim import GravitySimulator
+from gravity_sim import GravitySimulatorAPI
+from gravity_sim import plotting
 
 N = 50000
 FPS = 30
 DPI = 200
 N_FRAMES = 500
+
 
 class Progress_bar(rich.progress.Progress):
     def __init__(self):
@@ -35,36 +38,36 @@ class Progress_bar(rich.progress.Progress):
             "•[magenta] {task.completed}/{task.total}",
         )
 
+
 def main():
     # ---------- Initialization ---------- #
     print("Initializing the system...", end="")
-    grav_sim = GravitySimulator()
+    grav_sim = GravitySimulatorAPI()
     system = grav_sim.create_system()
 
     system.load("solar_system")
-    system.remove("Mercury")
-    system.remove(name="Neptune")
-    system.remove(name="Uranus")
-    colors = [grav_sim.SOLAR_SYSTEM_COLORS[name] for name in system.objects_names]
+    system.remove([1, 7, 8])  # Remove Mercury, Uranus, and Neptune
+    objects_name = ["Sun", "Venus", "Earth", "Mars", "Jupiter", "Saturn"]
+    colors = [plotting.SOLAR_SYSTEM_COLORS[name] for name in objects_name]
     marker_sizes = [6.0, 1.5, 2.0, 1.5, 4.0, 3.5]
 
     #################################################
     # Adding a star to the system
 
     # Star 1
-    # system.add_keplerian(
-    #     semi_major_axis=5.5,
-    #     eccentricity=0.7,
-    #     inclination=0.05,
-    #     argument_of_periapsis=0.07,
-    #     longitude_of_ascending_node=0.07,
-    #     true_anomaly=0.35,
-    #     m=1.0,
-    #     primary_object_name="Sun",
-    #     object_name="Added Star",
-    # )
-    # colors.append("orange")
-    # marker_sizes.append(6.0)
+    system.add_keplerian(
+        semi_major_axis=5.5,
+        eccentricity=0.7,
+        inclination=0.05,
+        argument_of_periapsis=0.07,
+        longitude_of_ascending_node=0.07,
+        true_anomaly=0.35,
+        m=1.0,
+        primary_object_index=0,
+    )
+    objects_name.append("Star 1")
+    colors.append("orange")
+    marker_sizes.append(6.0)
 
     # Star 2
     # system.add_keplerian(
@@ -75,9 +78,9 @@ def main():
     #     longitude_of_ascending_node=4.0,
     #     true_anomaly=4.0,
     #     m=1.0,
-    #     primary_object_name="Sun",
-    #     object_name="Added Star",
+    #     primary_object_index=0,
     # )
+    # objects_name.append("Star 1")
     # colors.append("orange")
     # marker_sizes.append(6.0)
 
@@ -103,7 +106,7 @@ def main():
             longitude_of_ascending_node=long_asc_node[i],
             true_anomaly=true_anomaly[i],
             m=0.0,
-            primary_object_name="Sun",
+            primary_object_index=0,
         )
 
     system.center_of_mass_correction()
@@ -121,13 +124,16 @@ def main():
         for i in range(N_FRAMES):
             if i == 0:
                 grav_sim.launch_simulation(
-                    "rkf78",
-                    grav_sim.years_to_days(5.0 / N_FRAMES),
-                    tolerance=1e-6,
+                    gravitational_system=system,
+                    tf=grav_sim.years_to_days(5.0 / N_FRAMES),
+                    integrator="rk4",
+                    dt=grav_sim.years_to_days(5.0 / N_FRAMES / 100.0),
                     acceleration_method="massless",
-                    storing_method="no_store",
-                    no_print=True,
-                    no_progress_bar=True,
+                    storing_method="disabled",
+                    make_copy_system=False,
+                    make_copy_params=False,
+                    verbose=1,
+                    disable_progress_bar=True,
                 )
             else:
                 grav_sim.resume_simulation(grav_sim.years_to_days(5.0 / N_FRAMES))
@@ -161,20 +167,20 @@ def main():
             # Plotting massive objects
             for j in range(massive_objects_count):
                 ax.scatter(
-                    grav_sim.simulator.x[j, 0],
-                    grav_sim.simulator.x[j, 1],
-                    grav_sim.simulator.x[j, 2],
+                    system.x[j, 0],
+                    system.x[j, 1],
+                    system.x[j, 2],
                     marker="o",
-                    label=system.objects_names[j],
+                    label=objects_name[j],
                     color=colors[j],
                     s=marker_sizes[j],
                 )
 
             # Plotting massless objects
             ax.scatter(
-                grav_sim.simulator.x[massive_objects_count:, 0],
-                grav_sim.simulator.x[massive_objects_count:, 1],
-                grav_sim.simulator.x[massive_objects_count:, 2],
+                system.x[massive_objects_count:, 0],
+                system.x[massive_objects_count:, 1],
+                system.x[massive_objects_count:, 2],
                 color="white",
                 marker=".",
                 s=0.1,
@@ -212,6 +218,7 @@ def main():
 
     print()
     print("Combining frames to gif...")
+
     def frames_generator():
         for i in range(N_FRAMES):
             yield PIL.Image.open(file_path / f"frames_{i:04d}.png")
@@ -222,7 +229,7 @@ def main():
         save_all=True,
         append_images=frames,
         loop=0,
-        duration=(1000 // FPS)
+        duration=(1000 // FPS),
     )
 
     for i in range(N_FRAMES):
@@ -230,6 +237,7 @@ def main():
 
     print(f"Output completed! Please check {file_path / 'asteroid_belt.gif'}")
     print()
+
 
 if __name__ == "__main__":
     main()
