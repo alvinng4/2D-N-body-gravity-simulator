@@ -196,13 +196,13 @@ IN_FILE int acceleration_massless(
     {
         if (m[i] != 0.0)
         {
-            massless_indices[massless_objects_count] = i;
-            massless_objects_count++;
+            massive_indices[massive_objects_count] = i;
+            massive_objects_count++;
         }
         else
         {
-            massive_indices[massive_objects_count] = i;
-            massive_objects_count++;
+            massless_indices[massless_objects_count] = i;
+            massless_objects_count++;
         }
     }
 

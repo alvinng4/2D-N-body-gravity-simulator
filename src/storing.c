@@ -198,7 +198,7 @@ WIN32DLL_API int store_solution_step(
     }
     else if (storing_param->storing_method_flag_ == STORING_METHOD_DISABLED)
     {
-        return_code = ERROR_STORE_SOLUTION_STEP_METHOD_DISABLED;
+        return_code = SUCCESS;
     }
     else
     {

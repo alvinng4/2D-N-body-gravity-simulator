@@ -85,67 +85,60 @@ class GravitySimulatorAPI:
 
     def launch_simulation(
         self,
-        tf: float,
         gravitational_system: GravitationalSystem,
-        integrator_params: dict,
-        acceleration_params: Optional[dict] = None,
-        storing_params: Optional[dict] = None,
-        settings: Optional[dict] = None,
+        tf: float,
+        **kwargs,
     ) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         """Launch simulation
 
         Parameters
         ----------
         gravitational_system : GravitationalSystem
-        integrator_params : dict
-        acceleration_params : dict
-        storing_params : dict
-        settings : dict
         tf : float
+        kwargs : dict
         """
-        if acceleration_params is None:
-            acceleration_params = {
-                "method": "pairwise",
-                "softening_length": 0.0,
-            }
-        if storing_params is None:
-            storing_params = {
-                "method": "default",
-                "storing_freq": 1,
-            }
-        if settings is None:
-            settings = {
-                "verbose": 2,
-                "disable_progress_bar": False,
-                "make_copy_params": True,
-                "make_copy_system": True,
-            }
-        if "make_copy_params" in settings:
-            if settings["make_copy_params"]:
-                integrator_params = integrator_params.copy()
-                acceleration_params = acceleration_params.copy()
-                storing_params = storing_params.copy()
-                settings = settings.copy()
-            if "make_copy_system" in settings:
-                if settings["make_copy_system"]:
-                    gravitational_system = copy.deepcopy(gravitational_system)
+        (integrator_params, acceleration_params, storing_params, settings) = (
+            self._create_simulation_input(**kwargs)
+        )
+        if settings["make_copy_params"]:
+            integrator_params = integrator_params.copy()
+            acceleration_params = acceleration_params.copy()
+            storing_params = storing_params.copy()
+            self.settings = settings.copy()
 
-        self._check_simulation_input(
-            gravitational_system,
-            integrator_params,
-            acceleration_params,
-            storing_params,
-            settings,
+        if settings["make_copy_system"]:
+            gravitational_system = copy.deepcopy(gravitational_system)
+
+        self.gravitational_system = gravitational_system
+        self.integrator_params = integrator_params
+        self.acceleration_params = acceleration_params
+        self.storing_params = storing_params
+        self.settings = settings
+
+        if settings["verbose"] >= 2:
+            self._print_simulation_input(
+                self.integrator_params,
+                self.acceleration_params,
+                self.storing_params,
+                self.settings,
+                tf,
+            )
+        self._check_and_fill_in_simulation_input(
+            self.gravitational_system,
+            self.integrator_params,
+            self.acceleration_params,
+            self.storing_params,
+            self.settings,
             tf,
         )
         is_exit_ctypes_bool = ctypes.c_bool(False)
         try:
             self.simulator.launch_simulation(
-                gravitational_system,
-                integrator_params,
-                acceleration_params,
-                storing_params,
-                settings,
+                self.gravitational_system,
+                self.integrator_params,
+                self.acceleration_params,
+                self.storing_params,
+                self.settings,
                 tf,
                 is_exit_ctypes_bool,
             )
@@ -153,7 +146,7 @@ class GravitySimulatorAPI:
             is_exit_ctypes_bool.value = True
             raise KeyboardInterrupt
 
-        if storing_params["method"] == "default":
+        if self.storing_params["method"] == "default":
             return (
                 self.simulator.sol_state_,
                 self.simulator.sol_time_,
@@ -162,7 +155,112 @@ class GravitySimulatorAPI:
 
         return None
 
-    def _check_simulation_input(
+    def resume_simulation(
+        self, tf: float
+    ) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        """Resume simulation
+
+        Parameters
+        ----------
+        tf : float
+        """
+        is_exit_ctypes_bool = ctypes.c_bool(False)
+        try:
+            self.simulator.launch_simulation(
+                self.gravitational_system,
+                self.integrator_params,
+                self.acceleration_params,
+                self.storing_params,
+                self.settings,
+                tf,
+                is_exit_ctypes_bool,
+            )
+        except KeyboardInterrupt:
+            is_exit_ctypes_bool.value = True
+            raise KeyboardInterrupt
+
+        if self.storing_params["method"] == "default":
+            return (
+                self.simulator.sol_state_,
+                self.simulator.sol_time_,
+                self.simulator.sol_dt_,
+            )
+
+        return None
+
+    def _create_simulation_input(self, **kwargs) -> Tuple[dict, dict, dict, dict]:
+        integrator_params = {}
+        acceleration_params = {}
+        storing_params = {}
+        settings = {}
+
+        if "verbose" in kwargs:
+            verbose = kwargs["verbose"]
+        else:
+            verbose = 2
+
+        integrator_params_list = [
+            "integrator",
+            "dt",
+            "tolerance",
+            "initial_dt",
+            "whfast_kepler_tol",
+            "whfast_kepler_max_iter",
+            "whfast_kepler_auto_remove",
+            "whfast_auto_remove_tol",
+        ]
+        acceleration_params_list = [
+            "acceleration_method",
+            "softening_length",
+            "order",
+            "opening_angle",
+        ]
+        storing_params_list = ["storing_method", "storing_freq", "flush_path"]
+        settings_list = [
+            "disable_progress_bar",
+            "make_copy_params",
+            "make_copy_system",
+            "verbose",
+        ]
+
+        for key in kwargs:
+            if key in integrator_params_list:
+                integrator_params[key] = kwargs[key]
+            elif key in acceleration_params_list:
+                if key == "acceleration_method":
+                    acceleration_params["method"] = kwargs[key]
+                else:
+                    acceleration_params[key] = kwargs[key]
+            elif key in storing_params_list:
+                if key == "storing_method":
+                    storing_params["method"] = kwargs[key]
+                else:
+                    storing_params[key] = kwargs[key]
+            elif key in settings_list:
+                settings[key] = kwargs[key]
+            else:
+                warnings.warn(f"Unknown key: {key}")
+
+        if "method" not in acceleration_params:
+            acceleration_params["method"] = "pairwise"
+        if "softening_length" not in acceleration_params:
+            acceleration_params["softening_length"] = 0.0
+        if "method" not in storing_params:
+            storing_params["method"] = "default"
+        if storing_params["method"] != "disabled":
+            if "storing_freq" not in storing_params:
+                storing_params["storing_freq"] = 1
+        if "disable_progress_bar" not in settings:
+            settings["disable_progress_bar"] = False
+        if "make_copy_params" not in settings:
+            settings["make_copy_params"] = True
+        if "make_copy_system" not in settings:
+            settings["make_copy_system"] = True
+        settings["verbose"] = verbose
+
+        return integrator_params, acceleration_params, storing_params, settings
+
+    def _check_and_fill_in_simulation_input(
         self,
         gravitational_system: GravitationalSystem,
         integrator_params: dict,
@@ -171,7 +269,7 @@ class GravitySimulatorAPI:
         settings: dict,
         tf: float,
     ) -> None:
-        """Check simulation input
+        """Check and fill in simulation input
 
         Parameters
         ----------
@@ -336,6 +434,11 @@ class GravitySimulatorAPI:
             raise ValueError(
                 f'acceleration_params["method"] must be one of {self.simulator.AVAILABLE_ACCELERATION_METHODS}'
             )
+        if acceleration_params["method"] == "barnes_hut":
+            if (gravitational_system.m == 0.0).any():
+                raise ValueError(
+                    "Barnes-Hut method cannot be used with any massless objects"
+                )
         if "softening_length" in acceleration_params:
             if not isinstance(acceleration_params["softening_length"], (int, float)):
                 raise TypeError(
@@ -412,6 +515,8 @@ class GravitySimulatorAPI:
                 warnings.warn(
                     'storing_params["storing_freq"] is not used for disabled storing method'
                 )
+            else:
+                storing_params["storing_freq"] = 1
 
         ### settings ###
         if "verbose" not in settings:
@@ -436,6 +541,30 @@ class GravitySimulatorAPI:
 
         if tf <= 0.0:
             raise ValueError("tf must be positive")
+
+    def _print_simulation_input(
+        self,
+        integrator_params: dict,
+        acceleration_params: dict,
+        storing_params: dict,
+        settings: dict,
+        tf: float,
+    ) -> None:
+        print("---------- Simulation input ----------")
+        print("integrator_params:")
+        for key, value in integrator_params.items():
+            print(f"    {key}: {value}")
+        print("acceleration_params:")
+        for key, value in acceleration_params.items():
+            print(f"    {key}: {value}")
+        print("storing_params:")
+        for key, value in storing_params.items():
+            print(f"    {key}: {value}")
+        print("settings:")
+        for key, value in settings.items():
+            print(f"    {key}: {value}")
+        print(f"tf: {tf} days")
+        print("--------------------------------------")
 
     def compute_energy(
         self,

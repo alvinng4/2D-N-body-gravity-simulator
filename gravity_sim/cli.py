@@ -62,21 +62,6 @@ class GravitySimulatorCLI:
             "Vesta",
         ],
     }
-    SOLAR_SYSTEM_COLORS = {
-        "Sun": "orange",
-        "Mercury": "slategrey",
-        "Venus": "wheat",
-        "Earth": "skyblue",
-        "Mars": "red",
-        "Jupiter": "darkgoldenrod",
-        "Saturn": "gold",
-        "Uranus": "paleturquoise",
-        "Neptune": "blue",
-        "Moon": "grey",
-        "Pluto": None,
-        "Ceres": None,
-        "Vesta": None,
-    }
 
     def __init__(self) -> None:
         ### Read command line arguments ###
@@ -733,8 +718,8 @@ class GravitySimulatorCLI:
                 ]
                 colors: list[str] = []
                 for label in labels:
-                    if label in self.SOLAR_SYSTEM_COLORS:
-                        color = self.SOLAR_SYSTEM_COLORS[label]
+                    if label in plotting.SOLAR_SYSTEM_COLORS:
+                        color = plotting.SOLAR_SYSTEM_COLORS[label]
                         if color is not None:
                             colors.append(color)
 
@@ -779,8 +764,8 @@ class GravitySimulatorCLI:
                 ]
                 colors: list[str] = []
                 for label in labels:
-                    if label in self.SOLAR_SYSTEM_COLORS:
-                        color = self.SOLAR_SYSTEM_COLORS[label]
+                    if label in plotting.SOLAR_SYSTEM_COLORS:
+                        color = plotting.SOLAR_SYSTEM_COLORS[label]
                         if color is not None:
                             colors.append(color)
 
@@ -930,8 +915,8 @@ class GravitySimulatorCLI:
                 ]
                 colors: list[str] = []
                 for label in labels:
-                    if label in self.SOLAR_SYSTEM_COLORS:
-                        color = self.SOLAR_SYSTEM_COLORS[label]
+                    if label in plotting.SOLAR_SYSTEM_COLORS:
+                        color = plotting.SOLAR_SYSTEM_COLORS[label]
                         if color is not None:
                             colors.append(color)
 
@@ -978,8 +963,8 @@ class GravitySimulatorCLI:
                 ]
                 colors: list[str] = []
                 for label in labels:
-                    if label in self.SOLAR_SYSTEM_COLORS:
-                        color = self.SOLAR_SYSTEM_COLORS[label]
+                    if label in plotting.SOLAR_SYSTEM_COLORS:
+                        color = plotting.SOLAR_SYSTEM_COLORS[label]
                         if color is not None:
                             colors.append(color)
 
@@ -1206,8 +1191,8 @@ class GravitySimulatorCLI:
                 ][1:]  # Exclude the first object)
                 colors: list[str] = []
                 for label in labels:
-                    if label in self.SOLAR_SYSTEM_COLORS:
-                        color = self.SOLAR_SYSTEM_COLORS[label]
+                    if label in plotting.SOLAR_SYSTEM_COLORS:
+                        color = plotting.SOLAR_SYSTEM_COLORS[label]
                         if color is not None:
                             colors.append(color)
 
@@ -1275,8 +1260,8 @@ class GravitySimulatorCLI:
                 ][1:]  # Exclude the first object)
                 colors: list[str] = []
                 for label in labels:
-                    if label in self.SOLAR_SYSTEM_COLORS:
-                        color = self.SOLAR_SYSTEM_COLORS[label]
+                    if label in plotting.SOLAR_SYSTEM_COLORS:
+                        color = plotting.SOLAR_SYSTEM_COLORS[label]
                         if color is not None:
                             colors.append(color)
 

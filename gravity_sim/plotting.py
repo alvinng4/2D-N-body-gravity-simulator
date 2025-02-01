@@ -7,6 +7,22 @@ import PIL
 
 from . import utils
 
+SOLAR_SYSTEM_COLORS = {
+    "Sun": "orange",
+    "Mercury": "slategrey",
+    "Venus": "wheat",
+    "Earth": "skyblue",
+    "Mars": "red",
+    "Jupiter": "darkgoldenrod",
+    "Saturn": "gold",
+    "Uranus": "paleturquoise",
+    "Neptune": "blue",
+    "Moon": "grey",
+    "Pluto": None,
+    "Ceres": None,
+    "Vesta": None,
+}
+
 
 def set_3d_axes_equal(ax: plt.Axes) -> None:
     """

@@ -160,7 +160,7 @@ class Simulator:
         ### Begin simulation ###
         if settings["verbose"] > 1:
             print("Simulation in progress...")
-            simulation_thread.start()
+        simulation_thread.start()
         if not settings["disable_progress_bar"]:
             progress_bar_thread.start()
 
