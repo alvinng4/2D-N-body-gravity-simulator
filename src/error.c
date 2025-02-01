@@ -63,7 +63,60 @@ IN_FILE int get_error_msg(const int error_code, char **error_msg)
         case ERROR_ACCELERATION_MASSLESS_MEMORY_ALLOC:
             *error_msg = "C library error: Memory allocation failed in acceleration_massless().\n";
             return SUCCESS;
-        
+
+        // Barnes-Hut acceleration error
+        case ERROR_BARNES_HUT_ROOT_MEMORY_ALLOC:
+            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut().\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_LEAF_POOL_PTR_MEMORY_ALLOC:
+            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for leaf node pool pointer.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_LEAF_POOL_MEMORY_ALLOC:
+            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for leaf node pool.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_INTERNAL_POOL_PTR_MEMORY_ALLOC:
+            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for internal node pool pointer.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_INTERNAL_POOL_MEMORY_ALLOC:
+            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for internal node pool.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_CONSTRUCT_OCTREE_INTERNAL_POOL_MEMORY_ALLOC:
+            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for internal node pool in construct octree.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_SHORTEN_TREE_MEMORY_ALLOC:
+            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for shorten tree.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_SHORTEN_TREE_MEMORY_FULL:
+            *error_msg = "C library error: Memory full in acceleration_barnes_hut() for shorten tree.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_SHORTEN_TREE_MEMORY_FAILED_FIND_ALL_LEAVES:
+            *error_msg = "C library error: Failed to find all leaves in acceleration_barnes_hut() for shorten tree.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_COMPUTE_COM_MEMORY_ALLOC:
+            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for compute center of mass.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_COMPUTE_COM_MEMORY_FULL:
+            *error_msg = "C library error: Memory full in acceleration_barnes_hut() for compute center of mass.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_ACCELERATION_STEP_ACC_STACK_MEMORY_ALLOC:
+            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for acceleration step.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_ACCELERATION_STEP_ACC_STACK_FULL:
+            *error_msg = "C library error: Acceleration stack is full in acceleration_barnes_hut() for acceleration step.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_ACCELERATION_STEP_OBJ_STACK_MEMORY_ALLOC:
+            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for object stack in acceleration step.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_ACCELERATION_STEP_OBJ_STACK_FULL:
+            *error_msg = "C library error: Object stack is full in acceleration_barnes_hut() for acceleration step.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_ACCELERATION_STEP_SAME_BRANCH_NODE_POOL_MEMORY_ALLOC:
+            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for same branch node pool in acceleration step.\n";
+            return SUCCESS;
+        case ERROR_BARNES_HUT_ACCELERATION_STEP_SAME_BRANCH_NODE_POOL_FULL:
+            *error_msg = "C library error: Same branch node pool is full in acceleration_barnes_hut() for acceleration step.\n";
+            return SUCCESS;
+
         /* Solution storing (general) */
         // Storing error (general)
         case ERROR_UNKNOWN_STORING_METHOD:

@@ -1,7 +1,7 @@
 CFLAGS = -O3 -std=c99 -Wall -Wextra -Wpedantic
 LDFLAGS = -shared
 LIBS = -lm
-SRCS = acceleration.c error.c gravity_sim.c integrator_simple.c integrator_rk_embedded.c integrator_ias15.c integrator_whfast.c math_functions.c storing.c utils.c
+SRCS = acceleration.c acceleration_barnes_hut.c error.c gravity_sim.c integrator_simple.c integrator_rk_embedded.c integrator_ias15.c integrator_whfast.c math_functions.c storing.c utils.c
 OBJS = $(SRCS:.c=.o)
 
 ifeq ($(OS),Windows_NT)

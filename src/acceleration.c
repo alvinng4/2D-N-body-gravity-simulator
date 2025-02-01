@@ -85,6 +85,8 @@ WIN32DLL_API int acceleration(
             return acceleration_pairwise(a, system, acceleration_param);
         case ACCELERATION_METHOD_MASSLESS:
             return acceleration_massless(a, system, acceleration_param);
+        case ACCELERATION_METHOD_BARNES_HUT:
+            return acceleration_barnes_hut(a, system, acceleration_param);
         default:
             return ERROR_UNKNOWN_ACCELERATION_CODE;
     }

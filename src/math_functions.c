@@ -52,3 +52,8 @@ WIN32DLL_API real vec_dot(
 
     return sum;
 }
+
+WIN32DLL_API int fast_pow_of_2(int n)
+{
+    return 1 << n;
+}

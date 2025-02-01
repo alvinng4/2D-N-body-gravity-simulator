@@ -60,4 +60,13 @@ real vec_dot(
     const int vec_length
 );
 
+/**
+ * \brief Calculate 2^n using bit shifting
+ * 
+ * \param n Exponent
+ * 
+ * \return 2^n
+ */
+int fast_pow_of_2(int n);
+
 #endif

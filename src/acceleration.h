@@ -1,8 +1,8 @@
 /**
  * \file acceleration.h
  * \author Ching Yin Ng
- * \brief Contains simple methods in calculating gravitational
- *        acceleration, and acceleration-related functions.
+ * \brief Prototype of acceleration and acceleration-related
+ *        functions for gravity-simulator
  */
 
 #ifndef ACCELERATION_H
@@ -42,6 +42,22 @@ int acceleration(
     real *restrict a,
     const System *restrict system,
     AccelerationParam *restrict acceleration_param
+);
+
+/**
+ * \brief Compute acceleration with Barnes-Hut algorithm
+ * 
+ * \param a Array of acceleration vectors to be modified
+ * \param system Pointer to the gravitational system
+ * \param acceleration_param Pointer to the acceleration parameters
+ * 
+ * \retval SUCCESS If the computation is successful
+ * \retval
+ */
+int acceleration_barnes_hut(
+    real *restrict a,
+    const System *restrict system,
+    const AccelerationParam *restrict acceleration_param
 );
 
 #endif
