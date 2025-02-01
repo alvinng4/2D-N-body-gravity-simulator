@@ -131,6 +131,18 @@ class GravitySimulatorAPI:
             self.settings,
             tf,
         )
+
+        # Ensuring no file name conflicts
+        if self.storing_params["method"] == "flush":
+            if Path(storing_params["flush_path"]).is_file():
+                while True:
+                    i = 0
+                    flush_path = str(storing_params["flush_path"]) + f"_{i}"
+                    if not Path(flush_path).is_file():
+                        storing_params["flush_path"] = flush_path
+                        break
+                    i += 1
+
         is_exit_ctypes_bool = ctypes.c_bool(False)
         try:
             self.simulator.launch_simulation(

@@ -97,8 +97,6 @@ class Simulator:
 
         if "flush_path" in storing_params:
             Path(storing_params["flush_path"]).parent.mkdir(parents=True, exist_ok=True)
-            if Path(storing_params["flush_path"]).is_file():
-                Path(storing_params["flush_path"]).unlink()
             flush_path_ctypes = storing_params["flush_path"].encode("utf-8")
         else:
             flush_path_ctypes = None
