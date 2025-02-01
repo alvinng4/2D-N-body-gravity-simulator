@@ -28,7 +28,7 @@ from gravity_sim import plotting
 from gravity_sim.cli import GravitySimulatorCLI
 from gravity_sim.utils import Progress_bar
 
-N = 5000
+N = 1000
 FPS = 30
 DPI = 200
 
@@ -360,12 +360,12 @@ def main():
     print()
     print("Combining frames to gif...")
 
-    def frames_generator(num_frames, file_prefix):
+    def frames_generator(num_frames, file_prefix: str) -> PIL.Image:
         for i in range(num_frames):
-            yield PIL.Image.open(f"file_prefix_{i:04d}.png")
+            yield PIL.Image.open(f"{file_prefix}_{i:04d}.png")
 
     semi_major_axes_frames = frames_generator(
-        save_count_semi_major_axes, "semi_major_axes_frames"
+        save_count_semi_major_axes, str(file_path / "semi_major_axes_frames")
     )
     next(semi_major_axes_frames).save(
         file_path / "Kirkwood_gap_semi_major_axes.gif",
@@ -376,7 +376,7 @@ def main():
     )
 
     visualization_frames = frames_generator(
-        save_count_visualization, "visualization_frames"
+        save_count_visualization, str(file_path / "visualization_frames")
     )
     next(visualization_frames).save(
         file_path / "Kirkwood_gap_visualization.gif",
@@ -387,18 +387,18 @@ def main():
     )
 
     print(
-        f"Output completed! Please check {file_path / 'Kirkwood_gap_semi_major_axes.gif'} \nand {file_path / 'Kirkwood_gap_visualization.gif'}"
+        f"Output completed! Please check \"{file_path / 'Kirkwood_gap_semi_major_axes.gif'}\" and \"{file_path / 'Kirkwood_gap_visualization.gif'}\""
     )
     print()
 
-    print("Deleting files...")
     for i in range(save_count_semi_major_axes):
         (file_path / f"semi_major_axes_frames_{i:04d}.png").unlink()
 
     for i in range(save_count_visualization):
         (file_path / f"visualization_frames_{i:04d}.png").unlink()
 
-    if GravitySimulatorCLI.get_bool(f"Delete data file? Path: {data_path}"):
+    msg = "Do you want to delete the data file? (y/n)"
+    if GravitySimulatorCLI.get_bool(msg):
         data_path.unlink()
 
     print("Done! Exiting the program...")
