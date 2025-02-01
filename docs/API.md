@@ -16,8 +16,9 @@
 ## Quick Start
 
 ### Prerequisite
+
 1. Python version 3.10 or higher. 
-2. Any C compiler that supports C99
+2. Any C compiler that supports C99 (May not be needed if the program runs successfully)
 
 ### Installation
 1. Download the source files, or clone this repository by running the following command in terminal:
@@ -43,49 +44,20 @@
     ```
     make [CC=gcc]
     ```
-    Then, move the `c_lib.dylib`, `c_lib.dll` or `c_lib.so` file into the gravity_sim folder (One of them will be generated depending on your operation system).
-    ```
-    mv c_lib.dylib ../gravity_sim
-    mv c_lib.dll   ../gravity_sim
-    mv c_lib.so    ../gravity_sim
-    ```
 
 ### Some notes
 * The default unit for this project is solar masses, AU and days, with $G = 0.00029591220828411956 \text{ M}_\odot^{-1} \text{ AU}^3 \text{ day}^{-2}$.
 It is possible to change this value in the API by changing `system.G`.
-* Animations, simulation results, etc. will be stored to `gravity_sim/result` by default, unless a file path is specified.
-* Complex animations like the asteroid belt cannot be done solely with the API functions. Sample scripts are provided in this repository
 * Check the `examples` folder for API tutorial and sample projects
-* For WHFast, features including `compensated_summation`, `barnes_hut` and `resume_simulation` are not available due to implementation difficulties.
+* For WHFast, features including Barnes-Hut algorithm are not available due to implementation difficulties.
 
 ## GravitySimulator API
 
 You may import the GravitySimulator API from `gravity_sim` to perform gravity simulation.
 See `examples/tutorial.ipynb` or [Sample projects](#sample-projects) for some example usage.
 If your computer cannot render jupyter notebook (files end with `.ipynb`), you can view them on github.
-```
-from gravity_sim import GravitySimulator
 
-grav_sim = GravitySimulator()
-grav_sim.integration_mode = "c_lib"  # "numpy" is also available
-
-system = grav_sim.create_system()
-grav_sim.set_current_system(system)
-system.load("solar_system")
-
-grav_sim.launch_simulation(
-    integrator="ias15",
-    tf=grav_sim.years_to_days(1000.0),
-    tolerance=1e-9,
-    store_every_n=50,
-)
-
-grav_sim.plot_2d_trajectory()
-grav_sim.plot_rel_energy()
-grav_sim.save_results()
-```
-
-#### launch_simulation
+<!-- #### launch_simulation
 launch_simulation() is the main method for launching the simulation.
 
 | Parameter | Type | Default | Description |
@@ -101,7 +73,7 @@ launch_simulation() is the main method for launching the simulation.
 | `no_progress_bar` | bool | False | If True, disables the progress bar. |
 | `no_print` | bool | False | If True, disables some printing to console |
 | `softening_length` | float | 0.0 | Softening length for acceleration calculation |
-| `**kwargs` | dict | - | Additional keyword arguments. |
+| `**kwargs` | dict | - | Additional keyword arguments. | -->
 
 #### integrators 
 `euler`, `euler_cromer`, `rk4`, `leapfrog`, `rkf45`, `dopri`, `dverk`, `rkf78`, `ias15`, `whfast`
@@ -116,24 +88,24 @@ launch_simulation() is the main method for launching the simulation.
 - `barnes_hut`
     * Calculate gravitational acceleration with Barnes-Hut algorithm
     * Time complexity: $O(N \log{N})$
-    * `**kwargs`: `barnes_hut_theta`
+    * `**kwargs`: `opening_angle`
         * Threshold for Barnes-Hut algorithm, default = 0.5
 
-- `fast_multipole`
+<!-- - `fast_multipole`
     * Calculate gravitational acceleration with fast multipole method (FMM)
         * Time complexity: $O(N)$
-        * `**kwargs`: `softening_length`
+        * `**kwargs`: `softening_length` -->
 
 #### storing_method
 - `default`
     * Store solutions directly into memory
 - `flush`
-    * Flush intermediate results into a csv file in `gravity_sim/results` to reduce memory pressure.
-- `no_store`
-    * To not store any result, typically used for benchmarking.
+    * Flush intermediate results into a csv file to reduce memory pressure.
+- `disabled`
+    * To not store any result.
 
-## Default systems
-Some systems are available by default.
+## Built-in systems
+Some systems are available by default and can be loaded readily.
 | System | Description |
 |:-------|:------------| 
 | circular_binary_orbit | A circular orbit formed by two stars |
@@ -183,60 +155,16 @@ WHFast is a second order symplectic method with fixed step size, which conserves
 #### `**kwargs` for WHFast
 | Argument               | Description                                                  | Default Value |
 |------------------------|--------------------------------------------------------------|---------------|
-| `kepler_tol`           | Tolerance in solving the Kepler's equation                   | $10^{-12}$    |
-| `kepler_max_iter`      | Maximum number of iterations in solving Kepler's equation    | 500        |
-| `kepler_auto_remove`   | Integer flag to indicate whether to remove objects that failed to converge in Kepler's equation | False |
-| `kepler_auto_remove_tol` | Tolerance for removing objects that failed to converge in Kepler's equation  | $10^{-8}$ |
+| `whfast_kepler_tol`           | Tolerance in solving the Kepler's equation                   | $10^{-12}$    |
+| `whfast_kepler_max_iter`      | Maximum number of iterations in solving Kepler's equation    | 500        |
+| `whfast_kepler_auto_remove`   | Integer flag to indicate whether to remove objects that failed to converge in Kepler's equation | False |
+| `whfast_kepler_auto_remove_tol` | Tolerance for removing objects that failed to converge in Kepler's equation  | $10^{-8}$ |
 
 > [!WARNING]\
 > When using WHFast, the order of adding objects matters. Since WHFast use Jacobi coordinate, we must add the inner object first, followed by outer objects relative to the central star. For convenience, you may also add the objects in any order, then call `system.sort_by_distance(primary_object_name)` or `system.sort_by_distance(primary_object_index)`
 
 ## Saving the results
-If you saved the results, the numerical data will be stored in the following folder:
-```
-Gravity-Simulator/gravity_sim/results
-```
-The file will starts with the metadata which starts with `#`.
-Missing information will be saved as `None`.
-More rows may be added in the future.
-
-Below is an example:
-```
-# Data saved on (YYYY-MM-DD): 2024-07-27
-# System Name: solar_system
-# Integrator: IAS15
-# Number of objects: 9
-# Gravitational constant: 0.00029591220828411956
-# Simulation time (days): 73048.4378
-# dt (days): None
-# Tolerance: 1e-09
-# Data size: 64596
-# Store every nth point: 1
-# Run time (s): 1.4667500000214204
-# masses: 1.0 1.6601208254589484e-07 2.447838287796944e-06 3.0034896154649684e-06 3.2271560829322774e-07 0.0009547919099414248 0.00028588567002459455 4.36624961322212e-05 5.151383772654274e-05
-```
-Then, the actual data will be saved in the default unit (solar masses, AU and days), and follow this format:
+If you save the results, the data will be saved in the default unit (solar masses, AU and days), and follow this format:
 ```
 time, dt, total energy, x1, y1, z1, ... vx1, vy1, vz1, ...
 ```
-The saved data file can be read by the program.
-Even if the metadata is corrupted or missing, the program can still read the data file, although some information could be missing.
-
-## Output animations in .gif
-
-You may output the simple trajectory animations in 2D / 3D in .gif.
-The output file would be stored in `gravity_sim/result`.
-
-Available parameters:
-| Parameter                  | Description                                             |
-|----------------------------|---------------------------------------------------------|
-| FPS                        | Frames per second                                       |
-| Animation length           | Desired length of the output gif                        |
-| plot_every_nth_point       | File name without extension                             |
-| dpi                        | The resolution of the animation (dots per inch)         |
-| is_dynamic_axes            | Rescale the axes limit dynamically                      |
-| axes_lim | An array for the axes limits
-| is_maintain_fixed_dt          | Attempt to maintain fixed step size with variable time step data |
-| traj_len | Length of the trajectory in number of data points |
-
-Some parameters are not listed here due to limit of space.
