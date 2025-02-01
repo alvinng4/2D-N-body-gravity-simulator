@@ -96,7 +96,9 @@ class Simulator:
         self.settings = settings
 
         if "flush_path" in storing_params:
-            Path(storing_params["flush_path"]).mkdir(parents=True, exist_ok=True)
+            Path(storing_params["flush_path"]).parent.mkdir(parents=True, exist_ok=True)
+            if Path(storing_params["flush_path"]).is_file():
+                Path(storing_params["flush_path"]).unlink()
             flush_path_ctypes = storing_params["flush_path"].encode("utf-8")
         else:
             flush_path_ctypes = None
@@ -136,7 +138,7 @@ class Simulator:
                 ctypes.c_double(integrator_params["whfast_kepler_tol"]),
                 ctypes.c_int(integrator_params["whfast_kepler_max_iter"]),
                 ctypes.c_bool(integrator_params["whfast_kepler_auto_remove"]),
-                ctypes.c_double(integrator_params["whfast_auto_remove_tol"]),
+                ctypes.c_double(integrator_params["whfast_kepler_auto_remove_tol"]),
                 acceleration_params["method"].encode("utf-8"),
                 ctypes.c_double(acceleration_params["opening_angle"]),
                 ctypes.c_double(acceleration_params["softening_length"]),

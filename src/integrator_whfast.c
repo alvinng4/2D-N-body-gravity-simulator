@@ -511,8 +511,8 @@ IN_FILE int whfast_drift(
             
             if (verbose >= 2)
             {
-                fprintf(stderr, "Warning: Kepler's equation did not converge. \
-                                Object index: %d, error = %23.15g\n", i, error);
+                fprintf(stderr, "Warning: Kepler's equation did not converge. "\
+                                "Object index: %d, error = %23.15g\n", i, error);
             }
 
             if (kepler_auto_remove && ((fabs(error) > kepler_auto_remove_tol) || isnan(error)))

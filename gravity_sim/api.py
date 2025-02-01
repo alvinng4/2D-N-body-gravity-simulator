@@ -207,7 +207,7 @@ class GravitySimulatorAPI:
             "whfast_kepler_tol",
             "whfast_kepler_max_iter",
             "whfast_kepler_auto_remove",
-            "whfast_auto_remove_tol",
+            "whfast_kepler_auto_remove_tol",
         ]
         acceleration_params_list = [
             "acceleration_method",
@@ -366,9 +366,9 @@ class GravitySimulatorAPI:
                 warnings.warn(
                     'integrator_params["whfast_kepler_auto_remove"] is only used for WHFast integrator'
                 )
-            if "whfast_auto_remove_tol" in integrator_params:
+            if "whfast_kepler_auto_remove_tol" in integrator_params:
                 warnings.warn(
-                    'integrator_params["whfast_auto_remove_tol"] is only used for WHFast integrator'
+                    'integrator_params["whfast_kepler_auto_remove_tol"] is only used for WHFast integrator'
                 )
         else:
             if "whfast_kepler_tol" in integrator_params:
@@ -396,17 +396,17 @@ class GravitySimulatorAPI:
                     raise TypeError(
                         f"Expected bool, but got {type(integrator_params['whfast_kepler_auto_remove'])}"
                     )
-            if "whfast_auto_remove_tol" in integrator_params:
+            if "whfast_kepler_auto_remove_tol" in integrator_params:
                 if not isinstance(
-                    integrator_params["whfast_auto_remove_tol"], (int, float)
+                    integrator_params["whfast_kepler_auto_remove_tol"], (int, float)
                 ):
                     raise TypeError(
-                        f"Expected int or float, but got {type(integrator_params['whfast_auto_remove_tol'])}"
+                        f"Expected int or float, but got {type(integrator_params['whfast_kepler_auto_remove_tol'])}"
                     )
                 else:
-                    if integrator_params["whfast_auto_remove_tol"] <= 0.0:
+                    if integrator_params["whfast_kepler_auto_remove_tol"] <= 0.0:
                         raise ValueError(
-                            'integrator_params["whfast_auto_remove_tol"] must be positive'
+                            'integrator_params["whfast_kepler_auto_remove_tol"] must be positive'
                         )
 
         for key in ["dt", "tolerance", "initial_dt"]:
@@ -419,8 +419,8 @@ class GravitySimulatorAPI:
             integrator_params["whfast_kepler_max_iter"] = 500
         if "whfast_kepler_auto_remove" not in integrator_params:
             integrator_params["whfast_kepler_auto_remove"] = False
-        if "whfast_auto_remove_tol" not in integrator_params:
-            integrator_params["whfast_auto_remove_tol"] = 1e-8
+        if "whfast_kepler_auto_remove_tol" not in integrator_params:
+            integrator_params["whfast_kepler_auto_remove_tol"] = 1e-8
 
         ### acceleration_params ###
         if not isinstance(acceleration_params, dict):

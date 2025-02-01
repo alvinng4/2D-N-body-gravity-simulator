@@ -340,7 +340,7 @@ class GravitySimulatorCLI:
             "whfast_kepler_tol": 1e-12,
             "whfast_kepler_max_iter": 500,
             "whfast_kepler_auto_remove": False,
-            "whfast_auto_remove_tol": 1e-8,
+            "whfast_kepler_auto_remove_tol": 1e-8,
         }
         acceleration_params: dict[str, str | int | float] = {
             "method": "pairwise",

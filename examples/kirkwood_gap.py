@@ -1,31 +1,34 @@
 """
 Demonstration on using the gravity simulator to simulate the Kirkwood gap.
-You will need to install the `Pillow` library for this script.
 
 Note: N = 1000 is enough to observe some gaps, but it may not be very clear.
-Since the simulation is O(N), seting N = 50000 would take 24 hours to a few days to 
-finish, and reducing N to 25000 will reduce the runtime by half.
+Seting N = 50000 could take 24 hours to a few days to finish.
+Since the simulation is O(N), reducing N to 25000 will reduce the runtime by half.
 
 Warning: Do not run multiple instances of this program at the same time, unless you made copies
          of the whole directory. Otherwise, the final data may overwrite each other.
 
-TODO: Calculations for the 2D scatter plot is not vectorized and is extremely slow. 
+TODO: Calculations for the 2D scatter plot is not vectorized and is extremely slow.
+
+Author: Ching Yin Ng
 """
 
 import csv
 from pathlib import Path
 import sys
+
 sys.path.append(str(Path(__file__).parent.parent))
 
 import numpy as np
 import PIL
 import matplotlib.pyplot as plt
 
-from gravity_sim import GravitySimulator
-from gravity_sim.common import get_bool
-from gravity_sim.common import Progress_bar
+from gravity_sim import GravitySimulatorAPI
+from gravity_sim import plotting
+from gravity_sim.cli import GravitySimulatorCLI
+from gravity_sim.utils import Progress_bar
 
-N = 50000
+N = 5000
 FPS = 30
 DPI = 200
 
@@ -36,23 +39,14 @@ M = 1.0
 def main():
     # ---------- Initialization ---------- #
 
-    grav_sim = GravitySimulator()
+    grav_sim = GravitySimulatorAPI()
     system = grav_sim.create_system()
-    grav_sim.set_current_system(system)
 
     system.load("solar_system")
-    system.remove(name="Mercury")
-    system.remove(name="Venus")
-    system.remove(name="Earth")
-    system.remove(name="Neptune")
-    system.remove(name="Uranus")
-    colors = [
-        "orange",
-        "red",
-        "darkgoldenrod",
-        "gold",
-    ]
-    labels = system.objects_names.copy()
+    # Remove Mercury, Venus, Earth, Uranus, and Neptune
+    system.remove([1, 2, 3, 7, 8])
+    labels = ["Sun", "Mars", "Jupiter", "Saturn"]
+    colors = [plotting.SOLAR_SYSTEM_COLORS[name] for name in labels]
     marker_sizes = [6.0, 1.5, 4.0, 3.5]
 
     massive_objects_count = system.objects_count
@@ -76,9 +70,9 @@ def main():
             longitude_of_ascending_node=long_asc_node[i],
             true_anomaly=true_anomaly[i],
             m=0.0,
-            primary_object_name="Sun",
+            primary_object_index=0,
         )
-    system.sort_by_distance(primary_object_name="Sun")
+    system.sort_by_distance(primary_object_index=0)
     system.center_of_mass_correction()
     system.name = f"kirkwood_gap_N{N}"
 
@@ -91,30 +85,29 @@ def main():
     # Store about 2000 points in total
     tf = grav_sim.years_to_days(5000000)
     dt = 180.0
-    store_every_n = int((grav_sim.years_to_days(5000000) // dt) // 500)
+    storing_freq = int((grav_sim.years_to_days(5000000) // dt) // 500)
     grav_sim.launch_simulation(
-        "whfast",
+        gravitational_system=system,
+        integrator="whfast",
         tf=tf,
         dt=dt,
-        store_every_n=store_every_n,
+        storing_freq=storing_freq,
         acceleration_method="massless",
         storing_method="flush",
-        flush_results_path=str(data_path),
-        no_print=True,
-        kepler_tol=1e-12,
-        kepler_max_iter=500,
-        kepler_auto_remove=True,
-        kepler_auto_remove_tol=1e-8,
+        flush_path=str(data_path),
+        verbose=2,
+        whfast_kepler_tol=1e-12,
+        whfast_kepler_max_iter=500,
+        whfast_kepler_auto_remove=True,
+        whfast_kepler_auto_remove_tol=1e-8,
     )
 
     # ---------- Data Analysis and drawing frames ---------- #
 
-    # In the API, we use PillowWriter to generate animations.
-    # However, for some reason, the PillowWriter run out of memory
-    # in this case. Therefore, we save each frames as images and
-    # combine them as gif instead.
     save_count_semi_major_axes = 0
     save_count_visualization = 0
+
+    # Increase the field size limit to read the data
     new_field_lim = sys.maxsize
     while True:
         try:
@@ -126,19 +119,8 @@ def main():
     with open(data_path, "r") as file:
         reader = csv.reader(file)
 
-        # Read data size
-        data_size = None
-        for row in reader:
-            if row[0].startswith("#"):
-                if row[0].startswith("# Data size: "):
-                    data_size = int(row[0].replace("# Data size: ", ""))
-                else:
-                    pass
-            else:
-                break
-
+        data_size = int(tf // dt // storing_freq) + 1
         file.seek(0)
-
         progress_bar = Progress_bar()
 
         print()
@@ -374,23 +356,28 @@ def main():
         plt.close("all")
 
     progress_bar.stop_task(task)
-    
+
     print()
     print("Combining frames to gif...")
+
     def frames_generator(num_frames, file_prefix):
         for i in range(num_frames):
             yield PIL.Image.open(f"file_prefix_{i:04d}.png")
 
-    semi_major_axes_frames = frames_generator(save_count_semi_major_axes, "semi_major_axes_frames")
+    semi_major_axes_frames = frames_generator(
+        save_count_semi_major_axes, "semi_major_axes_frames"
+    )
     next(semi_major_axes_frames).save(
         file_path / "Kirkwood_gap_semi_major_axes.gif",
         save_all=True,
         append_images=semi_major_axes_frames,
         loop=0,
-        duration=(1000 // FPS)
+        duration=(1000 // FPS),
     )
 
-    visualization_frames = frames_generator(save_count_visualization, "visualization_frames")
+    visualization_frames = frames_generator(
+        save_count_visualization, "visualization_frames"
+    )
     next(visualization_frames).save(
         file_path / "Kirkwood_gap_visualization.gif",
         save_all=True,
@@ -411,7 +398,7 @@ def main():
     for i in range(save_count_visualization):
         (file_path / f"visualization_frames_{i:04d}.png").unlink()
 
-    if get_bool(f"Delete data file? Path: {data_path}"):
+    if GravitySimulatorCLI.get_bool(f"Delete data file? Path: {data_path}"):
         data_path.unlink()
 
     print("Done! Exiting the program...")
@@ -435,8 +422,13 @@ def calculate_semi_major_axis(x, v, m, G, M):
 
     return a
 
+
 def cartesian_to_orbital_elements(
-    mp, ms, position, velocity, G,
+    mp,
+    ms,
+    position,
+    velocity,
+    G,
 ):
     """
 
@@ -487,9 +479,7 @@ def cartesian_to_orbital_elements(
     completely_or_nearly_circular = False
 
     if ell > 1.0:
-        if (
-            1.0 < ell <= ell + ell_epsilon
-        ):  ### still unity within numerical precision
+        if 1.0 < ell <= ell + ell_epsilon:  ### still unity within numerical precision
             print(
                 "orbit is completely or nearly circular; in this case the LRL vector cannot be used to reliably obtain the argument of pericenter and true anomaly; the output values of the latter will be set to zero; output e will be e = 0"
             )
@@ -500,7 +490,7 @@ def cartesian_to_orbital_elements(
                 "angular momentum larger than maximum angular momentum for bound orbit"
             )
 
-    eccentricity = np.sqrt(1.0 - ell ** 2)
+    eccentricity = np.sqrt(1.0 - ell**2)
 
     ### Orbital inclination ###
     z_vector = np.array([0.0, 0.0, 1.0])
@@ -514,9 +504,7 @@ def cartesian_to_orbital_elements(
     if ascending_node_vector_norm == 0:
         ascending_node_vector_unit = np.array([1.0, 0.0, 0.0])
     else:
-        ascending_node_vector_unit = (
-            ascending_node_vector / ascending_node_vector_norm
-        )
+        ascending_node_vector_unit = ascending_node_vector / ascending_node_vector_norm
 
     long_asc_nodes = np.arctan2(
         ascending_node_vector_unit[1], ascending_node_vector_unit[0]
@@ -529,9 +517,7 @@ def cartesian_to_orbital_elements(
         velocity, specific_angular_momentum
     ) - position_unit  ### Laplace-Runge-Lenz vector
 
-    if (
-        completely_or_nearly_circular == True
-    ):  ### orbit is completely or nearly circular; in this case the LRL vector cannot be used to reliably obtain the argument of pericenter and true anomaly; the output values of the latter will be set to zero; output e will be e = 0
+    if completely_or_nearly_circular:  ### orbit is completely or nearly circular; in this case the LRL vector cannot be used to reliably obtain the argument of pericenter and true anomaly; the output values of the latter will be set to zero; output e will be e = 0
         arg_per = 0.0
         true_anomaly = 0.0
     else:
@@ -557,6 +543,7 @@ def cartesian_to_orbital_elements(
         arg_per,
         long_asc_nodes,
     )
+
 
 def keplerian_to_cartesian(
     semi_major_axis: float,
@@ -624,6 +611,7 @@ def keplerian_to_cartesian(
         return np.array([np.nan, np.nan, np.nan])
 
     return x
+
 
 if __name__ == "__main__":
     main()
