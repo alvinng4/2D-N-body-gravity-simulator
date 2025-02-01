@@ -1,6 +1,5 @@
 """
 Demonstration on using the gravity simulator to simulate galaxy collisions
-You will need to install the `Pillow` library for this script.
 
 Warning: Do not run multiple instances of this program at the same time, unless you made copies
          of the whole directory. Otherwise, the final data may overwrite each other.
@@ -16,7 +15,7 @@ import matplotlib.pyplot as plt
 import rich.progress
 from matplotlib.colors import LinearSegmentedColormap
 
-from gravity_sim import GravitySimulator
+from gravity_sim import GravitySimulatorAPI
 
 N = 75000 * 2
 FPS = 30
@@ -44,11 +43,10 @@ class Progress_bar(rich.progress.Progress):
 def main():
     # ---------- Initialization ---------- #
     print("Initializing the system...")
-    grav_sim = GravitySimulator()
+    grav_sim = GravitySimulatorAPI()
     system = grav_sim.create_system()
-    grav_sim.set_current_system(system)
     system.G = G
-    
+
     # Galaxy 1
     init_conditions = np.load("galaxy_collision_init_conditions.npz")
     x = init_conditions["x"]
@@ -161,19 +159,22 @@ def main():
     with progress_bar:
         task = progress_bar.add_task("[cyan]Simulation progress", total=N_FRAMES)
         for i in range(N_FRAMES):
-            if i == 0:
+            if i == 1:  # Skip i = 0 to draw the first frame
                 grav_sim.launch_simulation(
-                    integrator="rkf45",
-                    tf=0.0,
-                    tolerance=1e-8,
-                    acceleration_method="barnes-hut",
-                    storing_method="no_store",
-                    no_print=True,
-                    no_progress_bar=True,
-                    softening_length=1.0,
-                    barnes_hut_theta=1.0,
+                    gravitational_system=system,
+                    integrator="leapfrog",
+                    tf=2.5e5,
+                    dt=2.5e5,
+                    acceleration_method="barnes_hut",
+                    storing_method="disabled",
+                    verbose=1,
+                    disable_progress_bar=True,
+                    softening_length=0.01,
+                    opening_angle=1.0,
+                    make_copy_system=False,
+                    make_copy_params=False,
                 )
-            else:
+            elif i > 1:
                 grav_sim.resume_simulation(
                     2.5e5,
                 )
@@ -200,23 +201,23 @@ def main():
 
             # Galaxy 1
             hist1, _, _ = np.histogram2d(
-                grav_sim.simulator.x[:N, 0],
-                grav_sim.simulator.x[:N, 1],
+                system.x[:N, 0],
+                system.x[:N, 1],
                 bins=500,
                 range=[[xlim_min, xlim_max], [ylim_min, ylim_max]],
             )
 
             # Galaxy 2
             hist2, _, _ = np.histogram2d(
-                grav_sim.simulator.x[N:, 0],
-                grav_sim.simulator.x[N:, 1],
+                system.x[N:, 0],
+                system.x[N:, 1],
                 bins=500,
                 range=[[xlim_min, xlim_max], [ylim_min, ylim_max]],
             )
 
-            if i == 0:
-                print(hist1.max(), hist2.max())
-                print(hist1.mean(), hist2.mean())
+            # if i == 0:
+            #     print(hist1.max(), hist2.max())
+            #     print(hist1.mean(), hist2.mean())
             hist = np.clip(hist1 + hist2, 0.0, 25.0)
             
             ax.imshow(
@@ -245,7 +246,7 @@ def main():
 
     # import pickle
     # with open(file_path / "galaxy_collision_positions.pkl", "wb") as file:
-    #     pickle.dump(grav_sim.simulator.x, file)
+    #     pickle.dump(system.x, file)
 
     # with open(file_path / "galaxy_collision_velocities.pkl", "wb") as file:
     #     pickle.dump(grav_sim.simulator.v, file)
