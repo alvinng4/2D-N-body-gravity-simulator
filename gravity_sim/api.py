@@ -711,3 +711,55 @@ class GravitySimulatorAPI:
         objects_count = gravitational_system.objects_count
 
         return self.simulator.compute_inclination(objects_count, sol_state)
+
+    def save_results(
+        self,
+        file_path: str | Path,
+        sol_state: np.ndarray,
+        sol_time: np.ndarray,
+        sol_dt: np.ndarray,
+        sol_energy: np.ndarray,
+    ) -> None:
+        """Save results to a file
+
+        Parameters
+        ----------
+        sol_state_ : np.ndarray
+        sol_time_ : np.ndarray
+        sol_dt_ : np.ndarray
+        sol_energy_ : np.ndarray
+        """
+        utils.save_results_csv(
+            file_path,
+            sol_state,
+            sol_time,
+            sol_dt,
+            sol_energy,
+        )
+
+        print(f'Done! Results saved to "{file_path}".')
+
+    def read_results(
+        self,
+        file_path: str | Path,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Load results from a file
+
+        Parameters
+        ----------
+        file_path : str or Path
+
+        Returns
+        -------
+        sol_state : np.ndarray
+        sol_time : np.ndarray
+        sol_dt : np.ndarray
+        sol_energy : np.ndarray
+        """
+        sol_dict = utils.read_results_csv(file_path)
+        return (
+            sol_dict["state"],
+            sol_dict["time"],
+            sol_dict["dt"],
+            sol_dict["energy"],
+        )

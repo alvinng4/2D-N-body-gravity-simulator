@@ -421,9 +421,6 @@ def animate_2d_traj_gif(
                     if i % plotting_freq != 0:
                         continue
 
-                    # Clear the plot to prepare for the next frame
-                    ax.clear()
-
                     # Plot the trajectory from the beginning to current position
                     if traj_len == -1:
                         start_index = 0
@@ -452,7 +449,8 @@ def animate_2d_traj_gif(
                             markersize=markersize,
                         )
                     # Add legend at the beginning
-                    if legend:
+                    # Warning: if we keep adding legend, the memory consumption will keep increasing
+                    if legend and i == 0:
                         fig.legend(loc="center right", borderaxespad=0.2)
 
                     # Set axis labels before capturing the frame
@@ -486,9 +484,6 @@ def animate_2d_traj_gif(
             with progress_bar:
                 # Plot once every nth point
                 for i in progress_bar.track(range(frame_size)):
-                    # Clear the plot to prepare for the next frame
-                    ax.clear()
-
                     # Search the index with the closest value of time
                     index = np.searchsorted(sol_time, plot_time[i])
 
@@ -522,7 +517,8 @@ def animate_2d_traj_gif(
                             markersize=markersize,
                         )
                     # Add legend at the beginning
-                    if legend:
+                    # Warning: if we keep adding legend, the memory consumption will keep increasing
+                    if legend and i == 0:
                         fig.legend(loc="center right", borderaxespad=0.2)
 
                     # Set axis labels before capturing the frame
@@ -561,6 +557,9 @@ def animate_2d_traj_gif(
     )
 
     plt.close("all")
+
+    for i in range(num_frames_count):
+        (Path(file_path).parent / f"frames_{i:06d}.png").unlink()
 
 
 def animate_3d_traj_gif(
@@ -656,165 +655,160 @@ def animate_3d_traj_gif(
             zlim_min = axes_limits[4]
             zlim_max = axes_limits[5]
         else:
-            xlim_min, xlim_max = _animation_get_axes_lim(2, objects_count, sol_state)
+            xlim_min, xlim_max = _animation_get_axes_lim(3, objects_count, sol_state)
             ylim_min, ylim_max = xlim_min, xlim_max
             zlim_min, zlim_max = xlim_min, xlim_max
 
-        data_size = len(sol_state)
-        progress_bar = utils.Progress_bar()
-        num_frames_count = 0
-        if not is_maintain_fixed_dt:
-            with progress_bar:
-                for i in progress_bar.track(range(data_size)):
-                    if i % plotting_freq != 0:
-                        continue
+    data_size = len(sol_state)
+    progress_bar = utils.Progress_bar()
+    num_frames_count = 0
+    if not is_maintain_fixed_dt:
+        with progress_bar:
+            for i in progress_bar.track(range(data_size)):
+                if i % plotting_freq != 0:
+                    continue
 
-                    # Clear the plot to prepare for the next frame
-                    ax.clear()
+                # Plot the trajectory from the beginning to current position
+                if traj_len == -1:
+                    start_index = 0
+                else:
+                    start_index = np.clip(i + 1 - traj_len, 0, None)
 
-                    # Plot the trajectory from the beginning to current position
-                    if traj_len == -1:
-                        start_index = 0
-                    else:
-                        start_index = np.clip(i + 1 - traj_len, 0, None)
-
-                    for j in range(objects_count):
-                        colors_j = None
-                        labels_j = None
-                        if colors is not None:
-                            colors_j = colors[j]
-                        if labels is not None:
-                            labels_j = labels[j]
-                        traj = ax.plot(
-                            sol_state[start_index : (i + 1), j * 3],
-                            sol_state[start_index : (i + 1), j * 3 + 1],
-                            sol_state[start_index : (i + 1), j * 3 + 2],
-                            color=colors_j,
-                        )
-                        # Plot the current position as a filled circle
-                        ax.plot(
-                            sol_state[i, j * 3],
-                            sol_state[i, j * 3 + 1],
-                            sol_state[i, j * 3 + 2],
-                            color=traj[0].get_color(),
-                            label=labels_j,
-                            marker=marker,
-                            markersize=markersize,
-                        )
-                    # Add legend at the beginning
-                    if legend:
-                        fig.legend(loc="center right", borderaxespad=0.2)
-
-                        # Adjust figure for the legend
-                        if i == 0:
-                            fig.subplots_adjust(right=0.7)
-                            fig.tight_layout()
-
-                    # Set axis labels before capturing the frame
-                    ax.set_xlabel(xlabel)
-                    ax.set_ylabel(ylabel)
-                    ax.set_zlabel(zlabel)  # type: ignore
-
-                    if not is_dynamic_axes:
-                        ax.set_xlim3d((xlim_min, xlim_max))  # type: ignore
-                        ax.set_ylim3d((ylim_min, ylim_max))  # type: ignore
-                        ax.set_zlim3d((zlim_min, zlim_max))  # type: ignore
-                    else:
-                        set_3d_axes_equal(ax)
-
-                    # Set equal aspect ratio to prevent distortion
-                    ax.set_aspect("equal")
-
-                    # Capture the frame
-                    # Capture the frame
-                    plt.savefig(
-                        Path(file_path).parent / f"frames_{num_frames_count:06d}.png",
-                        dpi=dpi,
+                for j in range(objects_count):
+                    colors_j = None
+                    labels_j = None
+                    if colors is not None:
+                        colors_j = colors[j]
+                    if labels is not None:
+                        labels_j = labels[j]
+                    traj = ax.plot(
+                        sol_state[start_index : (i + 1), j * 3],
+                        sol_state[start_index : (i + 1), j * 3 + 1],
+                        sol_state[start_index : (i + 1), j * 3 + 2],
+                        color=colors_j,
                     )
-                    num_frames_count += 1
-
-                    # Clear the plot to prepare for the next frame
-                    ax.clear()
-
-        else:
-            if sol_time is None:
-                raise ValueError("Solution time is required to maintain fixed dt")
-
-            # Attempt to maintain fixed dt for the animation
-            frame_size = int(data_size / plotting_freq) + 1
-            plot_time = np.linspace(
-                sol_time[0],
-                sol_time[-1],
-                frame_size,
-            )
-            with progress_bar:
-                # Plot once every nth point
-                for i in progress_bar.track(range(frame_size)):
-                    # Clear the plot to prepare for the next frame
-                    ax.clear()
-
-                    # Search the index with the closest value of time
-                    index = np.searchsorted(sol_time, plot_time[i])
-
-                    if traj_len == -1:
-                        start_index = 0
-                    else:
-                        start_index = np.searchsorted(
-                            sol_time, plot_time[np.clip(i - traj_len, 0, None)]
-                        )
-
-                    # Plot the trajectory from the beginning to current position
-                    for j in range(objects_count):
-                        colors_j = None
-                        labels_j = None
-                        if colors is not None:
-                            colors_j = colors[j]
-                        if labels is not None:
-                            labels_j = labels[j]
-                        traj = ax.plot(
-                            sol_state[(start_index + 1) : (index + 1), j * 3],
-                            sol_state[(start_index + 1) : (index + 1), j * 3 + 1],
-                            sol_state[(start_index + 1) : (index + 1), j * 3 + 2],
-                            color=colors_j,
-                        )
-                        # Plot the current position as a filled circle
-                        ax.plot(
-                            sol_state[index, j * 3],
-                            sol_state[index, j * 3 + 1],
-                            sol_state[index, j * 3 + 2],
-                            color=traj[0].get_color(),
-                            label=labels_j,
-                            marker=marker,
-                            markersize=markersize,
-                        )
-                    # Add legend at the beginning
-                    if legend:
-                        fig.legend(loc="center right", bbox_to_anchor=(1.325, 0.5))
-
-                    # Set axis labels before capturing the frame
-                    ax.set_xlabel(xlabel)
-                    ax.set_ylabel(ylabel)
-                    ax.set_zlabel(zlabel)  # type: ignore
-
-                    if not is_dynamic_axes:
-                        ax.set_xlim3d((xlim_min, xlim_max))  # type: ignore
-                        ax.set_ylim3d((ylim_min, ylim_max))  # type: ignore
-                        ax.set_zlim3d((zlim_min, zlim_max))  # type: ignore
-                    else:
-                        set_3d_axes_equal(ax)
-
-                    # Set equal aspect ratio to prevent distortion
-                    ax.set_aspect("equal")
-
-                    # Capture the frame
-                    plt.savefig(
-                        Path(file_path).parent / f"frames_{num_frames_count:06d}.png",
-                        dpi=dpi,
+                    # Plot the current position as a filled circle
+                    ax.plot(
+                        sol_state[i, j * 3],
+                        sol_state[i, j * 3 + 1],
+                        sol_state[i, j * 3 + 2],
+                        color=traj[0].get_color(),
+                        label=labels_j,
+                        marker=marker,
+                        markersize=markersize,
                     )
-                    num_frames_count += 1
+                # Add legend at the beginning
+                # Warning: if we keep adding legend, the memory consumption will keep increasing
+                if legend and i == 0:
+                    fig.legend(loc="center right", borderaxespad=0.2)
 
-                    # Clear the plot to prepare for the next frame
-                    ax.clear()
+                    # Adjust figure for the legend
+                    if i == 0:
+                        fig.subplots_adjust(right=0.7)
+                        fig.tight_layout()
+
+                # Set axis labels before capturing the frame
+                ax.set_xlabel(xlabel)
+                ax.set_ylabel(ylabel)
+                ax.set_zlabel(zlabel)  # type: ignore
+
+                if not is_dynamic_axes:
+                    ax.set_xlim3d((xlim_min, xlim_max))  # type: ignore
+                    ax.set_ylim3d((ylim_min, ylim_max))  # type: ignore
+                    ax.set_zlim3d((zlim_min, zlim_max))  # type: ignore
+                else:
+                    set_3d_axes_equal(ax)
+
+                # Set equal aspect ratio to prevent distortion
+                ax.set_aspect("equal")
+
+                # Capture the frame
+                plt.savefig(
+                    Path(file_path).parent / f"frames_{num_frames_count:06d}.png",
+                    dpi=dpi,
+                )
+                num_frames_count += 1
+
+                # Clear the plot to prepare for the next frame
+                ax.clear()
+
+    else:
+        if sol_time is None:
+            raise ValueError("Solution time is required to maintain fixed dt")
+
+        # Attempt to maintain fixed dt for the animation
+        frame_size = int(data_size / plotting_freq) + 1
+        plot_time = np.linspace(
+            sol_time[0],
+            sol_time[-1],
+            frame_size,
+        )
+        with progress_bar:
+            # Plot once every nth point
+            for i in progress_bar.track(range(frame_size)):
+                # Search the index with the closest value of time
+                index = np.searchsorted(sol_time, plot_time[i])
+
+                if traj_len == -1:
+                    start_index = 0
+                else:
+                    start_index = np.searchsorted(
+                        sol_time, plot_time[np.clip(i - traj_len, 0, None)]
+                    )
+
+                # Plot the trajectory from the beginning to current position
+                for j in range(objects_count):
+                    colors_j = None
+                    labels_j = None
+                    if colors is not None:
+                        colors_j = colors[j]
+                    if labels is not None:
+                        labels_j = labels[j]
+                    traj = ax.plot(
+                        sol_state[(start_index + 1) : (index + 1), j * 3],
+                        sol_state[(start_index + 1) : (index + 1), j * 3 + 1],
+                        sol_state[(start_index + 1) : (index + 1), j * 3 + 2],
+                        color=colors_j,
+                    )
+                    # Plot the current position as a filled circle
+                    ax.plot(
+                        sol_state[index, j * 3],
+                        sol_state[index, j * 3 + 1],
+                        sol_state[index, j * 3 + 2],
+                        color=traj[0].get_color(),
+                        label=labels_j,
+                        marker=marker,
+                        markersize=markersize,
+                    )
+                # Add legend at the beginning
+                # Warning: if we keep adding legend, the memory consumption will keep increasing
+                if legend and i == 0:
+                    fig.legend(loc="center right", bbox_to_anchor=(1.325, 0.5))
+
+                # Set axis labels before capturing the frame
+                ax.set_xlabel(xlabel)
+                ax.set_ylabel(ylabel)
+                ax.set_zlabel(zlabel)  # type: ignore
+
+                if not is_dynamic_axes:
+                    ax.set_xlim3d((xlim_min, xlim_max))  # type: ignore
+                    ax.set_ylim3d((ylim_min, ylim_max))  # type: ignore
+                    ax.set_zlim3d((zlim_min, zlim_max))  # type: ignore
+                else:
+                    set_3d_axes_equal(ax)
+
+                # Set equal aspect ratio to prevent distortion
+                ax.set_aspect("equal")
+
+                # Capture the frame
+                plt.savefig(
+                    Path(file_path).parent / f"frames_{num_frames_count:06d}.png",
+                    dpi=dpi,
+                )
+                num_frames_count += 1
+
+                # Clear the plot to prepare for the next frame
+                ax.clear()
 
     print("Combining frames to gif...")
 
@@ -833,6 +827,9 @@ def animate_3d_traj_gif(
     )
 
     plt.close("all")
+
+    for i in range(num_frames_count):
+        (Path(file_path).parent / f"frames_{i:06d}.png").unlink()
 
 
 def plot_quantity_against_time(
