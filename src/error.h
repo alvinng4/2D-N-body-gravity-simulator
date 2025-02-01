@@ -27,6 +27,8 @@
 #define ERROR_UNKNOWN_INITIALIZE_SYSTEM_NAME 101
 #define ERROR_INITIALIZE_SYSTEM_MEMORY_NOT_NULL 102
 #define ERROR_INITIALIZE_SYSTEM_MEMORY_ALLOC 103
+
+// Check if the system has NULL array
 #define ERROR_NULL_SYSTEM_POINTER 104
 
 // 300 - 399: Adaptive step size integrator error (general)
