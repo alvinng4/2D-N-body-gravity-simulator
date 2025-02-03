@@ -115,6 +115,7 @@ IN_FILE int acceleration_pairwise(
     /* Compute the pairwise acceleration */
     for (int i = 0; i < objects_count; i++)
     {
+        const real m_i = m[i];
         for (int j = i + 1; j < objects_count; j++)
         {
             real temp_vec[3];
@@ -124,7 +125,7 @@ IN_FILE int acceleration_pairwise(
             R[0] = x[i * 3 + 0] - x[j * 3 + 0];
             R[1] = x[i * 3 + 1] - x[j * 3 + 1];
             R[2] = x[i * 3 + 2] - x[j * 3 + 2];
-            real R_norm = sqrt(
+            const real R_norm = sqrt(
                 R[0] * R[0] + 
                 R[1] * R[1] + 
                 R[2] * R[2] +
@@ -132,19 +133,20 @@ IN_FILE int acceleration_pairwise(
             );
 
             // Calculate the acceleration
-            real temp_value = G / (R_norm * R_norm * R_norm);
+            const real temp_value = G / (R_norm * R_norm * R_norm);
+            const real m_j = m[j];
             temp_vec[0] = temp_value * R[0];
             temp_vec[1] = temp_value * R[1];
             temp_vec[2] = temp_value * R[2];
-            a[i * 3 + 0] -= temp_vec[0] * m[j];
-            a[i * 3 + 1] -= temp_vec[1] * m[j];
-            a[i * 3 + 2] -= temp_vec[2] * m[j];
-            a[j * 3 + 0] += temp_vec[0] * m[i];
-            a[j * 3 + 1] += temp_vec[1] * m[i];
-            a[j * 3 + 2] += temp_vec[2] * m[i];
+            a[i * 3 + 0] -= temp_vec[0] * m_j;
+            a[i * 3 + 1] -= temp_vec[1] * m_j;
+            a[i * 3 + 2] -= temp_vec[2] * m_j;
+            a[j * 3 + 0] += temp_vec[0] * m_i;
+            a[j * 3 + 1] += temp_vec[1] * m_i;
+            a[j * 3 + 2] += temp_vec[2] * m_i;
         }
     }
-
+    
     return SUCCESS;
 }
 
@@ -211,10 +213,12 @@ IN_FILE int acceleration_massless(
     /* Pairwise acceleration calculation for massive objects */
     for (int i = 0; i < massive_objects_count; i++)
     {
+        const int idx_i = massive_indices[i];
+        const real m_i = m[idx_i];
         for (int j = i + 1; j < massive_objects_count; j++)
         {
-            int idx_i = massive_indices[i];
-            int idx_j = massive_indices[j];
+            const int idx_j = massive_indices[j];
+            const real m_j = m[idx_j];
             real temp_vec[3];
             real R[3];
 
@@ -222,7 +226,7 @@ IN_FILE int acceleration_massless(
             R[0] = x[idx_i * 3 + 0] - x[idx_j * 3 + 0];
             R[1] = x[idx_i * 3 + 1] - x[idx_j * 3 + 1];
             R[2] = x[idx_i * 3 + 2] - x[idx_j * 3 + 2];
-            real R_norm = sqrt(
+            const real R_norm = sqrt(
                 R[0] * R[0] + 
                 R[1] * R[1] + 
                 R[2] * R[2] +
@@ -234,12 +238,12 @@ IN_FILE int acceleration_massless(
             temp_vec[0] = temp_value * R[0];
             temp_vec[1] = temp_value * R[1];
             temp_vec[2] = temp_value * R[2];
-            a[idx_i * 3 + 0] -= temp_vec[0] * m[idx_j];
-            a[idx_i * 3 + 1] -= temp_vec[1] * m[idx_j];
-            a[idx_i * 3 + 2] -= temp_vec[2] * m[idx_j];
-            a[idx_j * 3 + 0] += temp_vec[0] * m[idx_i];
-            a[idx_j * 3 + 1] += temp_vec[1] * m[idx_i];
-            a[idx_j * 3 + 2] += temp_vec[2] * m[idx_i];
+            a[idx_i * 3 + 0] -= temp_vec[0] * m_j;
+            a[idx_i * 3 + 1] -= temp_vec[1] * m_j;
+            a[idx_i * 3 + 2] -= temp_vec[2] * m_j;
+            a[idx_j * 3 + 0] += temp_vec[0] * m_i;
+            a[idx_j * 3 + 1] += temp_vec[1] * m_i;
+            a[idx_j * 3 + 2] += temp_vec[2] * m_i;
         }
     }
 

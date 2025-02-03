@@ -66,55 +66,55 @@ IN_FILE int get_error_msg(const int error_code, char **error_msg)
 
         // Barnes-Hut acceleration error
         case ERROR_BARNES_HUT_ROOT_MEMORY_ALLOC:
-            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut().\n";
+            *error_msg = "C library error: Failed to allocate memory for tree root in acceleration_barnes_hut().\n";
             return SUCCESS;
         case ERROR_BARNES_HUT_LEAF_POOL_PTR_MEMORY_ALLOC:
-            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for leaf node pool pointer.\n";
+            *error_msg = "C library error: Failed to allocate memory for leaf pool pointer in acceleration_barnes_hut().\n";
             return SUCCESS;
         case ERROR_BARNES_HUT_LEAF_POOL_MEMORY_ALLOC:
-            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for leaf node pool.\n";
+            *error_msg = "C library error: Failed to allocate memory for leaf pool in acceleration_barnes_hut().\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_INTERNAL_POOL_PTR_MEMORY_ALLOC:
-            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for internal node pool pointer.\n";
+        case ERROR_BARNES_HUT_NODE_POOL_PTR_MEMORY_ALLOC:
+            *error_msg = "C library error: Failed to allocate memory for node pool pointer in acceleration_barnes_hut().\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_INTERNAL_POOL_MEMORY_ALLOC:
-            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for internal node pool.\n";
+        case ERROR_BARNES_HUT_NODE_POOL_MEMORY_ALLOC:
+            *error_msg = "C library error: Failed to allocate memory for node pool in acceleration_barnes_hut().\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_CONSTRUCT_OCTREE_INTERNAL_POOL_MEMORY_ALLOC:
-            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for internal node pool in construct octree.\n";
+        case ERROR_BARNES_HUT_GET_LEAF_POOL_PTR_MEMORY_ALLOC:
+            *error_msg = "C library error: Failed to allocate memory for leaf pool pointer in _get_leaf() for constructing octree.\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_SHORTEN_TREE_MEMORY_ALLOC:
-            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for shorten tree.\n";
+        case ERROR_BARNES_HUT_GET_LEAF_POOL_MEMORY_ALLOC:
+            *error_msg = "C library error: Failed to allocate memory for leaf pool in _get_leaf() for constructing octree.\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_SHORTEN_TREE_MEMORY_FULL:
-            *error_msg = "C library error: Memory full in acceleration_barnes_hut() for shorten tree.\n";
+        case ERROR_BARNES_HUT_DIVIDE_LEAF_NODE_POOL_PTR_MEMORY_ALLOC:
+            *error_msg = "C library error: Failed to allocate memory for leaf node pool pointer in _divide_tree() for constructing octree.\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_SHORTEN_TREE_MEMORY_FAILED_FIND_ALL_LEAVES:
-            *error_msg = "C library error: Failed to find all leaves in acceleration_barnes_hut() for shorten tree.\n";
+        case ERROR_BARNES_HUT_DIVIDE_LEAF_NODE_POOL_MEMORY_ALLOC:
+            *error_msg = "C library error: Failed to allocate memory for leaf node pool in _divide_tree() for constructing octree.\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_COMPUTE_COM_MEMORY_ALLOC:
-            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for compute center of mass.\n";
+        case ERROR_BARNES_HUT_COMPUTE_COM_STACK_MEMORY_ALLOC:
+            *error_msg = "C library error: Failed to allocate memory for stack pool in acceleration_barnes_hut() for _compute_center_of_mass().\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_COMPUTE_COM_MEMORY_FULL:
-            *error_msg = "C library error: Memory full in acceleration_barnes_hut() for compute center of mass.\n";
+        case ERROR_BARNES_HUT_COMPUTE_COM_STACK_FULL:
+            *error_msg = "C library error: Stack is full in acceleration_barnes_hut() for _compute_center_of_mass().\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_ACCELERATION_STEP_ACC_STACK_MEMORY_ALLOC:
-            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for acceleration step.\n";
+        case ERROR_BARNES_HUT_COMPUTE_ACCELERATION_STACK_POOL_MEMORY_ALLOC:
+            *error_msg = "C library error: Failed to allocate memory for stack pool in acceleration_barnes_hut() for _compute_acceleration().\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_ACCELERATION_STEP_ACC_STACK_FULL:
-            *error_msg = "C library error: Acceleration stack is full in acceleration_barnes_hut() for acceleration step.\n";
+        case ERROR_BARNES_HUT_COMPUTE_ACCELERATION_STACK_POOL_FULL:
+            *error_msg = "C library error: Stack is full in acceleration_barnes_hut() for _compute_acceleration().\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_ACCELERATION_STEP_OBJ_STACK_MEMORY_ALLOC:
-            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for object stack in acceleration step.\n";
+        case ERROR_BARNES_HUT_COMPUTE_ACCELERATION_BRANCH_RECORD_MEMORY_ALLOC:
+            *error_msg = "C library error: Failed to allocate memory for branch record in acceleration_barnes_hut() for _compute_acceleration().\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_ACCELERATION_STEP_OBJ_STACK_FULL:
-            *error_msg = "C library error: Object stack is full in acceleration_barnes_hut() for acceleration step.\n";
+        case ERROR_BARNES_HUT_COMPUTE_ACC_TREE_WALK_STACK_MEMORY_ALLOC:
+            *error_msg = "C library error: Failed to allocate memory for stack pool in acceleration_barnes_hut() for _compute_acc_tree_walk().\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_ACCELERATION_STEP_SAME_BRANCH_NODE_POOL_MEMORY_ALLOC:
-            *error_msg = "C library error: Memory allocation failed in acceleration_barnes_hut() for same branch node pool in acceleration step.\n";
+        case ERROR_BARNES_HUT_COMPUTE_ACC_TREE_WALK_STACK_FULL:
+            *error_msg = "C library error: Stack is full in acceleration_barnes_hut() for _compute_acc_tree_walk().\n";
             return SUCCESS;
-        case ERROR_BARNES_HUT_ACCELERATION_STEP_SAME_BRANCH_NODE_POOL_FULL:
-            *error_msg = "C library error: Same branch node pool is full in acceleration_barnes_hut() for acceleration step.\n";
+        case ERROR_BARNES_HUT_COMPUTE_ACC_TREE_WALK_BRANCH_RECORD_MEMORY_ALLOC:
+            *error_msg = "C library error: Failed to allocate memory for branch record in acceleration_barnes_hut() for _compute_acc_tree_walk().\n";
             return SUCCESS;
 
         /* Solution storing (general) */

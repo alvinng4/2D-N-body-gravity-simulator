@@ -1,53 +1,100 @@
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "error.h"
 #include "gravity_sim.h"
 #include "math_functions.h"
 
+#define MAX_NUM_PARTICLES_PER_LEAF 8
+
+typedef struct BarnesHutTreeLeaf
+{
+    int objects_count;
+    int indices[MAX_NUM_PARTICLES_PER_LEAF];
+} BarnesHutTreeLeaf;
+
+typedef struct BarnesHutTreeLeafPool
+{
+    BarnesHutTreeLeaf *leaves;
+    int pool_size;
+    struct BarnesHutTreeLeafPool *next;
+} BarnesHutTreeLeafPool;
+
 typedef struct BarnesHutTreeNode
 {
-    int index;
     real center_of_mass[3];
     real total_mass;
     real box_width;
-    int internal_nodes_objects_count;
     struct BarnesHutTreeNode *children[8];
+    BarnesHutTreeLeaf *leaves[8];
 } BarnesHutTreeNode;
 
 typedef struct BarnesHutTreeNodePool
 {
-    BarnesHutTreeNode *node_pool;
+    BarnesHutTreeNode *nodes;
     int pool_size;
     struct BarnesHutTreeNodePool *next;
 } BarnesHutTreeNodePool; 
 
+typedef struct BarnesHutCOMStack
+{
+    BarnesHutTreeNode *node;
+    struct BarnesHutCOMStack *last;
+    real sum_of_mass_times_distance[3];
+    int processed_region;
+} BarnesHutCOMStack;
+
+typedef struct BarnesHutAccStack
+{
+    BarnesHutTreeNode *node;
+    struct BarnesHutAccStack *last;
+    int processed_region;
+} BarnesHutAccStack;
+
 // For debug
-// void visualize_octree_nodes(BarnesHutTreeNode *node, int depth) 
-// {
-//     if (node == NULL) 
-//     {
-//         return;
-//     }
+// Helper function to print indentation based on the tree level.
+static void print_indent(int level) {
+    for (int i = 0; i < level; i++) {
+        printf("    ");
+    }
+}
 
-//     // Indentation for better visualization
-//     for (int i = 0; i < depth; i++) 
-//     {
-//         printf("  ");
-//     }
+// Recursively visualize the octree.
+void visualize_octree(BarnesHutTreeNode *node, int level, real *x, real *m) {
+    if (node == NULL)
+        return;
 
-//     // Print node information
-//     printf("Node (depth %d): is_leaf=%s, index=%d, mass=%.10f, center=(%.10f, %.10f, %.10f), width=%.2f, intern_obj_count=%d\n",
-//            depth, node->index >= 0 ? "true" : "false", node->index, node->total_mass,
-//            node->center_of_mass[0], node->center_of_mass[1], node->center_of_mass[2],
-//            node->box_width, node->internal_nodes_objects_count);
+    print_indent(level);
+    printf("Node: center_of_mass=[%f, %f, %f], total_mass=%g, box_width=%f\n",
+           node->center_of_mass[0], node->center_of_mass[1], node->center_of_mass[2],
+           node->total_mass, node->box_width);
 
-//     // Recursively visualize children
-//     for (int i = 0; i < 8; i++) 
-//     {
-//         visualize_octree_nodes(node->children[i], depth + 1);
-//     }
-// }
+    // Iterate through each of the 8 octants.
+    for (int i = 0; i < 8; i++) {
+        if (node->children[i] != NULL) {
+            print_indent(level);
+            printf("Child[%d]:\n", i);
+            visualize_octree(node->children[i], level + 1, x, m);
+        }
+        if (node->leaves[i] != NULL) {
+            print_indent(level);
+            printf("Leaf[%d]: objects_count = %d\n", i, node->leaves[i]->objects_count);
+            for (int j = 0; j < node->leaves[i]->objects_count; j++)
+            {
+                print_indent(level + 1);
+                printf(
+                    "idx = %d, x = [%f, %f, %f], m = %g\n",
+                       node->leaves[i]->indices[j],
+                       x[node->leaves[i]->indices[j] * 3 + 0],
+                       x[node->leaves[i]->indices[j] * 3 + 1],
+                       x[node->leaves[i]->indices[j] * 3 + 2],
+                       m[node->leaves[i]->indices[j]]
+                    );
+            }
+        }
+    }
+}
 
 /**
  * \brief Calculate the bounding box of the system
@@ -57,281 +104,6 @@ typedef struct BarnesHutTreeNodePool
  * \param center 3D vector of the center of the bounding box
  * \param width Width of the bounding box
  */
-IN_FILE void _calculate_bounding_box(
-    const int objects_count,
-    const real *restrict x,
-    real *restrict center,
-    real *restrict width
-);
-
-/**
- * \brief Check the region (i.e. octant)
- *  
- * \param x x-coordinate
- * \param y y-coordinate
- * \param z z-coordinate
- * \param center_x x-coordinate of the center
- * \param center_y y-coordinate of the center
- * \param center_z z-coordinate of the center
- * 
- * \return Region index
- */
-IN_FILE int _check_region(
-    real x,
-    real y,
-    real z,
-    real center_x,
-    real center_y,
-    real center_z
-);
-
-/**
- * \brief Construct the octree
- * 
- * \param objects_count Number of objects
- * \param x Array of position vectors
- * \param m Array of masses
- * \param width Width of the bounding box
- * \param leaf_node_pool Pool of leaf nodes
- * \param internal_node_pool Pool of internal nodes
- * \param actual_internal_nodes_count Pointer to the number of internal nodes
- * \param root Root node of the octree
- */
-IN_FILE int _construct_octree(
-    int objects_count,
-    const real *restrict x,
-    const real *restrict m,
-    real width,
-    BarnesHutTreeNodePool *leaf_node_pool,
-    BarnesHutTreeNodePool *internal_node_pool,
-    int *restrict actual_interval_nodes_count,
-    BarnesHutTreeNode *restrict root
-);
-
-/**
- * \brief Shorten the tree if internal node have less than 8 leaves
- * 
- * \param actual_interval_nodes_count Pointer to the number of internal nodes
- * \param root Root node of the octree
- */
-IN_FILE int _shorten_tree(
-    int *restrict actual_interval_nodes_count,
-    BarnesHutTreeNode *restrict root
-);
-
-/**
- * \brief Compute the center of mass
- * 
- * \param actual_interval_nodes_count Number of internal nodes
- * \param max_depth Pointer to the maximum depth of the tree
- * \param root Root node of the octree
- */
-IN_FILE int _compute_center_of_mass(
-    int actual_interval_nodes_count,
-    int *restrict max_depth,
-    BarnesHutTreeNode *restrict root
-);
-
-/**
- * \brief Calculate the acceleration
- * 
- * \param a Array of acceleration vectors to be modified
- * \param G Gravitational constant
- * \param softening_length Softening length
- * \param opening_angle Opening angle
- * \param actual_interval_nodes_count Number of internal nodes
- * \param max_depth Maximum depth of the tree
- * \param root Root node of the octree
- */
-IN_FILE int _acceleration_step(
-    real *restrict a,
-    real G,
-    real softening_length,
-    real opening_angle,
-    int actual_interval_nodes_count,
-    int max_depth,
-    BarnesHutTreeNode *restrict root
-);
-
-/**
- * \brief Helper function for calculating the acceleration
- * 
- * \param current_acc_leaf Current leaf node for acceleration calculation
- * \param current_obj_leaf Current leaf node for object
- * \param a Array of acceleration vectors to be modified
- * \param G Gravitational constant
- * \param R Array of the relative position vector
- * \param R_norm Norm of the relative position vector
- */
-IN_FILE void _helper_acceleration_pair(
-    BarnesHutTreeNode *restrict current_acc_leaf,
-    BarnesHutTreeNode *restrict current_obj_leaf,
-    real *restrict a,
-    real G,
-    real *restrict R,
-    real R_norm
-);
-
-WIN32DLL_API int acceleration_barnes_hut(
-    real *restrict a,
-    const System *restrict system,
-    AccelerationParam *restrict acceleration_param
-)
-{
-    int return_code;
-
-    const int objects_count = system->objects_count;
-    const real *x = system->x;
-    const real *m = system->m;
-    const real G = system->G;
-    const real softening_length = acceleration_param->softening_length; 
-    const real opening_angle = acceleration_param->opening_angle;
-
-    // Empty the input array
-    for (int i = 0; i < objects_count; i++)
-    {
-        a[i * 3 + 0] = 0.0;
-        a[i * 3 + 1] = 0.0;
-        a[i * 3 + 2] = 0.0;
-    }
-
-    /* Find the width and center of the bounding box */
-    real center[3];
-    real width;
-    _calculate_bounding_box(objects_count, x, center, &width);
-
-    /* Construct the octree */
-    // root node
-    BarnesHutTreeNode *restrict root = malloc(sizeof(BarnesHutTreeNode));
-    if (root == NULL) 
-    {
-        return_code = ERROR_BARNES_HUT_ROOT_MEMORY_ALLOC;
-        goto err_root_memory;
-    }
-    root->index = -1;
-    root->total_mass = 0.0;
-    root->center_of_mass[0] = center[0];
-    root->center_of_mass[1] = center[1];
-    root->center_of_mass[2] = center[2];
-    root->box_width = width;
-    root->internal_nodes_objects_count = 0;
-    root->children[0] = NULL;
-    root->children[1] = NULL;
-    root->children[2] = NULL;
-    root->children[3] = NULL;
-    root->children[4] = NULL;
-    root->children[5] = NULL;
-    root->children[6] = NULL;
-    root->children[7] = NULL;
-
-    // leaf node pool
-    BarnesHutTreeNodePool *leaf_node_pool = malloc(sizeof(BarnesHutTreeNodePool));
-    if (leaf_node_pool == NULL)
-    {
-        return_code = ERROR_BARNES_HUT_LEAF_POOL_PTR_MEMORY_ALLOC;
-        goto err_leaf_pool_ptr_memory;
-    }
-    leaf_node_pool->pool_size = objects_count;
-    leaf_node_pool->node_pool = malloc(leaf_node_pool->pool_size * sizeof(BarnesHutTreeNode));
-    leaf_node_pool->next = NULL;
-    if (leaf_node_pool->node_pool == NULL)
-    {
-        return_code = ERROR_BARNES_HUT_LEAF_POOL_MEMORY_ALLOC;
-        goto err_leaf_pool_memory;
-    }
-
-    // internal node pool
-    BarnesHutTreeNodePool *internal_node_pool = malloc(sizeof(BarnesHutTreeNodePool));
-    if (internal_node_pool == NULL)
-    {
-        return_code = ERROR_BARNES_HUT_INTERNAL_POOL_PTR_MEMORY_ALLOC;
-        goto err_internal_pool_ptr_memory;
-    }
-    internal_node_pool->pool_size = leaf_node_pool->pool_size;
-    internal_node_pool->node_pool = malloc(internal_node_pool->pool_size * sizeof(BarnesHutTreeNode));
-    internal_node_pool->next = NULL;
-    if (internal_node_pool->node_pool == NULL)
-    {
-        return_code = ERROR_BARNES_HUT_INTERNAL_POOL_MEMORY_ALLOC;
-        goto err_internal_pool_memory;
-    }
-    
-    // Construct the octree
-    int actual_internal_nodes_count = 0;
-    return_code = _construct_octree(
-        objects_count,
-        x,
-        m,
-        width,
-        leaf_node_pool,
-        internal_node_pool,
-        &actual_internal_nodes_count,
-        root
-    );
-    if (return_code != SUCCESS)
-    {
-        goto err_octree;
-    }
-
-    // Shorten the tree if internal node have less than 8 leaves
-    return_code = _shorten_tree(&actual_internal_nodes_count, root);
-    if (return_code != SUCCESS)
-    {
-        goto err_shorten_tree;
-    }
-
-    /* Calculate the center of mass */
-    int max_depth;
-    return_code = _compute_center_of_mass(actual_internal_nodes_count, &max_depth, root);
-    if (return_code != SUCCESS)
-    {
-        goto err_center_of_mass_memory;
-    }
-
-    /* Calculate the acceleration */
-    return_code = _acceleration_step(a, G, softening_length, opening_angle, actual_internal_nodes_count, max_depth, root);
-    if (return_code != SUCCESS)
-    {
-        goto err_acceleration_memory;
-    }
-
-    // Free the memory
-    free(leaf_node_pool->node_pool);
-    free(leaf_node_pool);
-    while (internal_node_pool != NULL)
-    {
-        BarnesHutTreeNodePool *next = internal_node_pool->next;
-        free(internal_node_pool->node_pool);
-        free(internal_node_pool);
-        internal_node_pool = next;
-    }
-    free(root);
-    
-    return SUCCESS;
-
-err_acceleration_memory:
-err_center_of_mass_memory:
-err_shorten_tree:
-err_octree:
-err_internal_pool_memory:
-err_internal_pool_ptr_memory:
-    while (internal_node_pool != NULL)
-    {
-        BarnesHutTreeNodePool *next = internal_node_pool->next;
-        free(internal_node_pool->node_pool);
-        free(internal_node_pool);
-        internal_node_pool = next;
-    }
-err_leaf_pool_memory:
-    free(leaf_node_pool->node_pool);
-err_leaf_pool_ptr_memory:
-    free(leaf_node_pool);
-err_root_memory:
-    free(root);
-    
-    return return_code;
-}
-
 IN_FILE void _calculate_bounding_box(
     const int objects_count,
     const real *restrict x,
@@ -367,13 +139,52 @@ IN_FILE void _calculate_bounding_box(
     *width = fmax(fmax(width_x, width_y), width_z);
 }
 
+/**
+ * \brief Initialize Barnes-Hut tree node
+ * 
+ * \param node Pointer to the node
+ * \param center_of_mass 3d vector of the center of mass
+ * \param total_mass Total mass
+ * \param box_width Width of the box
+ */
+IN_FILE void _initialize_node(
+    BarnesHutTreeNode *restrict node,
+    const real center_of_mass[3],
+    const real total_mass,
+    const real box_width
+)
+{
+    node->center_of_mass[0] = center_of_mass[0];
+    node->center_of_mass[1] = center_of_mass[1];
+    node->center_of_mass[2] = center_of_mass[2];
+    node->total_mass = total_mass;
+    node->box_width = box_width;
+    for (int i = 0; i < 8; i++)
+    {
+        node->children[i] = NULL;
+        node->leaves[i] = NULL;
+    }
+}
+
+/**
+ * \brief Check the region (i.e. octant)
+ *  
+ * \param x x-coordinate
+ * \param y y-coordinate
+ * \param z z-coordinate
+ * \param center_x x-coordinate of the center
+ * \param center_y y-coordinate of the center
+ * \param center_z z-coordinate of the center
+ * 
+ * \return Region index
+ */
 IN_FILE int _check_region(
-    real x,
-    real y,
-    real z,
-    real center_x,
-    real center_y,
-    real center_z
+    const real x,
+    const real y,
+    const real z,
+    const real center_x,
+    const real center_y,
+    const real center_z
 )
 {
     int region = 0;
@@ -394,505 +205,375 @@ IN_FILE int _check_region(
     return region;
 }
 
+/**
+ * \brief Get leaf node from leaf pool
+ * 
+ * \param leaf Pointer of Pointer to the leaf node
+ * \param leaf_pool_ptr Pointer to pool of leaf nodes
+ * \param leaf_pool_expand_count Pointer to the number of leaf nodes after expanding the pool
+ */
+IN_FILE int _get_leaf(
+    BarnesHutTreeLeaf **restrict leaf,
+    BarnesHutTreeLeafPool **leaf_pool_ptr,
+    int *restrict leaf_pool_expand_count
+)
+{
+    int return_code;
+
+    const int pool_size = (*leaf_pool_ptr)->pool_size;
+    if (*leaf_pool_expand_count >= pool_size)
+    {
+        (*leaf_pool_ptr)->next = malloc(sizeof(BarnesHutTreeLeafPool));
+        if (!((*leaf_pool_ptr)->next))
+        {
+            return_code = ERROR_BARNES_HUT_GET_LEAF_POOL_PTR_MEMORY_ALLOC;
+            goto err_leaf_pool_ptr_memory;
+        }
+        *leaf_pool_ptr = (*leaf_pool_ptr)->next;
+        (*leaf_pool_ptr)->next = NULL;
+        (*leaf_pool_ptr)->pool_size = pool_size * 2;
+        (*leaf_pool_ptr)->leaves = malloc((*leaf_pool_ptr)->pool_size * sizeof(BarnesHutTreeLeaf));
+        if (!((*leaf_pool_ptr)->leaves))
+        {
+            return_code = ERROR_BARNES_HUT_GET_LEAF_POOL_MEMORY_ALLOC;
+            goto err_leaf_pool_memory;
+        }
+
+        *leaf_pool_expand_count = 0;
+    }
+
+    *leaf = &((*leaf_pool_ptr)->leaves[*leaf_pool_expand_count]);
+    (*leaf)->objects_count = 0;
+    *leaf_pool_expand_count += 1;
+
+    return SUCCESS;
+
+// The memory will be freed in the main 
+// function, even in the case of error
+err_leaf_pool_memory:
+err_leaf_pool_ptr_memory:
+    return return_code;
+}
+
+/**
+ * \brief Divide the tree when the leaf is full
+ * 
+ * \param node Pointer to the node
+ * \param region Region index of the full leaf
+ * \param node_pool_ptr Pointer to pool of nodes
+ * \param node_pool_expand_count Pointer to the number of nodes after expanding the pool
+ * \param leaf_pool_ptr Pointer to pool of leaves
+ * \param leaf_pool_expand_count Pointer to the number of leaves after expanding the pool
+ * \param x Array of position vectors
+ * \param m Array of masses
+ */
+IN_FILE int _divide_tree(
+    BarnesHutTreeNode *restrict const node,
+    const int region,
+    BarnesHutTreeNodePool **node_pool_ptr,
+    int *restrict node_pool_expand_count,
+    BarnesHutTreeLeafPool **leaf_pool_ptr,
+    int *restrict leaf_pool_expand_count,
+    const real *restrict x,
+    const real *restrict m
+)
+{
+    int return_code;
+
+    int pool_size = (*node_pool_ptr)->pool_size;
+    if (*node_pool_expand_count >= pool_size)
+    {
+        (*node_pool_ptr)->next = malloc(sizeof(BarnesHutTreeNodePool));
+        if (!((*node_pool_ptr)->next))
+        {
+            return_code = ERROR_BARNES_HUT_DIVIDE_LEAF_NODE_POOL_PTR_MEMORY_ALLOC;
+            goto err_node_pool_ptr_memory;
+        }
+        (*node_pool_ptr) = (*node_pool_ptr)->next;
+        (*node_pool_ptr)->next = NULL;
+        (*node_pool_ptr)->pool_size = pool_size * 2;
+        (*node_pool_ptr)->nodes = malloc((*node_pool_ptr)->pool_size * sizeof(BarnesHutTreeNode));
+        if ((*node_pool_ptr)->nodes == NULL)
+        {
+            return_code = ERROR_BARNES_HUT_DIVIDE_LEAF_NODE_POOL_MEMORY_ALLOC;
+            goto err_node_pool_memory;
+        }
+
+        *node_pool_expand_count = 0;
+    }
+
+    BarnesHutTreeNode *new_node = &((*node_pool_ptr)->nodes[*node_pool_expand_count]);
+    *node_pool_expand_count += 1;
+    _initialize_node(new_node, node->center_of_mass, 0.0, node->box_width / 2.0);
+    if (region & 1)
+    {
+        new_node->center_of_mass[0] += new_node->box_width / 2.0;
+    }
+    else
+    {
+        new_node->center_of_mass[0] -= new_node->box_width / 2.0;
+    }
+
+    if (region & 2)
+    {
+        new_node->center_of_mass[1] += new_node->box_width / 2.0;
+    }
+    else
+    {
+        new_node->center_of_mass[1] -= new_node->box_width / 2.0;
+    }
+
+    if (region & 4)
+    {
+        new_node->center_of_mass[2] += new_node->box_width / 2.0;
+    }
+    else
+    {
+        new_node->center_of_mass[2] -= new_node->box_width / 2.0;
+    }
+
+
+    BarnesHutTreeLeaf *old_leaf = node->leaves[region];
+    const int num_objects_old_leaf = old_leaf->objects_count;
+    int old_leaf_indices[MAX_NUM_PARTICLES_PER_LEAF];
+    memcpy(old_leaf_indices, old_leaf->indices, num_objects_old_leaf * sizeof(int));
+
+    // Reset the old leaf
+    old_leaf->objects_count = 0;
+    node->children[region] = new_node;
+    node->leaves[region] = NULL;
+
+    // Distribute the objects for the new node
+    for (int i = 0; i < num_objects_old_leaf; i++)
+    {
+        const int idx_i = old_leaf_indices[i];
+        const int new_region = _check_region(
+            x[idx_i * 3 + 0],
+            x[idx_i * 3 + 1],
+            x[idx_i * 3 + 2],
+            new_node->center_of_mass[0],
+            new_node->center_of_mass[1],
+            new_node->center_of_mass[2]
+        );
+
+        // Check if the leaf is not created
+        BarnesHutTreeLeaf *new_leaf = new_node->leaves[new_region];
+        if (!new_leaf)
+        {
+            if (i == 0)
+            {
+                new_leaf = old_leaf;
+            }
+            else
+            {
+                return_code = _get_leaf(
+                    &new_leaf,
+                    leaf_pool_ptr,
+                    leaf_pool_expand_count
+                );
+                if (return_code != SUCCESS)
+                {
+                    goto err_get_leaf;
+                }
+            }
+        }
+        
+        new_leaf->indices[new_leaf->objects_count] = idx_i;
+        new_leaf->objects_count += 1;
+
+        new_node->leaves[new_region] = new_leaf;
+        new_node->total_mass += m[idx_i];
+    }
+
+    return SUCCESS;
+
+
+// The memory will be freed in the main
+// function, even in the case of error
+err_get_leaf:
+err_node_pool_ptr_memory:
+err_node_pool_memory:
+    return return_code;
+}
+
+/**
+ * \brief Construct the octree
+ * 
+ * \param objects_count Number of objects
+ * \param x Array of position vectors
+ * \param m Array of masses
+ * \param leaf_pool Pool of leaves
+ * \param node_pool Pool of nodes
+ * \param max_depth Pointer to the maximum depth of the tree
+ * \param root Root node of the octree
+ */
 IN_FILE int _construct_octree(
-    int objects_count,
+    const int objects_count,
     const real *restrict x,
     const real *restrict m,
-    real width,
-    BarnesHutTreeNodePool *leaf_node_pool,
-    BarnesHutTreeNodePool *internal_node_pool,
-    int *restrict actual_internal_nodes_count,
-    BarnesHutTreeNode *restrict root
-)
-{
-    int return_code;
-
-    // Note: This variable is used to keep track of whether
-    //       the node pool is full. It will be reset to 0 
-    //       when the node pool is full and expanded. Thus,
-    //       don't trust the value of this variable.
-    int current_internal_nodes_count = 0;
-    for (int i = 0; i < objects_count; i++)
-    {
-        int depth = 1;
-        BarnesHutTreeNode *current_node = root;
-        BarnesHutTreeNode *leaf_node = &(leaf_node_pool->node_pool[i]);
-
-        leaf_node->index = i;
-        leaf_node->total_mass = m[i];
-        leaf_node->center_of_mass[0] = x[i * 3 + 0];
-        leaf_node->center_of_mass[1] = x[i * 3 + 1];
-        leaf_node->center_of_mass[2] = x[i * 3 + 2];
-        // Technically not used
-        // leaf_node->box_width = 0.0;
-        // leaf_node->internal_nodes_objects_count = 0;
-        // leaf_node->children[0] = NULL;
-        // leaf_node->children[1] = NULL;
-        // leaf_node->children[2] = NULL;
-        // leaf_node->children[3] = NULL;
-        // leaf_node->children[4] = NULL;
-        // leaf_node->children[5] = NULL;
-        // leaf_node->children[6] = NULL;
-        // leaf_node->children[7] = NULL;
-
-        BarnesHutTreeNode *collider_leaf = NULL;
-        
-        while (true)
-        {
-            /*
-            *   Note: In the following parameters,
-            *         the center_of_mass is just
-            *         the center of the node, not
-            *         the center of mass. It will
-            *         be replaced in the next step.
-            */
-            int region = _check_region(
-                x[i * 3 + 0],
-                x[i * 3 + 1],
-                x[i * 3 + 2],
-                current_node->center_of_mass[0],
-                current_node->center_of_mass[1],
-                current_node->center_of_mass[2]
-            );
-
-            (current_node->internal_nodes_objects_count)++;
-            
-            if (collider_leaf == NULL)
-            {
-                // The node is empty
-                if (current_node->children[region] == NULL)
-                {
-                    current_node->children[region] = leaf_node;
-                    break;
-                }
-
-                // The node is already occupied by a leaf. (>= 0 means it is a leaf)
-                else if ((current_node->children[region]->index) >= 0)
-                {
-                    collider_leaf = current_node->children[region];
-
-                    // Create a new internal node
-                    if (current_internal_nodes_count >= internal_node_pool->pool_size)
-                    {
-                        internal_node_pool->next = malloc(sizeof(BarnesHutTreeNodePool));
-                        if (internal_node_pool->next == NULL)
-                        {
-                            return_code = ERROR_BARNES_HUT_CONSTRUCT_OCTREE_INTERNAL_POOL_MEMORY_ALLOC;
-                            goto err_memory;
-                        }
-                        internal_node_pool->next->pool_size = internal_node_pool -> pool_size * 2;
-                        internal_node_pool->next->node_pool = malloc(internal_node_pool->next->pool_size * sizeof(BarnesHutTreeNode));
-                        if (internal_node_pool->next->node_pool == NULL)
-                        {
-                            return_code = ERROR_BARNES_HUT_CONSTRUCT_OCTREE_INTERNAL_POOL_MEMORY_ALLOC;
-                            goto err_memory;
-                        }
-                        internal_node_pool->next->next = NULL;
-                        internal_node_pool = internal_node_pool->next;
-
-                        current_internal_nodes_count = 0;
-                    }
-                    BarnesHutTreeNode *new_node = &(internal_node_pool->node_pool[current_internal_nodes_count]);
-                    (*actual_internal_nodes_count)++;
-                    current_internal_nodes_count++;
-
-                    new_node->index = -1;
-                    new_node->total_mass = collider_leaf->total_mass + m[i];
-                    new_node->box_width = width / ((real) fast_pow_of_2(depth));
-                    new_node->internal_nodes_objects_count = 1;
-                    new_node->children[0] = NULL;
-                    new_node->children[1] = NULL;
-                    new_node->children[2] = NULL;
-                    new_node->children[3] = NULL;
-                    new_node->children[4] = NULL;
-                    new_node->children[5] = NULL;
-                    new_node->children[6] = NULL;
-                    new_node->children[7] = NULL;
-
-                    // Calculate the center of the node (not center of mass) when constructing the octree
-                    // It will be replaced with the center of mass in the next step
-                    if (region & 1)
-                    {
-                        new_node->center_of_mass[0] = current_node->center_of_mass[0] + width / ((real) fast_pow_of_2(depth + 1));
-                    }
-                    else
-                    {
-                        new_node->center_of_mass[0] = current_node->center_of_mass[0] - width / ((real) fast_pow_of_2(depth + 1));
-                    }
-
-                    if (region & 2)
-                    {
-                        new_node->center_of_mass[1] = current_node->center_of_mass[1] + width / ((real) fast_pow_of_2(depth + 1));
-                    }
-                    else
-                    {
-                        new_node->center_of_mass[1] = current_node->center_of_mass[1] - width / ((real) fast_pow_of_2(depth + 1));
-                    }
-
-                    if (region & 4)
-                    {
-                        new_node->center_of_mass[2] = current_node->center_of_mass[2] + width / ((real) fast_pow_of_2(depth + 1));
-                    }
-                    else
-                    {
-                        new_node->center_of_mass[2] = current_node->center_of_mass[2] - width / ((real) fast_pow_of_2(depth + 1));
-                    }
-
-                    current_node->children[region] = new_node;
-                    current_node = new_node;
-                    depth++;
-                }
-
-                // The node is already occupied by a internal node
-                else
-                {   
-                    current_node = current_node->children[region];
-                    current_node->total_mass += m[i];
-                    depth++;
-                }
-            }
-            else
-            {
-                int collider_region = _check_region(
-                    collider_leaf->center_of_mass[0],
-                    collider_leaf->center_of_mass[1],
-                    collider_leaf->center_of_mass[2],
-                    current_node->center_of_mass[0],
-                    current_node->center_of_mass[1],
-                    current_node->center_of_mass[2]
-                );
-
-                if (region != collider_region)
-                {
-                    current_node->children[region] = leaf_node;
-                    current_node->children[collider_region] = collider_leaf;
-                    break;
-                }
-
-                // Collide again
-                else
-                {
-                    // Create a new internal node
-                    if (current_internal_nodes_count >= internal_node_pool->pool_size)
-                    {
-                        internal_node_pool->next = malloc(sizeof(BarnesHutTreeNodePool));
-                        if (internal_node_pool->next == NULL)
-                        {
-                            return_code = ERROR_BARNES_HUT_CONSTRUCT_OCTREE_INTERNAL_POOL_MEMORY_ALLOC;
-                            goto err_memory;
-                        }
-                        internal_node_pool->next->pool_size = internal_node_pool -> pool_size * 2;
-                        internal_node_pool->next->node_pool = malloc(internal_node_pool->next->pool_size * sizeof(BarnesHutTreeNode));
-                        if (internal_node_pool->next->node_pool == NULL)
-                        {
-                            return_code = ERROR_BARNES_HUT_CONSTRUCT_OCTREE_INTERNAL_POOL_MEMORY_ALLOC;
-                            goto err_memory;
-                        }
-                        internal_node_pool->next->next = NULL;
-                        internal_node_pool = internal_node_pool->next;
-
-                        current_internal_nodes_count = 0;
-                    }
-                    BarnesHutTreeNode *new_node = &(internal_node_pool->node_pool[current_internal_nodes_count]);
-                    (*actual_internal_nodes_count)++;
-                    current_internal_nodes_count++;
-
-                    new_node->index = -1;
-                    new_node->total_mass = current_node->total_mass;
-                    new_node->center_of_mass[0] = current_node->center_of_mass[0];
-                    new_node->center_of_mass[1] = current_node->center_of_mass[1];
-                    new_node->center_of_mass[2] = current_node->center_of_mass[2];
-                    new_node->box_width = width / ((real) fast_pow_of_2(depth));
-                    new_node->internal_nodes_objects_count = 1;
-                    new_node->children[0] = NULL;
-                    new_node->children[1] = NULL;
-                    new_node->children[2] = NULL;
-                    new_node->children[3] = NULL;
-                    new_node->children[4] = NULL;
-                    new_node->children[5] = NULL;
-                    new_node->children[6] = NULL;
-                    new_node->children[7] = NULL;
-
-                    // Calculate the center of the node when constructing the octree
-                    // It will be replaced with the center of mass later
-                    if (region & 1)
-                    {
-                        new_node->center_of_mass[0] = current_node->center_of_mass[0] + width / ((real) fast_pow_of_2(depth + 1));
-                    }
-                    else
-                    {
-                        new_node->center_of_mass[0] = current_node->center_of_mass[0] - width / ((real) fast_pow_of_2(depth + 1));
-                    }
-
-                    if (region & 2)
-                    {
-                        new_node->center_of_mass[1] = current_node->center_of_mass[1] + width / ((real) fast_pow_of_2(depth + 1));
-                    }
-                    else
-                    {
-                        new_node->center_of_mass[1] = current_node->center_of_mass[1] - width / ((real) fast_pow_of_2(depth + 1));
-                    }
-                    
-                    if (region & 4)
-                    {
-                        new_node->center_of_mass[2] = current_node->center_of_mass[2] + width / ((real) fast_pow_of_2(depth + 1));
-                    }
-                    else
-                    {
-                        new_node->center_of_mass[2] = current_node->center_of_mass[2] - width / ((real) fast_pow_of_2(depth + 1));
-                    }
-
-                    current_node->children[region] = new_node;
-                    current_node = new_node;
-                    depth++;
-                }
-            }
-        }
-    }
-
-    return SUCCESS;
-
-err_memory:
-    return return_code;
-}
-
-IN_FILE int _shorten_tree(
-    int *restrict actual_internal_nodes_count,
-    BarnesHutTreeNode *restrict root
-)
-{
-    int return_code;
-
-    if (root->internal_nodes_objects_count <= 8)
-    {
-        return SUCCESS;
-    }
-
-    typedef struct BarnesHutShortenTreeStack
-    {
-        BarnesHutTreeNode *node;
-        struct BarnesHutShortenTreeStack *last;
-        int processed_region;
-    } BarnesHutShortenTreeStack;
-
-    BarnesHutTreeNode *current_node = root;
-
-    int shorten_stack_pool_size = *actual_internal_nodes_count + root->internal_nodes_objects_count + 1;
-    BarnesHutShortenTreeStack *shorten_tree_stack_pool = malloc(shorten_stack_pool_size * sizeof(BarnesHutShortenTreeStack));
-    if (shorten_tree_stack_pool == NULL)
-    {
-        return_code = ERROR_BARNES_HUT_SHORTEN_TREE_MEMORY_ALLOC;
-        goto err_memory;
-    }
-    int current_stack_count = 1;
-    BarnesHutShortenTreeStack *stack = &shorten_tree_stack_pool[0];
-
-    stack->node = root;
-    stack->last = NULL;
-    stack->processed_region = -1;
-
-    bool is_shorten = false;
-    BarnesHutTreeNode *shorten_leaves[8];
-    int num_leaves_to_find;
-    int found_leaves_count;
-    while (true)
-    {
-        for (int i = (stack->processed_region + 1); i < 8; i++)
-        {
-            BarnesHutTreeNode *child_i = current_node->children[i];
-
-            // Check if the node is empty 
-            // or occupied by a leaf (index >= 0 means it is a leaf) 
-            if (
-                (child_i == NULL)
-                || (child_i->index >= 0)
-            )
-            {
-                stack->processed_region = i;
-                continue;
-            }
-
-            else
-            {
-                // Create a new stack item
-                if (current_stack_count >= shorten_stack_pool_size)
-                {
-                    return_code = ERROR_BARNES_HUT_SHORTEN_TREE_MEMORY_FULL;
-                    goto err_memory;
-                }
-                BarnesHutShortenTreeStack *new_item = &shorten_tree_stack_pool[current_stack_count];
-                current_stack_count++;
-
-                new_item->node = child_i;
-                new_item->last = stack;
-                new_item->processed_region = -1;
-
-                stack = new_item;
-                current_node = child_i;
-                break;
-            }
-        }
-
-        if (stack->processed_region >= 7)
-        {
-            // Root node has no parent
-            if (stack->last == NULL)
-            {
-                break;
-            }
-
-            stack = stack->last;
-            (stack->processed_region)++;
-            current_node = stack->node;
-        }
-
-        else if (current_node->internal_nodes_objects_count <= 8)
-        {
-            for (int i = 0; i < 8; i++)
-            {
-                BarnesHutTreeNode *temp_child = current_node->children[i];
-                // Check if there is internal node
-                if ((temp_child != NULL) && (temp_child->index < 0))
-                {
-                    is_shorten = true;
-                    break;
-                }
-            }
-        }
-
-        if (!is_shorten)
-        {
-            continue;
-        }
-
-        /* Shorten the tree */
-        // Find the leaves
-        num_leaves_to_find = current_node->internal_nodes_objects_count;
-        found_leaves_count = 0;
-        BarnesHutShortenTreeStack *find_leaves_stack = stack;
-        BarnesHutTreeNode *find_leaves_current_node = current_node;
-        while (true)
-        {
-            for (int i = find_leaves_stack->processed_region + 1; i < 8; i++)
-            {
-                BarnesHutTreeNode *temp_child = find_leaves_current_node->children[i];
-                
-                // Check if the node is empty
-                if (temp_child == NULL)
-                {
-                    find_leaves_stack->processed_region = i;
-                    continue;
-                }
-
-                // Check if the node is occupied by a leaf
-                else if (temp_child->index >= 0)
-                {
-                    shorten_leaves[found_leaves_count] = temp_child;
-                    found_leaves_count++;
-                    find_leaves_stack->processed_region = i;
-                    break;
-                }
-
-                else
-                {
-                    // Create a new stack item
-                    if (current_stack_count >= shorten_stack_pool_size)
-                    {
-                        return_code = ERROR_BARNES_HUT_SHORTEN_TREE_MEMORY_FULL;
-                        goto err_memory;
-                    }
-                    BarnesHutShortenTreeStack *new_item = &shorten_tree_stack_pool[current_stack_count];
-                    current_stack_count++;
-
-                    new_item->node = temp_child;
-                    new_item->last = find_leaves_stack;
-                    new_item->processed_region = -1;
-
-                    find_leaves_stack = new_item;
-                    find_leaves_current_node = temp_child;
-                    *actual_internal_nodes_count -= 1;
-                    break;
-                }
-            }
-
-            if (found_leaves_count >= num_leaves_to_find)
-            {
-                break;
-            }
-
-            if (find_leaves_stack->processed_region >= 7)
-            {
-                BarnesHutShortenTreeStack *parent = find_leaves_stack->last;
-                if (parent == NULL)
-                {
-                    break;
-                }
-
-                find_leaves_stack = parent;
-                find_leaves_current_node = parent->node;
-                (find_leaves_stack->processed_region)++;
-            }
-        }
-
-        if (found_leaves_count < num_leaves_to_find)
-        {
-            return_code = ERROR_BARNES_HUT_SHORTEN_TREE_MEMORY_FAILED_FIND_ALL_LEAVES;
-            goto err_shorten_tree;
-        }
-
-        for (int i = 0, placed_leaves_count = 0; (i < 8) && (placed_leaves_count < found_leaves_count); i++)
-        {
-            current_node->children[i] = shorten_leaves[placed_leaves_count];
-            placed_leaves_count++;
-        }
-        for (int i = num_leaves_to_find; i < 8; i++)
-        {
-            current_node->children[i] = NULL;
-        }
-
-        is_shorten = false;
-        stack->processed_region = 7;
-    }
-
-    // Free the stack pool
-    free(shorten_tree_stack_pool);
-
-    return SUCCESS;
-
-err_shorten_tree:
-    free(shorten_tree_stack_pool);
-err_memory:
-    return return_code;
-}
-
-IN_FILE int _compute_center_of_mass(
-    int actual_internal_nodes_count,
+    BarnesHutTreeLeafPool *leaf_pool,
+    BarnesHutTreeNodePool *node_pool,
     int *restrict max_depth,
     BarnesHutTreeNode *restrict root
 )
 {
     int return_code;
 
-    typedef struct BarnesHutCOMStack
-    {
-        BarnesHutTreeNode *node;
-        struct BarnesHutCOMStack *last;
-        real sum_of_mass_times_distance[3];
-        int processed_region;
-    } BarnesHutCOMStack;
+    // To keep track of the number of nodes / leaves
+    // after expanding the pool
+    int leaf_pool_expand_count = 0;
+    int node_pool_expand_count = 0;
 
-    BarnesHutTreeNode *current_node = root;
-
-    int COM_stack_pool_size = actual_internal_nodes_count + 1;
-    BarnesHutCOMStack *COM_stack_pool = malloc(COM_stack_pool_size * sizeof(BarnesHutCOMStack));
-    if (COM_stack_pool == NULL)
+    // Construct octree
+    for (int i = 0; i < objects_count; i++)
     {
-        return_code = ERROR_BARNES_HUT_COMPUTE_COM_MEMORY_ALLOC;
+        BarnesHutTreeNode *node = root;
+        int depth = 0;
+
+        while (true)
+        {
+            depth++;
+
+            int region = _check_region(
+                x[i * 3 + 0],
+                x[i * 3 + 1],
+                x[i * 3 + 2],
+                node->center_of_mass[0],
+                node->center_of_mass[1],
+                node->center_of_mass[2]
+            );
+
+            BarnesHutTreeNode *child = node->children[region];
+            BarnesHutTreeLeaf *leaf = node->leaves[region];
+
+            node->total_mass += m[i];
+
+            // Both child node and leaf do not exist
+            if ((!child) && (!leaf))
+            {
+                // Create a new leaf
+                return_code = _get_leaf(
+                    &leaf,
+                    &leaf_pool,
+                    &leaf_pool_expand_count
+                );
+                if (return_code != SUCCESS)
+                {
+                    goto err_get_leaf;
+                }
+                leaf->indices[0] = i;
+                leaf->objects_count = 1;
+                node->leaves[region] = leaf;
+                break;
+            }
+
+            // Leaf exists
+            else if (!child)
+            {
+                // Check if the leaf is full
+                if (leaf->objects_count >= MAX_NUM_PARTICLES_PER_LEAF)
+                {
+                    // Split the branch
+                    return_code = _divide_tree(
+                        node,
+                        region,
+                        &node_pool,
+                        &node_pool_expand_count,
+                        &leaf_pool,
+                        &leaf_pool_expand_count,
+                        x,
+                        m
+                    );
+                    if (return_code != SUCCESS)
+                    {
+                        goto err_divide_leaf;
+                    }
+                    node = node->children[region];
+                }
+                else
+                {
+                    leaf->indices[leaf->objects_count] = i;
+                    leaf->objects_count += 1;
+
+                    break;
+                }
+            }
+
+            // Child node already exists
+            else
+            {
+                node = node->children[region];
+            }
+        }
+
+        if (depth > *max_depth)
+        {
+            *max_depth = depth;
+        }
+    }
+
+    return SUCCESS;
+
+err_divide_leaf:
+err_get_leaf:
+    return return_code;
+}
+
+/**
+ * \brief Update the sum of mass times distance vector
+ * 
+ * \param sum_of_mass_times_distance_vector Pointer to the sum of mass times distance vector
+ * \param x Array of position vectors
+ * \param m Array of masses
+ * \param leaf Leaf node
+ */
+IN_FILE void _com_update_sum_of_mass_times_distance(
+    real *restrict sum_of_mass_times_distance_vector,
+    const real *restrict x,
+    const real *restrict m,
+    const BarnesHutTreeLeaf *restrict leaf
+)
+{
+    for (int i = 0; i < (leaf->objects_count); i++)
+    {
+        const int idx_i = leaf->indices[i];
+        real m_i = m[idx_i];
+        sum_of_mass_times_distance_vector[0] += m_i * x[idx_i * 3 + 0];
+        sum_of_mass_times_distance_vector[1] += m_i * x[idx_i * 3 + 1];
+        sum_of_mass_times_distance_vector[2] += m_i * x[idx_i * 3 + 2];
+    }
+}
+
+/**
+ * \brief Compute the center of mass
+ * 
+ * \param x Array of position vectors
+ * \param m Array of masses
+ * \param max_depth Maximum depth of the tree
+ * \param root Root node of the octree
+ */
+IN_FILE int _compute_center_of_mass(
+    const real *restrict x,
+    const real *restrict m,
+    const int max_depth,
+    BarnesHutTreeNode *restrict root
+)
+{
+    int return_code;
+
+    BarnesHutTreeNode *node = root;
+
+    /* Create a stack pool */
+    const int stack_pool_size = max_depth;
+    BarnesHutCOMStack *stack_pool = malloc(stack_pool_size * sizeof(BarnesHutCOMStack));
+    if (!stack_pool)
+    {
+        return_code = ERROR_BARNES_HUT_COMPUTE_COM_STACK_MEMORY_ALLOC;
         goto err_memory;
     }
-    int current_stack_count = 1;
-    BarnesHutCOMStack *stack = &COM_stack_pool[0];
 
+    int stack_count = 1;
+    BarnesHutCOMStack *stack = &(stack_pool[0]);
     stack->node = root;
     stack->last = NULL;
     stack->sum_of_mass_times_distance[0] = 0.0;
@@ -900,43 +581,42 @@ IN_FILE int _compute_center_of_mass(
     stack->sum_of_mass_times_distance[2] = 0.0;
     stack->processed_region = -1;
 
-    *max_depth = 0;
-    int current_depth = 0;
-
     while (true)
     {
         for (int i = (stack->processed_region + 1); i < 8; i++)
         {
-            BarnesHutTreeNode *child_i = current_node->children[i];
+            BarnesHutTreeNode *child_i = node->children[i];
+            BarnesHutTreeLeaf *leaf_i = node->leaves[i];
 
-            // The node is empty
-            if (child_i == NULL)
+            // Both child node and leaf do not exist
+            if ((!child_i) && (!leaf_i))
             {
                 stack->processed_region = i;
-                continue;
             }
 
-            // The node is occupied by a leaf (>= 0 means it is a leaf)
-            else if (child_i->index >= 0)
+            // Leaf exists
+            else if (!child_i)
             {
-                real child_mass = child_i->total_mass;
-                stack->sum_of_mass_times_distance[0] += child_mass * child_i->center_of_mass[0];
-                stack->sum_of_mass_times_distance[1] += child_mass * child_i->center_of_mass[1];
-                stack->sum_of_mass_times_distance[2] += child_mass * child_i->center_of_mass[2];
-
+                _com_update_sum_of_mass_times_distance(
+                    stack->sum_of_mass_times_distance,
+                    x,
+                    m,
+                    leaf_i
+                );
                 stack->processed_region = i;
-                continue;
             }
+
+            // Node exists
             else
             {
                 // Create a new stack item
-                if (current_stack_count >= COM_stack_pool_size)
+                if (stack_count >= stack_pool_size)
                 {
-                    return_code = ERROR_BARNES_HUT_COMPUTE_COM_MEMORY_FULL;
-                    goto err_memory;
+                    return_code = ERROR_BARNES_HUT_COMPUTE_COM_STACK_FULL;
+                    goto err_stack_full;
                 }
-                BarnesHutCOMStack *new_item = &COM_stack_pool[current_stack_count];
-                current_stack_count++;
+                BarnesHutCOMStack *new_item = &stack_pool[stack_count];
+                stack_count++;
 
                 new_item->node = child_i;
                 new_item->last = stack;
@@ -946,386 +626,856 @@ IN_FILE int _compute_center_of_mass(
                 new_item->processed_region = -1;
 
                 stack = new_item;
-                current_node = child_i;
+                node = child_i;
 
-                current_depth++;
                 break;
             }
         }
 
-        if (current_depth > *max_depth)
-        {
-            *max_depth = current_depth;
-        }
-    
         if (stack->processed_region >= 7)
         {
-            // For max depth calculation, check if (1) there is at least one children and (2) they are all leaves
-            bool there_is_at_least_one_child = false;
-            bool all_children_are_leaves = true;
-            for (int i = 0; i < 8; i++)
-            {
-                BarnesHutTreeNode *child_i = current_node->children[i];
-                if (child_i != NULL)
-                {
-                    there_is_at_least_one_child = true;
-                    if (child_i->index < 0)
-                    {
-                        all_children_are_leaves = false;
-                        break;
-                    }
-                }
-            }
+            BarnesHutCOMStack *parent_stack = stack->last;
 
-            if (there_is_at_least_one_child && all_children_are_leaves)
-            {
-                if (current_depth + 1 > *max_depth)
-                {
-                    *max_depth = current_depth + 1;
-                }
-            }
-            BarnesHutCOMStack *parent = stack->last;
-            
-            // Root node has no parent
-            if (parent == NULL)
+            // Break if the stack is empty
+            if (!parent_stack)
             {
                 break;
             }
 
-            real total_mass = current_node->total_mass;
+            real total_mass = node->total_mass;
+            node->center_of_mass[0] = stack->sum_of_mass_times_distance[0] / total_mass;
+            node->center_of_mass[1] = stack->sum_of_mass_times_distance[1] / total_mass;
+            node->center_of_mass[2] = stack->sum_of_mass_times_distance[2] / total_mass;
 
-            current_node->center_of_mass[0] = stack->sum_of_mass_times_distance[0] / total_mass;
-            current_node->center_of_mass[1] = stack->sum_of_mass_times_distance[1] / total_mass;
-            current_node->center_of_mass[2] = stack->sum_of_mass_times_distance[2] / total_mass;
+            parent_stack->sum_of_mass_times_distance[0] += stack->sum_of_mass_times_distance[0];
+            parent_stack->sum_of_mass_times_distance[1] += stack->sum_of_mass_times_distance[1];
+            parent_stack->sum_of_mass_times_distance[2] += stack->sum_of_mass_times_distance[2];
 
-            BarnesHutTreeNode *parent_node = parent->node;
-            parent->sum_of_mass_times_distance[0] += total_mass * current_node->center_of_mass[0];
-            parent->sum_of_mass_times_distance[1] += total_mass * current_node->center_of_mass[1];
-            parent->sum_of_mass_times_distance[2] += total_mass * current_node->center_of_mass[2];
-            parent->processed_region++;
-
-            stack = parent;
-            current_node = parent_node;
-
-            current_depth--;
+            parent_stack->processed_region += 1;
+            stack = parent_stack;
+            node = parent_stack->node;
+            stack_count--;
         }
     }
 
-    // Free the stack pool
-    free(COM_stack_pool);
+    /* Free the stack pool */
+    free(stack_pool);
 
     return SUCCESS;
 
+err_stack_full:
 err_memory:
-    free(COM_stack_pool);
+    free(stack_pool);
     return return_code;
 }
 
-IN_FILE int _acceleration_step(
+/**
+ * \brief Check if the tree walk node includes the given leaf
+ * 
+ * \param branch_record_leaf Branch record of the given leaf
+ * \param branch_record_leaf_count Size of branch record
+ * \param branch_record_tree_walk Branch record of the tree walk node / leaf
+ * \param branch_record_tree_walk_count Size of branch record
+ * 
+ * \return True if the tree walk node includes the given leaf
+ * \return False otherwise
+ */
+IN_FILE bool _compare_branch_record(
+    const int *restrict branch_record_leaf,
+    const int branch_record_leaf_count,
+    const int *restrict branch_record_tree_walk,
+    const int branch_record_tree_walk_count
+)
+{
+    if (branch_record_tree_walk_count > branch_record_leaf_count)
+    {
+        return false;
+    }
+
+    for (int i = 0; i < branch_record_tree_walk_count; i++)
+    {
+        if (branch_record_tree_walk[i] != branch_record_leaf[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * \brief Compute the acceleration between all particles within the leaf
+ * 
+ * \param a Array of acceleration vectors to be modified
+ * \param x Array of position vectors
+ * \param m Array of masses
+ * \param G Gravitational constant
+ * \param softening_length Softening length
+ * \param leaf Leaf node
+ */
+IN_FILE void _compute_acc_single_leaf(
     real *restrict a,
-    real G,
-    real softening_length,
-    real opening_angle,
-    int actual_internal_nodes_count,
-    int max_depth,
-    BarnesHutTreeNode *restrict root
+    const real *restrict x,
+    const real *restrict m,
+    const real G,
+    const real softening_length,
+    BarnesHutTreeLeaf *restrict leaf
+)
+{
+    const int objects_count = leaf->objects_count;
+    const int *restrict indices = leaf->indices;
+
+    /* Compute the pairwise acceleration */
+    for (int i = 0; i < objects_count; i++)
+    {
+        const int idx_i = indices[i];
+        const real m_i = m[idx_i];
+        for (int j = i + 1; j < objects_count; j++)
+        {
+            const int idx_j = indices[j];
+            const real m_j = m[idx_j];
+
+            real temp_vec[3];
+            real R[3];
+
+            // Calculate \vec{R} and its norm
+            R[0] = x[idx_i * 3 + 0] - x[idx_j * 3 + 0];
+            R[1] = x[idx_i * 3 + 1] - x[idx_j * 3 + 1];
+            R[2] = x[idx_i * 3 + 2] - x[idx_j * 3 + 2];
+            const real R_norm = sqrt(
+                R[0] * R[0] + 
+                R[1] * R[1] + 
+                R[2] * R[2] +
+                softening_length * softening_length
+            );
+
+            // Calculate the acceleration
+            const real temp_value = G / (R_norm * R_norm * R_norm);
+            temp_vec[0] = temp_value * R[0];
+            temp_vec[1] = temp_value * R[1];
+            temp_vec[2] = temp_value * R[2];
+            a[idx_i * 3 + 0] -= temp_vec[0] * m_j;
+            a[idx_i * 3 + 1] -= temp_vec[1] * m_j;
+            a[idx_i * 3 + 2] -= temp_vec[2] * m_j;
+            a[idx_j * 3 + 0] += temp_vec[0] * m_i;
+            a[idx_j * 3 + 1] += temp_vec[1] * m_i;
+            a[idx_j * 3 + 2] += temp_vec[2] * m_i;
+        }
+    }
+}
+
+/**
+ * \brief Compute the acceleration of particles of leaf_i due to leaf_j
+ * 
+ * \param a Array of acceleration vectors to be modified
+ * \param x Array of position vectors
+ * \param m Array of masses
+ * \param G Gravitational constant
+ * \param softening_length Softening length
+ * \param indices_i Array of indices of particles in leaf_i
+ * \param objects_count_i Number of particles in leaf_i
+ * \param leaf Leaf node
+ */
+IN_FILE void _compute_acc_leaf_to_leaf(
+    real *restrict a,
+    const real *restrict x,
+    const real *restrict m,
+    const real G,
+    const real softening_length,
+    const int *restrict indices_i,
+    const int objects_count_i,
+    BarnesHutTreeLeaf *restrict leaf_j
+)
+{
+    const int objects_count_j = leaf_j->objects_count;
+    const int *restrict indices_j = leaf_j->indices;
+
+    /* Compute the pairwise acceleration */
+    for (int i = 0; i < objects_count_i; i++)
+    {
+        const int idx_i = indices_i[i];
+        for (int j = 0; j < objects_count_j; j++)
+        {
+            const int idx_j = indices_j[j];
+            const real m_j = m[idx_j];
+
+            real temp_vec[3];
+            real R[3];
+
+            // Calculate \vec{R} and its norm
+            R[0] = x[idx_i * 3 + 0] - x[idx_j * 3 + 0];
+            R[1] = x[idx_i * 3 + 1] - x[idx_j * 3 + 1];
+            R[2] = x[idx_i * 3 + 2] - x[idx_j * 3 + 2];
+            const real R_norm = sqrt(
+                R[0] * R[0] +
+                R[1] * R[1] +
+                R[2] * R[2] +
+                softening_length * softening_length
+            );
+
+            // Calculate the acceleration
+            const real temp_value = G / (R_norm * R_norm * R_norm);
+            temp_vec[0] = temp_value * R[0];
+            temp_vec[1] = temp_value * R[1];
+            temp_vec[2] = temp_value * R[2];
+            a[idx_i * 3 + 0] -= temp_vec[0] * m_j;
+            a[idx_i * 3 + 1] -= temp_vec[1] * m_j;
+            a[idx_i * 3 + 2] -= temp_vec[2] * m_j;
+        }
+    }
+}
+
+// /**
+//  * \brief Compute the acceleration of particles of leaf due to node
+//  * 
+//  * \param a Array of acceleration vectors to be modified
+//  * \param x Array of position vectors
+//  * \param G Gravitational constant
+//  * \param softening_length Softening length
+//  * \param leaf Leaf node
+//  * \param center_of_mass Center of mass of the node
+//  * \param m_j Total mass of the node
+//  */
+// IN_FILE void _compute_acc_leaf_to_node(
+//     real *restrict a,
+//     const real *restrict x,
+//     const real G,
+//     const real softening_length,
+//     BarnesHutTreeLeaf *restrict leaf,
+//     const real *restrict center_of_mass,
+//     const real m_j
+// )
+// {
+//     const int objects_count = leaf->objects_count;
+//     const int *restrict indices = leaf->indices;
+
+//     for (int i = 0; i < objects_count; i++)
+//     {
+//         real R[3];
+//         real temp_vec[3];
+
+//         const int idx_i = indices[i];
+
+//         // Calculate \vec{R} and its norm
+//         R[0] = x[idx_i * 3 + 0] - center_of_mass[0];
+//         R[1] = x[idx_i * 3 + 1] - center_of_mass[1];
+//         R[2] = x[idx_i * 3 + 2] - center_of_mass[2];
+//         const real R_norm = sqrt(
+//             R[0] * R[0] + 
+//             R[1] * R[1] + 
+//             R[2] * R[2] +
+//             softening_length * softening_length
+//         );
+
+//         // Calculate the acceleration
+//         const real temp_value = G / (R_norm * R_norm * R_norm);
+//         temp_vec[0] = temp_value * R[0];
+//         temp_vec[1] = temp_value * R[1];
+//         temp_vec[2] = temp_value * R[2];
+//         a[idx_i * 3 + 0] -= temp_vec[0] * m_j;
+//         a[idx_i * 3 + 1] -= temp_vec[1] * m_j;
+//         a[idx_i * 3 + 2] -= temp_vec[2] * m_j;
+//     }
+// }
+
+IN_FILE void _pop_particles(
+    int *restrict particle_indices,
+    int *restrict num_particles,
+    int *restrict pop_indices,
+    int *restrict num_pop_particles
+)
+{
+    for (int read = 0, write = 0, pop_idx = 0; read < *num_particles; read++)
+    {
+        if (pop_idx < *num_pop_particles && pop_indices[pop_idx] == read)
+        {
+            pop_idx++;
+        }
+        else
+        {
+            particle_indices[write] = particle_indices[read];
+            write++;
+        }
+    }
+
+    *num_particles -= *num_pop_particles;
+    *num_pop_particles = 0;
+}
+
+/**
+ * \brief Compute the acceleration between the particles 
+ *        in the leaf and other nodes / leaves
+ * 
+ * \param a Array of acceleration vectors to be modified
+ * \param x Array of position vectors
+ * \param m Array of masses
+ * \param G Gravitational constant
+ * \param softening_length Softening length
+ * \param opening_angle Opening angle
+ * \param given_leaf Given leaf
+ * \param root Root node of the octree
+ * \param branch_record_given_leaf Branch record of the given leaf
+ * \param branch_record_given_leaf_count Size of branch record
+ * \param max_depth Maximum depth of the tree
+ */
+IN_FILE int _compute_acc_tree_walk(
+    real *restrict a,
+    const real *restrict x,
+    const real *restrict m,
+    const real G,
+    const real softening_length,
+    const real opening_angle,
+    BarnesHutTreeLeaf *restrict given_leaf,
+    BarnesHutTreeNode *restrict root,
+    const int *restrict branch_record_given_leaf,
+    const int branch_record_given_leaf_count,
+    const int max_depth
+)
+{
+    typedef struct BarnesHutAccTreeWalkStack
+    {
+        BarnesHutTreeNode *node;
+        struct BarnesHutAccTreeWalkStack *last;
+        int particle_indices[8 * MAX_NUM_PARTICLES_PER_LEAF];
+        int num_particles[8];
+        int processed_region;
+    } BarnesHutAccTreeWalkStack;
+
+    int return_code;
+
+    BarnesHutTreeNode *node = root;
+
+    /* Allocate a stack pool */
+    const int stack_pool_size = max_depth;
+    BarnesHutAccTreeWalkStack *stack_pool = malloc(stack_pool_size * sizeof(BarnesHutAccTreeWalkStack));
+    if (!stack_pool)
+    {
+        return_code = ERROR_BARNES_HUT_COMPUTE_ACC_TREE_WALK_STACK_MEMORY_ALLOC;
+        goto err_stack_pool_memory_alloc;
+    }
+
+    int stack_count = 1;
+    BarnesHutAccTreeWalkStack *stack = &stack_pool[0];
+    stack->node = root;
+    stack->last = NULL;
+    for (int i = 0; i < 8; i++)
+    {
+        stack->num_particles[i] = given_leaf->objects_count;
+        for (int j = 0; j < given_leaf->objects_count; j++)
+        {
+            stack->particle_indices[i * MAX_NUM_PARTICLES_PER_LEAF + j] = given_leaf->indices[j];
+        }
+    }
+    stack->processed_region = -1;
+
+    int branch_record_count = 0;
+    int *restrict branch_record = malloc(max_depth * sizeof(int));
+    if (!branch_record)
+    {
+        return_code = ERROR_BARNES_HUT_COMPUTE_ACC_TREE_WALK_BRANCH_RECORD_MEMORY_ALLOC;
+        goto err_branch_record_memory_alloc;
+    }
+
+    while (true)
+    {
+        for (int i = (stack->processed_region + 1); i < 8; i++)
+        {
+            BarnesHutTreeNode *child = node->children[i];
+            BarnesHutTreeLeaf *leaf = node->leaves[i];
+
+            // The node and leaf is empty
+            if ((!child) && (!leaf))
+            {
+                stack->processed_region = i;
+            }
+
+            // Leaf exists
+            else if (!child)
+            {
+                branch_record[branch_record_count] = i;
+                branch_record_count++;
+
+                bool is_same_leaf = _compare_branch_record(
+                    branch_record_given_leaf,
+                    branch_record_given_leaf_count,
+                    branch_record,
+                    branch_record_count
+                );
+                branch_record_count--;
+                if (!is_same_leaf)
+                {
+                    _compute_acc_leaf_to_leaf(
+                        a,
+                        x,
+                        m,
+                        G,
+                        softening_length,
+                        &(stack->particle_indices[i * MAX_NUM_PARTICLES_PER_LEAF]),
+                        stack->num_particles[i],
+                        leaf
+                    );
+                }
+                stack->processed_region = i;
+            }
+
+            // Node exists
+            else
+            {
+                branch_record[branch_record_count] = i;
+                branch_record_count++;
+
+                bool is_included = _compare_branch_record(
+                    branch_record_given_leaf,
+                    branch_record_given_leaf_count,
+                    branch_record,
+                    branch_record_count
+                );
+
+                if (!is_included)
+                {
+                    real R[3];
+                    const real COM_node[3] = {
+                        child->center_of_mass[0],
+                        child->center_of_mass[1],
+                        child->center_of_mass[2]
+                    };
+                    const real m_node = child->total_mass;
+                    const real box_width = child->box_width;
+
+                    int pop_indices[MAX_NUM_PARTICLES_PER_LEAF];
+                    int num_pop_particles = 0;
+                    for (int j = 0; j < stack->num_particles[i]; j++)
+                    {
+                        const int idx_j = stack->particle_indices[i * MAX_NUM_PARTICLES_PER_LEAF + j];
+                        
+                        // Calculate \vec{R} and its norm
+                        R[0] = x[idx_j * 3 + 0] - COM_node[0];
+                        R[1] = x[idx_j * 3 + 1] - COM_node[1];
+                        R[2] = x[idx_j * 3 + 2] - COM_node[2];
+
+                        if (box_width / sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2]) < opening_angle)
+                        {
+                            real temp_vec[3];
+                            const real R_norm = sqrt(
+                                R[0] * R[0] +
+                                R[1] * R[1] +
+                                R[2] * R[2] +
+                                softening_length * softening_length
+                            );
+                            const real temp_value = G / (R_norm * R_norm * R_norm);
+                            temp_vec[0] = temp_value * R[0];
+                            temp_vec[1] = temp_value * R[1];
+                            temp_vec[2] = temp_value * R[2];
+                            a[idx_j * 3 + 0] -= temp_vec[0] * m_node;
+                            a[idx_j * 3 + 1] -= temp_vec[1] * m_node;
+                            a[idx_j * 3 + 2] -= temp_vec[2] * m_node;
+                            pop_indices[num_pop_particles] = idx_j;
+                            num_pop_particles++;
+                        }
+                    }
+
+                    _pop_particles(
+                        &(stack->particle_indices[i * MAX_NUM_PARTICLES_PER_LEAF]),
+                        &(stack->num_particles[i]),
+                        pop_indices,
+                        &num_pop_particles
+                    );
+
+                    if (stack->num_particles[i] == 0)
+                    {
+                        stack->processed_region = i;
+                        branch_record_count--;
+                        break;
+                    }
+                }
+
+                // Create a new stack item if the leaf is included
+                if (stack_count >= stack_pool_size)
+                {
+                    return_code = ERROR_BARNES_HUT_COMPUTE_ACC_TREE_WALK_STACK_FULL;
+                    goto err_stack_pool_full;
+                }
+                BarnesHutAccTreeWalkStack *new_item = &stack_pool[stack_count];
+                stack_count++;
+
+                new_item->node = child;
+                new_item->last = stack;
+                for (int j = 0; j < 8; j++)
+                {
+                    new_item->num_particles[j] = stack->num_particles[i];
+                    for (int k = 0; k < stack->num_particles[i]; k++)
+                    {
+                        new_item->particle_indices[j * MAX_NUM_PARTICLES_PER_LEAF + k] = stack->particle_indices[i * MAX_NUM_PARTICLES_PER_LEAF + k];
+                    }
+                }
+                new_item->processed_region = -1;
+
+                stack->num_particles[i] = 0;    // Should be completely processed in the deeper level
+                stack = new_item;
+                node = child;
+
+                break;
+            }
+        }
+
+        if (stack->processed_region >= 7)
+        {
+            BarnesHutAccTreeWalkStack *parent_stack = stack->last;
+
+            // Root node has no parent
+            if (!parent_stack)
+            {
+                break;
+            }
+
+            stack = parent_stack;
+            node = parent_stack->node;
+            stack_count--;
+            branch_record_count--;
+
+            parent_stack->processed_region += 1;
+        }
+    }
+    /* Free the memory */
+    free(branch_record);
+    free(stack_pool);
+
+    return SUCCESS;
+
+err_stack_pool_full:
+err_branch_record_memory_alloc:
+    free(branch_record);
+err_stack_pool_memory_alloc:
+    free(stack_pool);
+    return return_code;
+}
+
+/**
+ * \brief Compute the Barnes-Hut acceleration given the tree
+ * 
+ * \param a Array of acceleration vectors to be modified
+ * \param x Array of position vectors
+ * \param m Array of masses
+ * \param G Gravitational constant
+ * \param softening_length Softening length
+ * \param opening_angle Opening angle
+ * \param max_depth Maximum depth of the tree
+ * \param root Root node of the octree
+ * 
+ * \retval SUCCESS If the computation is successful
+ * \retval ERROR_BARNES_HUT_ACCELERATION_STEP_ACC_STACK_MEMORY_ALLOC 
+ *         If memory allocation failed for the acceleration stack
+ * \retval ERROR_BARNES_HUT_ACCELERATION_STEP_ACC_STACK_FULL 
+ *         If the acceleration stack is full
+ * \retval ERROR_BARNES_HUT_ACCELERATION_STEP_BRANCH_RECORD_MEMORY_ALLOC
+ *         If memory allocation failed for the branch record
+ * \retval error code if other errors occurred
+ */
+IN_FILE int _compute_acceleration(
+    real *restrict a,
+    const real *restrict x,
+    const real *restrict m,
+    const real G,
+    const real softening_length,
+    const real opening_angle,
+    const int max_depth,
+    BarnesHutTreeNode *root
 )
 {
     int return_code;
-    
-    BarnesHutTreeNode *current_acc_node = root;
 
-    typedef struct BarnesHutAccStack
-    {
-        BarnesHutTreeNode *node;
-        struct BarnesHutAccStack *last;
-        int processed_region;
-    } BarnesHutAccStack;
-
-    typedef struct BarnesHutSameBranchNode
-    {
-        BarnesHutTreeNode *node;
-        struct BarnesHutSameBranchNode *next;
-    } BarnesHutSameBranchNode;
+    BarnesHutTreeNode *node = root;
     
-    /* Allocate a stack pool for the outer loop */
-    int acc_stack_pool_size = actual_internal_nodes_count + 1;
-    BarnesHutAccStack *acc_stack_pool = malloc(acc_stack_pool_size * sizeof(BarnesHutAccStack));
-    if (acc_stack_pool == NULL)
+    /* Allocate a stack pool */
+    const int stack_pool_size = max_depth;
+    BarnesHutAccStack *stack_pool = malloc(stack_pool_size * sizeof(BarnesHutAccStack));
+    if (!stack_pool)
     {
-        return_code = ERROR_BARNES_HUT_ACCELERATION_STEP_ACC_STACK_MEMORY_ALLOC;
-        goto err_acc_stack_pool_init_memory;
+        return_code = ERROR_BARNES_HUT_COMPUTE_ACCELERATION_STACK_POOL_MEMORY_ALLOC;
+        goto err_stack_pool_memory_alloc;
     }
 
-    /* Allocate a stack pool for the inner loop */
-    int obj_stack_pool_size = actual_internal_nodes_count + 1;
-    BarnesHutAccStack *obj_stack_pool = malloc(obj_stack_pool_size * sizeof(BarnesHutAccStack));
-    if (obj_stack_pool == NULL)
-    {
-        return_code = ERROR_BARNES_HUT_ACCELERATION_STEP_OBJ_STACK_MEMORY_ALLOC;
-        goto err_obj_stack_pool_init_memory;
-    }
-
-    int current_acc_stack_count = 1;
-    BarnesHutAccStack *acc_stack = &acc_stack_pool[0];
-
-    acc_stack->node = current_acc_node;
-    acc_stack->last = NULL;
-    acc_stack->processed_region = -1;
-
-    bool found_leaf;
-    int acc_object_index = 0;
-    BarnesHutTreeNode *current_acc_leaf;
+    int stack_count = 1;
+    BarnesHutAccStack *stack = &(stack_pool[0]);
+    stack->node = root;
+    stack->last = NULL;
+    stack->processed_region = -1;
 
     // Keep track of the nodes that is in the same branch as the current node
-    int same_branch_node_pool_size = max_depth + 1;
-    BarnesHutSameBranchNode *acc_same_branch_node_pool = malloc(same_branch_node_pool_size * sizeof(BarnesHutSameBranchNode));
-    if (acc_same_branch_node_pool == NULL)
+    int branch_record_count = 0;
+    int *restrict branch_record = malloc(max_depth * sizeof(int));
+    if (!branch_record)
     {
-        return_code = ERROR_BARNES_HUT_ACCELERATION_STEP_SAME_BRANCH_NODE_POOL_MEMORY_ALLOC;
-        goto err_same_branch_node_pool_init_memory;
+        return_code = ERROR_BARNES_HUT_COMPUTE_ACCELERATION_BRANCH_RECORD_MEMORY_ALLOC;
+        goto err_branch_record_memory_alloc;
     }
-    int current_same_branch_nodes_count = 1;
-    BarnesHutSameBranchNode *current_same_branch_node = &acc_same_branch_node_pool[0];
-    current_same_branch_node->node = root;
-    BarnesHutSameBranchNode *same_branch_node_root = current_same_branch_node;
 
     while (true)
     {     
         /*
-        *   First of all, we attempt to find a leaf node.
-        *   Then, we calculate the acceleration between 
-        *   the leaf node and all other nodes that satisfy
-        *   s / d < opening_angle, where s is the width of the node
-        *   and d is the distance between the center of mass
-        *   of the node and the leaf node.
+        *   First of all, we attempt to find a leaf node. Then, 
+        *   (1) we calculate the acceleration between all 
+        *       particles within the leaf. 
+        *   (2) we calculate the acceleration between 
+        *       the particles in the leaf and other nodes that 
+        *       satisfy the condition s / d < opening_angle, 
+        *       where s is the width of the node and d is the 
+        *       distance between the particle and center of mass
+        *       of the other node. In addition, we must note that the
+        *       other node cannot be predecessor of the leaf, otherwise
+        *       we are including the gravitational effect of the 
+        *       particle due to itself, which is incorrect.
         */
-        found_leaf = false;
-        current_same_branch_nodes_count = 0;
-        for (int i = (acc_stack->processed_region + 1); i < 8; i++)
-        {   
-            BarnesHutTreeNode *child_i = current_acc_node->children[i];
-
-            // The node is empty
-            if (child_i == NULL)
+        for (int i = (stack->processed_region + 1); i < 8; i++)
+        {
+            BarnesHutTreeNode *child = node->children[i];
+            BarnesHutTreeLeaf *leaf = node->leaves[i];
+            
+            // The node and leaf is empty
+            if ((!child) && (!leaf))
             {
-                acc_stack->processed_region = i;
-                continue;
+                stack->processed_region = i;
             }
 
-            // The node is occupied by a leaf (>= 0 means it is a leaf)
-            else if (child_i->index >= 0)
+            // Leaf exists
+            else if (!child)
             {
-                current_acc_leaf = child_i;
-                acc_object_index = current_acc_leaf->index;
-                found_leaf = true;
-                acc_stack->processed_region = i;
+                branch_record[branch_record_count] = i;
+                branch_record_count++;
 
-                if (current_same_branch_nodes_count >= same_branch_node_pool_size)
+                _compute_acc_single_leaf(
+                    a,
+                    x,
+                    m,
+                    G,
+                    softening_length,
+                    leaf
+                );
+                return_code = _compute_acc_tree_walk(
+                    a,
+                    x,
+                    m,
+                    G,
+                    softening_length,
+                    opening_angle,
+                    leaf,
+                    root,
+                    branch_record,
+                    branch_record_count,
+                    max_depth
+                );
+                if (return_code != SUCCESS)
                 {
-                    return_code = ERROR_BARNES_HUT_ACCELERATION_STEP_SAME_BRANCH_NODE_POOL_FULL;
-                    goto err_memory;
+                    goto err_compute_acc_tree_walk;
                 }
-                current_same_branch_node->next = &acc_same_branch_node_pool[current_same_branch_nodes_count];
-                current_same_branch_node = current_same_branch_node->next;
-                current_same_branch_node->node = current_acc_leaf;
-                current_same_branch_nodes_count++;
-                break;
+                branch_record_count--;
+                stack->processed_region = i;
             }
 
-            // The node is occupied by a internal node
+            // Node exists
             else
             {
-                // Create a new stack item
-                if (current_acc_stack_count >= acc_stack_pool_size)
-                {
-                    return_code = ERROR_BARNES_HUT_ACCELERATION_STEP_ACC_STACK_FULL;
-                    goto err_memory;
-                }
-                BarnesHutAccStack *new_item = &acc_stack_pool[current_acc_stack_count];
-                current_acc_stack_count++;
+                branch_record[branch_record_count] = i;
+                branch_record_count++;
 
-                new_item->node = child_i;
-                new_item->last = acc_stack;
+                // Create a new stack item
+                if (stack_count >= stack_pool_size)
+                {
+                    return_code = ERROR_BARNES_HUT_COMPUTE_ACCELERATION_STACK_POOL_FULL;
+                    goto err_stack_pool_full;
+                }
+                BarnesHutAccStack *new_item = &stack_pool[stack_count];
+                stack_count++;
+
+                new_item->node = child;
+                new_item->last = stack;
                 new_item->processed_region = -1;
 
-                acc_stack = new_item;
-                current_acc_node = child_i;
+                stack = new_item;
+                node = child;
 
-                if (current_same_branch_nodes_count >= same_branch_node_pool_size)
-                {
-                    return_code = ERROR_BARNES_HUT_ACCELERATION_STEP_SAME_BRANCH_NODE_POOL_FULL;
-                    goto err_memory;
-                }
-                current_same_branch_node->next = &acc_same_branch_node_pool[current_same_branch_nodes_count];
-                current_same_branch_node = current_same_branch_node->next;
-                current_same_branch_node->node = current_acc_node;
-                current_same_branch_nodes_count++;
                 break;
             }
         }
-        
-        if (found_leaf)
+
+        if (stack->processed_region >= 7)
         {
-            BarnesHutTreeNode *current_obj_node = root;
+            BarnesHutAccStack *parent_stack = stack->last;
 
-            // Note: This variable is used to keep track of whether
-            //       the stack pool is full. It will be reset to 0
-            //       when the stack is full and expanded. Thus, don't
-            //       trust the value of this variable.
-            int current_obj_stack_count = 0;
-
-            BarnesHutAccStack *obj_stack = &obj_stack_pool[current_obj_stack_count];
-            current_obj_stack_count++;
-
-            obj_stack->node = root;
-            obj_stack->last = NULL;
-            obj_stack->processed_region = -1;
-
-            // Calculate acceleration
-            while (true)
-            {
-                for (int j = (obj_stack->processed_region + 1); j < 8; j++)
-                {
-                    BarnesHutTreeNode *child_j = current_obj_node->children[j];
-
-                    // The node is empty
-                    if (child_j == NULL)
-                    {
-                        obj_stack->processed_region = j;
-                        continue;
-                    }
-
-                    // Check if the node is in the same branch as the current node
-                    bool is_same_branch = false;
-                    current_same_branch_node = same_branch_node_root;
-                    for (int k = 0; k < current_same_branch_nodes_count; k++)
-                    { 
-                        if (current_same_branch_node->node == child_j)
-                        {
-                            is_same_branch = true;
-                            break;
-                        }
-                        current_same_branch_node = current_same_branch_node->next;
-                    }
-                    if (is_same_branch)
-                    {
-                        obj_stack->processed_region = j;
-                        continue;
-                    }
-                    
-                    else
-                    { 
-                        real R[3];
-                        real R_norm;
-
-                        // Calculate \vec{R} and its norm
-                        R[0] = current_acc_leaf->center_of_mass[0] - child_j->center_of_mass[0];
-                        R[1] = current_acc_leaf->center_of_mass[1] - child_j->center_of_mass[1];
-                        R[2] = current_acc_leaf->center_of_mass[2] - child_j->center_of_mass[2];
-
-                        R_norm = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2] + softening_length * softening_length);
-
-                        // Check if the node satisfies the condition (s / d < opening_angle) or it is a leaf
-                        if (((child_j->box_width / R_norm) < opening_angle) || (child_j->index >= 0))
-                        {
-                            if (child_j->index != acc_object_index)
-                            {
-                                _helper_acceleration_pair(current_acc_leaf, child_j, a, G, R, R_norm);
-                            }
-                            obj_stack->processed_region = j;
-                            break;
-                        }
-                        else
-                        {
-                            // Create a new stack item
-                            if (current_obj_stack_count >= (obj_stack_pool_size))
-                            {
-                                return_code = ERROR_BARNES_HUT_ACCELERATION_STEP_OBJ_STACK_FULL;
-                                goto err_memory;
-                            }
-
-                            BarnesHutAccStack *new_item = &obj_stack_pool[current_obj_stack_count];
-                            current_obj_stack_count++;
-
-                            new_item->node = child_j;
-                            new_item->last = obj_stack;
-                            new_item->processed_region = -1;
-
-                            obj_stack = new_item;
-                            current_obj_node = child_j;
-                            break;
-                        }
-                    }
-                }
-                
-                if (obj_stack->processed_region >= 7)
-                {
-                    BarnesHutAccStack *parent = obj_stack->last;
-
-                    // If the parent is NULL, it means that the current node is the root node
-                    if (parent == NULL)
-                    {
-                        break;
-                    }
-
-                    parent->processed_region++;
-                    obj_stack = parent;
-                    current_obj_node = parent->node;
-                }   
-            }
-        }
-
-        if (acc_stack->processed_region >= 7)
-        {
-            BarnesHutAccStack *parent = acc_stack->last;
-
-            // If the parent is NULL, it means that the current node is the root node
-            if (parent == NULL)
+            // Root node has no parent
+            if (!parent_stack)
             {
                 break;
             }
 
-            parent->processed_region++;
-            acc_stack = parent;
-            current_acc_node = parent->node;
-            current_same_branch_nodes_count--;
+            parent_stack->processed_region += 1;
+            stack = parent_stack;
+            node = parent_stack->node;
+            stack_count--;
+            branch_record_count--;
         }
     }
 
-    // Free the stack pool
-    free(acc_stack_pool);
-    free(obj_stack_pool);
-    free(acc_same_branch_node_pool);    
-
+    // Free the memory
+    free(branch_record);
+    free(stack_pool);
     return SUCCESS;
 
-err_memory:
-err_same_branch_node_pool_init_memory:
-    free(acc_same_branch_node_pool);
-err_obj_stack_pool_init_memory:
-    free(obj_stack_pool);
-err_acc_stack_pool_init_memory:
-    free(acc_stack_pool);
+err_compute_acc_tree_walk:
+err_stack_pool_full:
+err_branch_record_memory_alloc:
+    free(branch_record);
+err_stack_pool_memory_alloc:
+    free(stack_pool);
     return return_code;
 }
 
-IN_FILE void _helper_acceleration_pair(
-    BarnesHutTreeNode *restrict current_acc_leaf,
-    BarnesHutTreeNode *restrict current_obj_leaf,
+WIN32DLL_API int acceleration_barnes_hut(
     real *restrict a,
-    real G,
-    real *restrict R,
-    real R_norm
+    const System *restrict system,
+    AccelerationParam *restrict acceleration_param
 )
 {
-    real temp_value;
+    int return_code;
 
-    // Calculate the acceleration
-    int acc_object_index = current_acc_leaf->index;
-    real object_2_mass = current_obj_leaf->total_mass;
-    temp_value = G * object_2_mass / (R_norm * R_norm * R_norm);
-    a[acc_object_index * 3 + 0] -= temp_value * R[0];
-    a[acc_object_index * 3 + 1] -= temp_value * R[1];
-    a[acc_object_index * 3 + 2] -= temp_value * R[2];
+    const int objects_count = system->objects_count;
+    const real *restrict x = system->x;
+    const real *restrict m = system->m;
+    const real G = system->G;
+    const real softening_length = acceleration_param->softening_length; 
+    const real opening_angle = acceleration_param->opening_angle;
+
+    /* Empty the input array */
+    for (int i = 0; i < objects_count; i++)
+    {
+        a[i * 3 + 0] = 0.0;
+        a[i * 3 + 1] = 0.0;
+        a[i * 3 + 2] = 0.0;
+    }
+
+    /* Find the width and center of the bounding box */
+    real center[3];
+    real width;
+    _calculate_bounding_box(objects_count, x, center, &width);
+
+    /* Construct the octree */
+    // Allocate memory
+
+    // root node
+    BarnesHutTreeNode *restrict root = malloc(sizeof(BarnesHutTreeNode));
+    if (root == NULL)
+    {
+        return_code = ERROR_BARNES_HUT_ROOT_MEMORY_ALLOC;
+        goto err_root_memory;
+    }
+    _initialize_node(root, center, 0.0, width);
+
+    // leaf pool
+    BarnesHutTreeLeafPool *leaf_pool = malloc(sizeof(BarnesHutTreeNodePool));
+    leaf_pool->pool_size = objects_count; // This value may not be optimal
+    leaf_pool->leaves = NULL;
+    leaf_pool->next = NULL;
+    if (!leaf_pool)
+    {
+        return_code = ERROR_BARNES_HUT_LEAF_POOL_PTR_MEMORY_ALLOC;
+        goto err_leaf_pool_ptr_memory;
+    }
+    leaf_pool->leaves = malloc(leaf_pool->pool_size * sizeof(BarnesHutTreeNode));
+    if (!(leaf_pool->leaves))
+    {
+        return_code = ERROR_BARNES_HUT_LEAF_POOL_MEMORY_ALLOC;
+        goto err_leaf_pool_memory;
+    }
+
+    // node pool
+    BarnesHutTreeNodePool *node_pool = malloc(sizeof(BarnesHutTreeNodePool));
+    node_pool->pool_size = objects_count; // This value may not be optimal
+    node_pool->nodes = NULL;
+    node_pool->next = NULL;
+    if (!node_pool)
+    {
+        return_code = ERROR_BARNES_HUT_NODE_POOL_PTR_MEMORY_ALLOC;
+        goto err_node_pool_ptr_memory;
+    }
+    node_pool->nodes = malloc(node_pool->pool_size * sizeof(BarnesHutTreeNode));
+    if (!(node_pool->nodes))
+    {
+        return_code = ERROR_BARNES_HUT_NODE_POOL_MEMORY_ALLOC;
+        goto err_node_pool_memory;
+    }
+
+    // Construct the octree
+    int max_depth = 0;
+    return_code = _construct_octree(
+        objects_count,
+        x,
+        m,
+        leaf_pool,
+        node_pool,
+        &max_depth,
+        root
+    );
+    if (return_code != SUCCESS)
+    {
+        goto err_octree;
+    }
+
+    /* Calculate the center of mass */
+    return_code = _compute_center_of_mass(x, m, max_depth, root);
+    if (return_code != SUCCESS)
+    {
+        goto err_center_of_mass;
+    }
+
+    /* Calculate the acceleration */
+    return_code = _compute_acceleration(a, x, m, G, softening_length, opening_angle, max_depth, root);
+    if (return_code != SUCCESS)
+    {
+        goto err_acceleration;
+    }
+
+    /* Free the memory */
+    while (node_pool != NULL)
+    {
+        BarnesHutTreeNodePool *next = node_pool->next;
+        free(node_pool->nodes);
+        free(node_pool);
+        node_pool = next;
+    }
+    while (leaf_pool != NULL)
+    {
+        BarnesHutTreeLeafPool *next = leaf_pool->next;
+        free(leaf_pool->leaves);
+        free(leaf_pool);
+        leaf_pool = next;
+    }
+    free(root);
+
+    return SUCCESS;
+
+err_acceleration:
+err_center_of_mass:
+err_octree:
+err_node_pool_memory:
+err_node_pool_ptr_memory:
+    while (node_pool != NULL)
+    {
+        BarnesHutTreeNodePool *next = node_pool->next;
+        free(node_pool->nodes);
+        free(node_pool);
+        node_pool = next;
+    }
+err_leaf_pool_memory:
+err_leaf_pool_ptr_memory:
+    while (leaf_pool != NULL)
+    {
+        BarnesHutTreeLeafPool *next = leaf_pool->next;
+        free(leaf_pool->leaves);
+        free(leaf_pool);
+        leaf_pool = next;
+    }
+err_root_memory:
+    free(root);
+    
+    return return_code;
 }
