@@ -272,8 +272,8 @@ class GravitySimulatorAPI:
 
         return integrator_params, acceleration_params, storing_params, settings
 
+    @staticmethod
     def _check_and_fill_in_simulation_input(
-        self,
         gravitational_system: GravitationalSystem,
         integrator_params: dict,
         acceleration_params: dict,
@@ -312,15 +312,12 @@ class GravitySimulatorAPI:
             raise TypeError(f"Expected dict, but got {type(integrator_params)}")
         if "integrator" not in integrator_params:
             raise ValueError('integrator_params must have key "integrator"')
-        if integrator_params["integrator"] not in self.simulator.AVAILABLE_INTEGRATORS:
+        if integrator_params["integrator"] not in Simulator.AVAILABLE_INTEGRATORS:
             raise ValueError(
-                f'integrator_params["integrator"] must be one of {self.simulator.AVAILABLE_INTEGRATORS}'
+                f'integrator_params["integrator"] must be one of {Simulator.AVAILABLE_INTEGRATORS}'
             )
 
-        if (
-            integrator_params["integrator"]
-            in self.simulator.FIXED_STEP_SIZE_INTEGRATORS
-        ):
+        if integrator_params["integrator"] in Simulator.FIXED_STEP_SIZE_INTEGRATORS:
             if "dt" not in integrator_params:
                 raise ValueError(
                     'integrator_params must have key "dt" for fixed-step-size integrators'
@@ -340,8 +337,7 @@ class GravitySimulatorAPI:
                     'integrator_params["initial_dt"] is not used for fixed-step-size integrators'
                 )
         elif (
-            integrator_params["integrator"]
-            in self.simulator.ADAPTIVE_STEP_SIZE_INTEGRATORS
+            integrator_params["integrator"] in Simulator.ADAPTIVE_STEP_SIZE_INTEGRATORS
         ):
             if "tolerance" not in integrator_params:
                 raise ValueError(
@@ -441,10 +437,10 @@ class GravitySimulatorAPI:
             raise ValueError('acceleration_params must have key "method"')
         if (
             acceleration_params["method"]
-            not in self.simulator.AVAILABLE_ACCELERATION_METHODS
+            not in Simulator.AVAILABLE_ACCELERATION_METHODS
         ):
             raise ValueError(
-                f'acceleration_params["method"] must be one of {self.simulator.AVAILABLE_ACCELERATION_METHODS}'
+                f'acceleration_params["method"] must be one of {Simulator.AVAILABLE_ACCELERATION_METHODS}'
             )
         if acceleration_params["method"] == "barnes_hut":
             if (gravitational_system.m == 0.0).any():
@@ -490,9 +486,9 @@ class GravitySimulatorAPI:
             raise TypeError(f"Expected dict, but got {type(storing_params)}")
         if "method" not in storing_params:
             raise ValueError('storing_params must have key "method"')
-        if storing_params["method"] not in self.simulator.AVAILABLE_STORING_METHODS:
+        if storing_params["method"] not in Simulator.AVAILABLE_STORING_METHODS:
             raise ValueError(
-                f'storing_params["method"] must be one of {self.simulator.AVAILABLE_STORING_METHODS}'
+                f'storing_params["method"] must be one of {Simulator.AVAILABLE_STORING_METHODS}'
             )
         if storing_params["method"] in ["default", "disabled"]:
             if "flush_path" in storing_params:
@@ -554,8 +550,8 @@ class GravitySimulatorAPI:
         if tf <= 0.0:
             raise ValueError("tf must be positive")
 
+    @staticmethod
     def _print_simulation_input(
-        self,
         integrator_params: dict,
         acceleration_params: dict,
         storing_params: dict,
@@ -666,8 +662,8 @@ class GravitySimulatorAPI:
             is_exit_ctypes_bool.value = True
             raise KeyboardInterrupt
 
+    @staticmethod
     def compute_eccentricity(
-        self,
         gravitational_system: GravitationalSystem,
         sol_state: np.ndarray,
     ) -> np.ndarray:
@@ -688,10 +684,10 @@ class GravitySimulatorAPI:
         m = gravitational_system.m
         G = gravitational_system.G
 
-        return self.simulator.compute_eccentricity(objects_count, m, G, sol_state)
+        return Simulator.compute_eccentricity(objects_count, m, G, sol_state)
 
+    @staticmethod
     def compute_inclination(
-        self,
         gravitational_system: GravitationalSystem,
         sol_state: np.ndarray,
     ) -> np.ndarray:
@@ -710,10 +706,10 @@ class GravitySimulatorAPI:
         """
         objects_count = gravitational_system.objects_count
 
-        return self.simulator.compute_inclination(objects_count, sol_state)
+        return Simulator.compute_inclination(objects_count, sol_state)
 
+    @staticmethod
     def save_results(
-        self,
         file_path: str | Path,
         sol_state: np.ndarray,
         sol_time: np.ndarray,
@@ -739,8 +735,8 @@ class GravitySimulatorAPI:
 
         print(f'Done! Results saved to "{file_path}".')
 
+    @staticmethod
     def read_results(
-        self,
         file_path: str | Path,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Load results from a file
@@ -762,4 +758,211 @@ class GravitySimulatorAPI:
             sol_dict["time"],
             sol_dict["dt"],
             sol_dict["energy"],
+        )
+
+    @staticmethod
+    def plot_rel_energy_error(
+        sol_energy: np.ndarray,
+        sol_time: np.ndarray,
+        is_log_y: bool = True,
+        title: Optional[str] = None,
+        xlabel: Optional[str] = "Time",
+        ylabel: Optional[str] = "$(E_0 - E(t)) / E_0$",
+        save_fig: bool = False,
+        save_fig_path: Optional[str | Path] = None,
+    ) -> None:
+        if sol_energy[0] == 0.0:
+            warnings.warn("The initial energy is zero.")
+        rel_energy_error = np.abs((sol_energy - sol_energy[0]) / sol_energy[0])
+        plotting.plot_quantity_against_time(
+            quantity=rel_energy_error,
+            sol_time=sol_time,
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            is_log_y=is_log_y,
+            save_fig=save_fig,
+            save_fig_path=save_fig_path,
+        )
+
+    def compute_and_plot_rel_energy_error(
+        self,
+        system: GravitationalSystem,
+        sol_state: np.ndarray,
+        sol_time: np.ndarray,
+        is_log_y: bool = True,
+        title: Optional[str] = None,
+        xlabel: Optional[str] = "Time",
+        ylabel: Optional[str] = "$(E_0 - E(t)) / E_0$",
+        save_fig: bool = False,
+        save_fig_path: Optional[str | Path] = None,
+    ) -> None:
+        sol_energy = self.compute_energy(system, sol_state)
+        self.plot_rel_energy_error(
+            sol_energy,
+            sol_time,
+            is_log_y,
+            title,
+            xlabel,
+            ylabel,
+            save_fig,
+            save_fig_path,
+        )
+
+    @staticmethod
+    def plot_rel_linear_momentum_error(
+        sol_linear_momentum: np.ndarray,
+        sol_time: np.ndarray,
+        is_log_y: bool = True,
+        title: Optional[str] = None,
+        xlabel: Optional[str] = "Time",
+        ylabel: Optional[str] = "Relative linear momentum error",
+        save_fig: bool = False,
+        save_fig_path: Optional[str | Path] = None,
+    ) -> None:
+        if sol_linear_momentum[0] == 0.0:
+            warnings.warn("The initial linear momentum is zero.")
+        rel_linear_momentum_error = np.abs(
+            (sol_linear_momentum - sol_linear_momentum[0]) / sol_linear_momentum[0]
+        )
+        plotting.plot_quantity_against_time(
+            quantity=rel_linear_momentum_error,
+            sol_time=sol_time,
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            is_log_y=is_log_y,
+            save_fig=save_fig,
+            save_fig_path=save_fig_path,
+        )
+
+    def compute_and_plot_rel_linear_momentum_error(
+        self,
+        system: GravitationalSystem,
+        sol_state: np.ndarray,
+        sol_time: np.ndarray,
+        is_log_y: bool = True,
+        title: Optional[str] = None,
+        xlabel: Optional[str] = "Time",
+        ylabel: Optional[str] = "Relative linear momentum error",
+        save_fig: bool = False,
+        save_fig_path: Optional[str | Path] = None,
+    ) -> None:
+        sol_linear_momentum = self.compute_linear_momentum(system, sol_state)
+        GravitySimulatorAPI.plot_rel_linear_momentum_error(
+            sol_linear_momentum,
+            sol_time,
+            is_log_y,
+            title,
+            xlabel,
+            ylabel,
+            save_fig,
+            save_fig_path,
+        )
+
+    @staticmethod
+    def plot_angular_momentum_error(
+        sol_angular_momentum: np.ndarray,
+        sol_time: np.ndarray,
+        is_log_y: bool = True,
+        title: Optional[str] = None,
+        xlabel: Optional[str] = "Time",
+        ylabel: Optional[str] = "$(L_0 - L(t)) / L_0$",
+        save_fig: bool = False,
+        save_fig_path: Optional[str | Path] = None,
+    ) -> None:
+        if sol_angular_momentum[0] == 0.0:
+            warnings.warn("The initial angular momentum is zero.")
+        angular_momentum_error = np.abs(
+            (sol_angular_momentum - sol_angular_momentum[0]) / sol_angular_momentum[0]
+        )
+        plotting.plot_quantity_against_time(
+            quantity=angular_momentum_error,
+            sol_time=sol_time,
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            is_log_y=is_log_y,
+            save_fig=save_fig,
+            save_fig_path=save_fig_path,
+        )
+
+    def compute_and_plot_angular_momentum_error(
+        self,
+        system: GravitationalSystem,
+        sol_state: np.ndarray,
+        sol_time: np.ndarray,
+        is_log_y: bool = True,
+        title: Optional[str] = None,
+        xlabel: Optional[str] = "Time",
+        ylabel: Optional[str] = "$(L_0 - L(t)) / L_0$",
+        save_fig: bool = False,
+        save_fig_path: Optional[str | Path] = None,
+    ) -> None:
+        sol_angular_momentum = self.compute_angular_momentum(system, sol_state)
+        GravitySimulatorAPI.plot_angular_momentum_error(
+            sol_angular_momentum,
+            sol_time,
+            is_log_y,
+            title,
+            xlabel,
+            ylabel,
+            save_fig,
+            save_fig_path,
+        )
+
+    def compute_and_plot_eccentricity(
+        self,
+        system: GravitationalSystem,
+        sol_state: np.ndarray,
+        sol_time: np.ndarray,
+        colors: list[str] | None = None,
+        labels: list[str] | None = None,
+        legend: bool = False,
+        title: str | None = None,
+        xlabel: str | None = None,
+        ylabel: str | None = None,
+        save_fig: bool = False,
+        save_fig_path: str | Path | None = None,
+    ) -> None:
+        sol_eccentricity = self.compute_eccentricity(system, sol_state)
+        self.plot_eccentricity_or_inclination(
+            eccentricity_or_inclination=sol_eccentricity,
+            sol_time=sol_time,
+            colors=colors,
+            labels=labels,
+            legend=legend,
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            save_fig=save_fig,
+            save_fig_path=save_fig_path,
+        )
+
+    def compute_and_plot_inclination(
+        self,
+        system: GravitationalSystem,
+        sol_state: np.ndarray,
+        sol_time: np.ndarray,
+        colors: list[str] | None = None,
+        labels: list[str] | None = None,
+        legend: bool = False,
+        title: str | None = None,
+        xlabel: str | None = None,
+        ylabel: str | None = None,
+        save_fig: bool = False,
+        save_fig_path: str | Path | None = None,
+    ) -> None:
+        sol_inclination = self.compute_inclination(system, sol_state)
+        self.plot_eccentricity_or_inclination(
+            eccentricity_or_inclination=sol_inclination,
+            sol_time=sol_time,
+            colors=colors,
+            labels=labels,
+            legend=legend,
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            save_fig=save_fig,
+            save_fig_path=save_fig_path,
         )
