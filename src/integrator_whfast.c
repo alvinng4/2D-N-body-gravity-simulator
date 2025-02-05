@@ -208,7 +208,7 @@ WIN32DLL_API int whfast(
 
     int objects_count = system->objects_count;
     real *restrict m = system->m;
-    
+
     const real dt = integrator_param->dt;
     const int64 n_steps = simulation_param->n_steps_;
     const int storing_freq = storing_param->storing_freq;
@@ -352,7 +352,7 @@ WIN32DLL_API int whfast(
             // Get v_1 from v_1+1/2
             memcpy(temp_jacobi_v, jacobi_v, objects_count * 3 * sizeof(real));
             whfast_kick(objects_count, temp_jacobi_v, a, -0.5 * dt);
-            jacobi_to_cartesian(system, jacobi_x, jacobi_v, eta);
+            jacobi_to_cartesian(system, jacobi_x, temp_jacobi_v, eta);
             return_code = store_solution_step(
                 storing_param,
                 system,

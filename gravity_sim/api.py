@@ -920,8 +920,8 @@ class GravitySimulatorAPI:
         labels: list[str] | None = None,
         legend: bool = False,
         title: str | None = None,
-        xlabel: str | None = None,
-        ylabel: str | None = None,
+        xlabel: Optional[str] = "Time",
+        ylabel: Optional[str] = "Eccentricity",
         save_fig: bool = False,
         save_fig_path: str | Path | None = None,
     ) -> None:
@@ -948,8 +948,8 @@ class GravitySimulatorAPI:
         labels: list[str] | None = None,
         legend: bool = False,
         title: str | None = None,
-        xlabel: str | None = None,
-        ylabel: str | None = None,
+        xlabel: Optional[str] = "Time",
+        ylabel: Optional[str] = "Inclination",
         save_fig: bool = False,
         save_fig_path: str | Path | None = None,
     ) -> None:

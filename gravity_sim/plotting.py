@@ -891,7 +891,7 @@ def plot_eccentricity_or_inclination(
     labels: Optional[list[str]] = None,
     legend: bool = False,
     title: Optional[str] = None,
-    xlabel: Optional[str] = None,
+    xlabel: Optional[str] = "Time",
     ylabel: Optional[str] = None,
     save_fig: bool = False,
     save_fig_path: Optional[str | Path] = None,

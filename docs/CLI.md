@@ -35,6 +35,7 @@
     matplotlib==3.8.3
     numpy==1.26.4
     rich==13.7.1
+    Pillow==10.3.0
     ```
 3. Compile the C library
 
