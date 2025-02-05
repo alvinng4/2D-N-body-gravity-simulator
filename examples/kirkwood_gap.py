@@ -1,9 +1,17 @@
 """
-Demonstration on using the gravity simulator to simulate the Kirkwood gap.
+Demonstration on using the gravity simulator API to simulate the formation of Kirkwood gap.
 
-Note: N = 1000 is enough to observe some gaps, but it may not be very clear.
-Seting N = 50000 could take 24 hours to a few days to finish.
-Since the simulation is O(N), reducing N to 25000 will reduce the runtime by half.
+Note: 1. N = 1000 is enough to observe some gaps, but it may not be very clear.
+         Seting N = 50000 could take 24 hours to a few days to finish. Since we
+         are using the "massless" acceleration method, which is O(N), reducing N 
+         to 25000 will reduce the runtime by half.
+      2. Technically, it is not good to use the "massless" acceleration method as
+         we are considering a rather long time frame (5 Myr). However, it would
+         take much more effort and computational power to include factors like
+         collision and mutual gravity of the asteroids. So it really depends on 
+         your goal and how accurate you want the simulation to be. Nevertheless,
+         the results of this simulation seems to be matching real data, despite
+         the approximation we made.
 
 Warning: Do not run multiple instances of this program at the same time, unless you made copies
          of the whole directory. Otherwise, the final data may overwrite each other.

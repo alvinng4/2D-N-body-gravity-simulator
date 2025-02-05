@@ -1,11 +1,13 @@
 """
 Demonstration on using the gravity simulator to simulate the asteroid belt
 
-Note: Technically you can also create nice looking solar system animations by setting N = 0 and
-      expanding the axes limits.
+Note: 1. Technically you can also create nice looking solar system animations by setting N = 0 and
+         expanding the axes limits.
+      2. We are using "massless" acceleration method because we are considering a short time frame,
+         so the gravitational effect from the asteroids is negligible.
 
 Warning: Do not run multiple instances of this program at the same time, unless you made copies
-    of the whole directory. Otherwise, the final data may overwrite each other.
+         of the whole directory. Otherwise, the final data may overwrite each other.
 
 Author: Ching Yin Ng
 """
