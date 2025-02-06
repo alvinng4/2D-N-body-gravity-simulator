@@ -22,7 +22,7 @@
 2. Any C compiler that supports C99 (May not be needed if the program runs successfully)
 
 ### Installation
-1. Download the source files, or clone this repository by running the following command in terminal:
+1. Download the source files, or clone this repository by
     ```
     git clone https://github.com/alvinng4/Gravity-Simulator
     ```
