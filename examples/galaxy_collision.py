@@ -7,6 +7,7 @@ Warning: Do not run multiple instances of this program at the same time, unless 
 
 from pathlib import Path
 import sys
+
 sys.path.append(str(Path(__file__).parent.parent))
 
 import numpy as np
@@ -16,6 +17,7 @@ import rich.progress
 from matplotlib.colors import LinearSegmentedColormap
 
 from gravity_sim import GravitySimulatorAPI
+from gravity_sim.gravitational_system import GravitationalSystem
 
 N = 75000 * 2
 FPS = 30
@@ -23,10 +25,13 @@ DPI = 200
 N_FRAMES = 1000
 
 # kpc^3 / (Msun * kyr^2)
-GM_SUN = 132712440041.279419 # km^3 s^-2 M_sun^-1
+GM_SUN = 132712440041.279419  # km^3 s^-2 M_sun^-1
 G = GM_SUN * (365 * 24 * 3600 * 1000) ** 2 * (3.24077929e-17) ** 3
 
-orange_white_cmap = LinearSegmentedColormap.from_list("orange_white", ["black", "orange", "white"])
+orange_white_cmap = LinearSegmentedColormap.from_list(
+    "orange_white", ["black", "orange", "white"]
+)
+
 
 class Progress_bar(rich.progress.Progress):
     def __init__(self):
@@ -39,7 +44,8 @@ class Progress_bar(rich.progress.Progress):
             rich.progress.TimeRemainingColumn(),
             "•[magenta] {task.completed}/{task.total}",
         )
-        
+
+
 def main():
     # ---------- Initialization ---------- #
     print("Initializing the system...")
@@ -47,28 +53,9 @@ def main():
     system = grav_sim.create_system()
     system.G = G
 
-    # Galaxy 1
-    init_conditions = np.load("galaxy_collision_init_conditions.npz")
-    x = init_conditions["x"]
-    v = init_conditions["v"]
-    m = init_conditions["m"]
-
-    for i in range(N // 2):
-        system.add(
-            x=x[i] + np.array([-60.0, 0.0, 0.0]),
-            v=v[i],
-            m=m[i],
-        )
-    system.center_of_mass_correction()
-
-    # Galaxy 2
-    for i in range(N // 2):
-        system.add(
-            x=system.x[i] + np.array([120.0, 0.0, 0.0]),
-            v=v[i],
-            m=m[i],
-        )
-    system.center_of_mass_correction()
+    load_init_conditions(
+        system, Path(__file__).parent / "galaxy_collision_init_conditions.npz"
+    )
 
     # # Galaxy 1
     # # Central black hole
@@ -162,7 +149,7 @@ def main():
             if i == 1:  # Skip i = 0 to draw the first frame
                 grav_sim.launch_simulation(
                     gravitational_system=system,
-                    integrator="leapfrog",
+                    integrator="rk4",
                     tf=2.5e5,
                     dt=2.5e5,
                     acceleration_method="barnes_hut",
@@ -194,10 +181,10 @@ def main():
             ax.set_yticks([])
             ax.xaxis.set_visible(False)
             ax.yaxis.set_visible(False)
-            ax.spines['top'].set_color('none')
-            ax.spines['bottom'].set_color('none')
-            ax.spines['left'].set_color('none')
-            ax.spines['right'].set_color('none')
+            ax.spines["top"].set_color("none")
+            ax.spines["bottom"].set_color("none")
+            ax.spines["left"].set_color("none")
+            ax.spines["right"].set_color("none")
 
             # Galaxy 1
             hist1, _, _ = np.histogram2d(
@@ -219,13 +206,13 @@ def main():
             #     print(hist1.max(), hist2.max())
             #     print(hist1.mean(), hist2.mean())
             hist = np.clip(hist1 + hist2, 0.0, 25.0)
-            
+
             ax.imshow(
                 hist.T,
                 origin="lower",
                 cmap=orange_white_cmap,
                 extent=[xlim_min, xlim_max, ylim_min, ylim_max],
-            )   
+            )
 
             fig.tight_layout()
 
@@ -253,9 +240,10 @@ def main():
 
     # with open(file_path / "galaxy_collision_masses.pkl", "wb") as file:
     #     pickle.dump(grav_sim.simulator.m, file)
-        
+
     print()
     print("Combining frames to gif...")
+
     def frames_generator():
         for i in range(N_FRAMES):
             yield PIL.Image.open(file_path / f"frames_{i:04d}.png")
@@ -266,7 +254,7 @@ def main():
         save_all=True,
         append_images=frames,
         loop=0,
-        duration=(1000 // FPS)
+        duration=(1000 // FPS),
     )
 
     for i in range(N_FRAMES):
@@ -274,6 +262,27 @@ def main():
 
     print(f"Output completed! Please check {file_path / 'galaxy_collision.gif'}")
     print()
+
+
+def load_init_conditions(system: GravitationalSystem, file_path: Path) -> None:
+    init_conditions = np.load(file_path)
+    x = init_conditions["x"]
+    v = init_conditions["v"]
+    m = init_conditions["m"]
+
+    # Galaxy 1
+    x_1 = x.copy()[: (N // 2)]
+    x_1[:, 0] -= 60.0
+    system.add(x=x, v=v, m=m)
+
+    # Galaxy 2
+    x_2 = x.copy()[: (N // 2)]
+    x_2[:, 0] += 60.0
+    system.add(x=x_2, v=v, m=m)
+
+    del x, v, m, init_conditions, x_1, x_2
+
+    system.center_of_mass_correction()
 
 
 if __name__ == "__main__":
