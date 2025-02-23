@@ -209,7 +209,11 @@ class GravitationalSystem:
         self.x = np.vstack((self.x, np.array(x, dtype=np.float64)))
         self.v = np.vstack((self.v, np.array(v, dtype=np.float64)))
         self.m = np.hstack((self.m, m))
-        self.objects_count += 1
+
+        if isinstance(m, (list, np.ndarray)):
+            self.objects_count += len(m)
+        else:
+            self.objects_count += 1
 
     def add_keplerian(
         self,
